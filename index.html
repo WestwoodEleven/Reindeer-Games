@@ -1083,7 +1083,9 @@ function phoneErr(e){const c=(e&&e.code)||'';
   if(/code-expired|session-expired/.test(c))return'That code expired. Send a new one.';
   if(/operation-not-allowed/.test(c))return'Text sign-in isn’t turned on yet. Use Google or email for now.';
   if(/captcha/.test(c))return'The security check didn’t finish. Try again.';
-  return'Couldn’t send the text. Try again, or use Google or email.'}
+  if(/billing-not-enabled/.test(c))return'Text sign-in needs billing turned on in Firebase. Use Google or email for now.';
+  if(/invalid-app-credential|app-not-authorized|unauthorized-domain/.test(c))return`This website isn’t authorized for text sign-in yet (${c}). Use Google or email for now.`;
+  return`Couldn’t send the text (${c||'unknown error'}). Try again, or use Google or email.`}
 async function finishLink(email){
   try{await fbAuth.signInWithEmailLink(email,location.href);try{localStorage.removeItem('rg-email')}catch{};S.needEmail=false;history.replaceState(null,'',linkUrl())}
   catch(e){console.error(e);S.needEmail=false;history.replaceState(null,'',linkUrl());toast('That sign-in link expired or was already used. Request a new one.');renderNow()}

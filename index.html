@@ -1,0 +1,1097 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0E6A55">
+<meta name="description" content="Emerald Bay’s neighborhood Rudolph-stealing game.">
+<title>Reindeer Games</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bowlby+One+SC&family=Karla:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}img{max-width:100%}[hidden]{display:none!important}
+/* Layout: one narrow phone column, sticky case-file header, fixed bottom tab bar with a big red "log" nose */
+:root{
+  --bg:#EEF4F1; --surface:#FFFFFF; --ink:#10302A; --muted:#5A716A; --line:#D3DFDA;
+  --accent:#0E6A55; --accent-ink:#FFFFFF; --nose:#D3262D; --nose-soft:#F9E1DF;
+  --sea:#A7D4CC; --sea-ink:#2D6C66; --land:#E3EBDD; --sand:#E9D7AE; --park:#C9DDBE;
+  --road:#FFFFFF; --road-edge:#C3CEC6; --pin:#FFFFFF;
+  --map-l:inline; --map-d:none;
+  --f-display:"Bowlby One SC","Arial Black",Impact,sans-serif;
+  --f-body:"Karla",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0A1916; --surface:#11241F; --ink:#E3EFEA; --muted:#93ABA3; --line:#24423B;
+  --accent:#4CC4A0; --accent-ink:#06231C; --nose:#FF4D51; --nose-soft:#3A1A1B;
+  --sea:#103539; --sea-ink:#79B9B1; --land:#16271F; --sand:#3B3423; --park:#1D3524;
+  --road:#2B4139; --road-edge:#1A2E28; --pin:#11241F; --map-l:none; --map-d:inline; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0A1916; --surface:#11241F; --ink:#E3EFEA; --muted:#93ABA3; --line:#24423B;
+  --accent:#4CC4A0; --accent-ink:#06231C; --nose:#FF4D51; --nose-soft:#3A1A1B;
+  --sea:#103539; --sea-ink:#79B9B1; --land:#16271F; --sand:#3B3423; --park:#1D3524;
+  --road:#2B4139; --road-edge:#1A2E28; --pin:#11241F; --map-l:none; --map-d:inline; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 var(--f-body);-webkit-tap-highlight-color:transparent}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+h1,h2,h3{font-family:var(--f-display);font-weight:400;line-height:1.1;text-wrap:balance;margin:0;letter-spacing:.01em}
+h2{font-size:1.35rem} h3{font-size:1.05rem}
+p{margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--accent)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.label{font:600 .72rem/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.wrap{max-width:640px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* header */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line)}
+.bar .wrap{display:flex;align-items:center;gap:12px;padding-block:10px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink);min-width:0;flex:1}
+.brand b{font-family:var(--f-display);font-weight:400;font-size:1.15rem;display:block;line-height:1}
+.brand small{font:500 .72rem var(--f-mono);color:var(--muted);letter-spacing:.06em}
+.nose{width:22px;height:22px;border-radius:50%;background:var(--nose);box-shadow:0 0 0 4px var(--nose-soft),0 0 14px var(--nose);flex:none}
+.logo-tile{flex:none;display:grid;place-items:center;width:42px;height:50px;border-radius:10px;background:#3b3b3b}
+.brand-logo{height:46px;width:auto;display:block}
+@keyframes tw{0%,100%{opacity:1}50%{opacity:.35}}
+.logo-tile.on .t1{animation:tw 1.6s ease-in-out infinite}
+.logo-tile.on .t2{animation:tw 1.6s ease-in-out .8s infinite}
+.who{display:flex;gap:8px;align-items:center;flex:none}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:.85rem;background:var(--surface);text-decoration:none;color:var(--ink);white-space:nowrap;max-width:46vw;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.chip.solid{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}
+
+/* banners */
+.banner{background:var(--nose-soft);border-bottom:1px solid var(--line)}
+.banner .wrap{padding-block:9px;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;font-size:.9rem}
+.banner .wrap > span{flex:1;min-width:12rem}
+
+main{padding-block:16px calc(96px + env(safe-area-inset-bottom,0px))}
+.view{display:flex;flex-direction:column;gap:18px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
+.stack{display:flex;flex-direction:column;gap:10px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.muted{color:var(--muted)}
+.small{font-size:.88rem}
+
+/* status: the "wanted" card */
+.status{position:relative;overflow:hidden;border-radius:16px;padding:18px;background:var(--ink);color:var(--bg)}
+.status .label{color:color-mix(in srgb,var(--bg) 70%,transparent)}
+.status h2{font-size:1.6rem;margin:6px 0 8px}
+.status p{color:color-mix(in srgb,var(--bg) 85%,transparent)}
+.status .glow{position:absolute;right:-30px;top:-30px;width:130px;height:130px;border-radius:50%;background:radial-gradient(circle,var(--nose) 0 22%,color-mix(in srgb,var(--nose) 35%,transparent) 40%,transparent 70%);animation:pulse 2.8s ease-in-out infinite}
+.status .btn{margin-top:12px}
+.status input{color:var(--ink);background:var(--surface);border-color:transparent}
+.status form{margin-top:14px}
+@keyframes pulse{50%{transform:scale(1.12);opacity:.8}}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:10px;border:1px solid var(--line);background:var(--surface);padding:10px 14px;font-weight:700;cursor:pointer;text-decoration:none;color:var(--ink);min-height:44px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.red{background:var(--nose);border-color:var(--nose);color:#fff}
+.btn.ghost{background:transparent}
+.btn.block{width:100%}
+.btn.sm{min-height:34px;padding:6px 11px;font-size:.88rem}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.danger{color:var(--nose);border-color:color-mix(in srgb,var(--nose) 40%,var(--line))}
+
+/* map */
+.map-card{padding:0;overflow:hidden}
+.map-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.map-box{position:relative;background:var(--sea)}
+.map-box svg{display:block;width:100%;height:auto;max-height:60vh;touch-action:none;user-select:none;-webkit-user-select:none}
+.map-bar{display:flex;align-items:center;gap:6px;padding:8px 10px;border-top:1px solid var(--line);background:var(--surface)}
+.map-bar .sp{flex:1}
+.map-bar button{min-width:44px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--bg);font-weight:700;font-size:1.05rem;cursor:pointer;padding:0 12px}
+.map-bar button.wide{font-size:.88rem}
+.map-card.full{position:fixed;inset:0;z-index:45;border-radius:0;border:0;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.map-card.full .map-head,.map-card.full .legend{flex:none}
+.map-card.full .map-box{flex:1;min-height:0}
+.map-card.full .map-box svg{width:100%;height:100%;max-height:none;aspect-ratio:auto!important}
+.map-card.full .map-bar{padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px))}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;padding:10px 14px;border-top:1px solid var(--line);font-size:.8rem;color:var(--muted)}
+.legend i{display:inline-block;width:22px;height:0;border-top:3px solid var(--nose);vertical-align:middle;margin-right:6px}
+.legend i.dash{border-top:3px dashed var(--muted)}
+.legend i.dot{width:12px;height:12px;border:0;border-radius:50%;background:var(--nose);box-shadow:0 0 6px var(--nose)}
+
+/* svg map classes */
+.m-land{fill:var(--land)} .m-sea{fill:var(--sea)} .m-sand{fill:none;stroke:var(--sand);stroke-width:30;stroke-linecap:round}
+.m-park{fill:var(--park)}
+.m-road-e{fill:none;stroke:var(--road-edge);stroke-linecap:round;stroke-linejoin:round}
+.m-road{fill:none;stroke:var(--road);stroke-linecap:round;stroke-linejoin:round}
+.m-center{fill:none;stroke:var(--sand);stroke-width:2;stroke-dasharray:14 12}
+.m-lbl{fill:var(--muted);font:600 22px var(--f-mono);letter-spacing:.12em}
+.m-sea-lbl{fill:var(--sea-ink);font:600 26px var(--f-mono);letter-spacing:.3em}
+.m-bay-lbl{fill:var(--sea-ink);font:400 30px var(--f-display);letter-spacing:.06em}
+.m-img-l{display:var(--map-l)} .m-img-d{display:var(--map-d)}
+.m-pin{fill:var(--accent);stroke:var(--surface);stroke-width:3}
+.m-pin.mine{fill:var(--nose)}
+.m-pin-dot{fill:var(--surface);pointer-events:none}
+.m-dot{fill:var(--accent);stroke:var(--surface);stroke-width:2.5;opacity:.85}
+.m-tag{fill:var(--nose);stroke:var(--surface);stroke-width:2}
+.m-tag.mine{stroke:var(--ink);stroke-width:2.5}
+.m-tag.faint{opacity:.85}
+.m-tag-t{fill:#fff;font:600 14px var(--f-mono);text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.m-pin-t{fill:var(--ink);font:600 13px var(--f-mono);text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.m-pin.mine + .m-pin-t{fill:var(--accent-ink)}
+.m-hit{fill:transparent;cursor:pointer}
+.m-arc{fill:none;stroke:var(--nose);stroke-width:5;stroke-linecap:round}
+.m-gap{fill:none;stroke:var(--muted);stroke-width:4;stroke-dasharray:10 10;stroke-linecap:round}
+.m-arrow{fill:var(--nose)}
+.m-badge{fill:var(--nose)} .m-badge-t{fill:#fff;font:600 14px var(--f-mono);text-anchor:middle;dominant-baseline:central}
+.m-gbadge{fill:var(--surface);stroke:var(--muted);stroke-width:2} .m-gbadge-t{fill:var(--muted);font:600 15px var(--f-mono);text-anchor:middle;dominant-baseline:central}
+.m-seen{fill:var(--nose);opacity:.25} .m-seen-c{fill:var(--nose)}
+.m-seen-t{fill:var(--ink);font:600 15px var(--f-mono);paint-order:stroke;stroke:var(--surface);stroke-width:5px;stroke-linejoin:round}
+.m-drop{fill:var(--nose);stroke:var(--surface);stroke-width:3}
+.m-sel{fill:none;stroke:var(--ink);stroke-width:3}
+
+/* timeline cases */
+.cases{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.case{display:grid;grid-template-columns:52px 1fr;gap:12px;align-items:start;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;cursor:pointer}
+.case > div{min-width:0}
+.case-n{font:600 .95rem var(--f-mono);color:var(--nose);border:2px solid currentColor;border-radius:8px;text-align:center;padding:5px 0}
+.case.gap{border-style:dashed;background:transparent;cursor:default}
+.case.gap .case-n,.case.sealed .case-n{color:var(--muted)}
+.case.sealed{background:transparent;cursor:default}
+.case-meta{font-size:.85rem;color:var(--muted);margin-top:2px}
+.case .btn{margin-top:8px}
+.thumbs{display:flex;gap:6px;margin-top:8px}
+.thumbs span{width:44px;height:44px;border-radius:8px;background:var(--line) center/cover no-repeat;flex:none;display:grid;place-items:center;font:600 .7rem var(--f-mono);color:var(--muted)}
+
+/* leaderboard */
+.board{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.board li{display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.board li:first-child{border-top:0}
+.board .rank{font:600 .9rem var(--f-mono);color:var(--muted)}
+.board .n{font:600 1.15rem var(--f-mono);color:var(--nose)}
+.board .fam{min-width:0;overflow-wrap:anywhere}
+
+/* homes list */
+.homes{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.homes li{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.homes li.on{border-color:var(--nose)}
+.homes li > div{min-width:0}
+.hno{font:600 .85rem var(--f-mono);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:4px 8px;white-space:nowrap}
+.tag{font:600 .66rem var(--f-mono);letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:2px 8px;background:var(--bg);color:var(--muted);border:1px solid var(--line);white-space:nowrap}
+.tag.you{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+
+/* forms */
+.field{display:flex;flex-direction:column;gap:6px}
+.field > span{font-weight:700;font-size:.92rem}
+.field small{color:var(--muted);font-size:.82rem}
+input[type=text],input[type=number],input[type=datetime-local],input[type=date],select,textarea{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:11px 12px;min-height:46px}
+textarea{min-height:120px;resize:vertical}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:4px}
+.seg button{border:0;border-radius:9px;padding:10px 8px;background:transparent;font-weight:700;cursor:pointer;min-height:44px}
+.seg button[aria-pressed="true"]{background:var(--surface);box-shadow:0 1px 3px rgb(0 0 0/.15);color:var(--nose)}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:18px;text-align:center;cursor:pointer;display:block}
+.drop input{position:absolute;width:1px;height:1px;opacity:0}
+.files{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-size:.88rem}
+.files li{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid var(--line);padding:6px 0}
+.files li span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* gallery */
+.gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.gallery button{position:relative;aspect-ratio:1;max-width:100%;border:0;padding:0;border-radius:8px;overflow:hidden;background:var(--line);cursor:pointer}
+.gallery img,.gallery video{width:100%;height:100%;object-fit:cover;display:block}
+.gallery .play{position:absolute;left:6px;bottom:6px;font:600 .66rem var(--f-mono);background:var(--nose);color:#fff;border-radius:6px;padding:2px 6px}
+
+/* rules */
+.rules{white-space:pre-wrap;overflow-wrap:anywhere}
+.draft{display:inline-block;font:600 .7rem var(--f-mono);letter-spacing:.08em;color:var(--nose);border:1.5px solid var(--nose);border-radius:6px;padding:2px 7px;transform:rotate(-2deg)}
+
+/* empty states */
+.empty{text-align:center;padding:26px 16px;border:1px dashed var(--line);border-radius:14px;color:var(--muted)}
+.empty h3{color:var(--ink);margin-bottom:6px}
+.empty .btn{margin-top:12px}
+
+/* tab bar */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+.tabs .wrap{display:grid;grid-template-columns:repeat(5,1fr);align-items:end;padding-block:6px}
+.tabs a{display:flex;flex-direction:column;align-items:center;gap:3px;text-decoration:none;color:var(--muted);font-size:.72rem;font-weight:700;padding:4px 0}
+.tabs a svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tabs a[aria-current="page"]{color:var(--accent)}
+.tabs a.log{color:var(--ink)}
+.tabs a.log span.b{width:54px;height:54px;margin-top:-26px;border-radius:50%;background:var(--nose);display:grid;place-items:center;box-shadow:0 0 0 5px var(--surface),0 4px 16px color-mix(in srgb,var(--nose) 55%,transparent)}
+.tabs a.log svg{stroke:#fff;width:26px;height:26px}
+
+/* sheet */
+.sheet-wrap{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;justify-content:center}
+.scrim{position:absolute;inset:0;background:rgb(5 15 12/.55)}
+.sheet{position:relative;background:var(--surface);width:100%;max-width:640px;max-height:92%;overflow:auto;border-radius:18px 18px 0 0;padding:18px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:14px}
+.sheet-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.media-full{width:100%;max-height:60vh;object-fit:contain;border-radius:10px;background:#000;display:block}
+.toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:60;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:700;max-width:calc(100% - 32px);box-shadow:0 6px 24px rgb(0 0 0/.25)}
+@media (prefers-reduced-motion:reduce){.status .glow,.logo-tile.on .t1,.logo-tile.on .t2{animation:none}}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="wrap">
+    <a class="brand" href="#trail"><span class="logo-tile on"><svg viewBox="0 -22 230 289" class="brand-logo" aria-hidden="true" focusable="false">
+<defs>
+<linearGradient id="lg-g" x1="0" y1="12" x2="0" y2="232" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#36a89c"/><stop offset="1" stop-color="#4fc25a"/></linearGradient>
+<filter id="lg-glow" x="-200%" y="-200%" width="500%" height="500%"><feGaussianBlur stdDeviation="2.2"/></filter>
+</defs>
+<path d="M28 236V104A87 87 0 0 1 202 104V236Z" fill="none" stroke="url(#lg-g)" stroke-width="7"/>
+<path d="M40 226V104A75 75 0 0 1 190 104V226Z" fill="none" stroke="url(#lg-g)" stroke-width="3"/>
+<g stroke="url(#lg-g)" stroke-width="3" stroke-linecap="round">
+<path d="M84 196H110M128 196H150"/>
+<path d="M70 203H110M128 203H162"/>
+<path d="M58 210H110M128 210H172"/>
+<path d="M50 217H180"/>
+</g>
+<path d="M114 214C115 180 116 146 116.5 110L121.5 110C122 146 123 180 124 214Z" fill="url(#lg-g)"/>
+<g fill="#4fc25a">
+<path d="M119.0 108.0 L117.3 104.5 L115.3 101.5 L113.0 98.9 L110.6 96.5 L108.1 94.4 L105.5 92.6 L102.8 91.0 L100.0 89.8 L97.1 88.8 L94.2 88.1 L91.4 87.7 L88.5 87.6 L85.7 87.7 L82.9 88.1 L80.2 88.8 L77.6 89.7 L75.0 90.8 L72.6 92.0 L70.3 93.5 L68.1 95.1 L66.0 96.8 L63.9 98.7 L62.0 100.7 L60.0 102.8 L62.5 101.5 L65.1 100.4 L67.5 99.4 L70.0 98.7 L72.4 98.2 L74.7 97.9 L77.0 97.7 L79.2 97.7 L81.4 97.8 L83.5 98.1 L85.5 98.4 L87.6 98.8 L89.7 99.3 L91.7 99.8 L93.9 100.4 L96.1 101.0 L98.4 101.7 L100.8 102.5 L103.4 103.3 L106.1 104.2 L108.9 105.1 L112.0 106.1 L115.3 107.2Z"/>
+<path d="M119.0 108.0 L117.8 104.1 L116.2 100.6 L114.5 97.4 L112.5 94.4 L110.5 91.7 L108.3 89.2 L106.0 87.0 L103.6 85.0 L101.2 83.2 L98.7 81.6 L96.1 80.3 L93.6 79.2 L91.0 78.4 L88.4 77.7 L85.8 77.4 L83.3 77.2 L80.8 77.2 L78.4 77.4 L76.1 77.9 L73.9 78.5 L71.8 79.2 L69.7 80.1 L67.8 81.1 L65.9 82.2 L68.1 82.0 L70.2 82.0 L72.2 82.2 L74.2 82.5 L76.1 83.0 L78.0 83.6 L79.8 84.4 L81.6 85.2 L83.4 86.1 L85.1 87.1 L86.9 88.2 L88.7 89.4 L90.6 90.6 L92.5 91.8 L94.5 93.2 L96.6 94.6 L98.8 96.1 L101.2 97.6 L103.7 99.2 L106.3 100.9 L109.1 102.7 L112.1 104.5 L115.3 106.3Z"/>
+<path d="M119.0 108.0 L118.9 104.4 L118.4 101.0 L117.7 97.9 L116.8 94.9 L115.8 92.0 L114.7 89.3 L113.5 86.8 L112.1 84.3 L110.8 82.1 L109.3 79.9 L107.8 78.0 L106.2 76.1 L104.5 74.4 L102.9 72.8 L101.2 71.4 L99.5 70.1 L97.8 68.9 L96.1 67.8 L94.4 66.9 L92.8 66.1 L91.1 65.4 L89.6 64.8 L88.0 64.3 L86.6 63.9 L87.5 65.1 L88.5 66.3 L89.4 67.6 L90.3 69.0 L91.2 70.4 L92.0 71.9 L92.9 73.5 L93.8 75.2 L94.7 76.9 L95.7 78.6 L96.7 80.4 L97.8 82.3 L98.9 84.2 L100.1 86.2 L101.4 88.2 L102.8 90.3 L104.3 92.4 L105.9 94.5 L107.6 96.7 L109.5 98.9 L111.5 101.2 L113.7 103.5 L116.1 105.8Z"/>
+<path d="M119.0 108.0 L119.9 105.2 L120.4 102.4 L120.7 99.8 L120.8 97.2 L120.8 94.7 L120.7 92.3 L120.5 89.9 L120.2 87.5 L119.7 85.3 L119.2 83.1 L118.7 80.9 L118.0 78.8 L117.3 76.7 L116.6 74.7 L115.8 72.8 L115.0 70.9 L114.1 69.0 L113.3 67.2 L112.4 65.4 L111.6 63.7 L110.7 62.0 L109.8 60.3 L109.0 58.7 L108.2 57.1 L108.2 58.9 L108.2 60.7 L108.2 62.6 L108.1 64.5 L108.1 66.4 L108.1 68.4 L108.1 70.3 L108.1 72.4 L108.2 74.4 L108.3 76.5 L108.4 78.6 L108.6 80.8 L108.9 83.0 L109.2 85.1 L109.6 87.4 L110.1 89.6 L110.8 91.9 L111.5 94.1 L112.3 96.4 L113.3 98.7 L114.4 101.0 L115.6 103.4 L117.1 105.7Z"/>
+<path d="M119.0 108.0 L120.9 105.8 L122.3 103.6 L123.6 101.3 L124.7 99.1 L125.6 96.9 L126.4 94.7 L127.1 92.5 L127.7 90.3 L128.2 88.2 L128.6 86.1 L128.9 84.0 L129.2 81.9 L129.3 79.8 L129.5 77.8 L129.6 75.8 L129.6 73.8 L129.6 71.8 L129.6 69.9 L129.6 68.0 L129.5 66.2 L129.5 64.3 L129.4 62.5 L129.4 60.8 L129.4 59.1 L128.6 60.6 L127.8 62.2 L126.9 63.7 L126.1 65.4 L125.2 67.0 L124.4 68.7 L123.6 70.5 L122.7 72.3 L121.9 74.1 L121.2 76.0 L120.4 77.9 L119.7 79.9 L119.1 81.9 L118.6 84.0 L118.1 86.1 L117.7 88.3 L117.4 90.5 L117.2 92.8 L117.1 95.2 L117.1 97.6 L117.3 100.1 L117.6 102.6 L118.1 105.3Z"/>
+<path d="M119.0 108.0 L121.8 105.9 L124.2 103.7 L126.3 101.5 L128.3 99.3 L130.1 97.2 L131.8 95.1 L133.4 93.0 L134.8 91.0 L136.1 89.0 L137.4 87.1 L138.5 85.2 L139.6 83.4 L140.6 81.6 L141.6 79.8 L142.5 78.1 L143.4 76.5 L144.3 74.9 L145.1 73.3 L145.9 71.9 L146.8 70.5 L147.6 69.1 L148.5 67.9 L149.4 66.7 L150.3 65.6 L148.9 65.9 L147.4 66.4 L145.9 66.9 L144.3 67.6 L142.7 68.3 L141.1 69.2 L139.4 70.2 L137.7 71.3 L136.1 72.6 L134.5 74.0 L132.8 75.5 L131.3 77.1 L129.7 78.9 L128.2 80.8 L126.8 82.9 L125.5 85.1 L124.2 87.4 L123.0 89.9 L122.0 92.5 L121.0 95.3 L120.2 98.2 L119.5 101.2 L119.0 104.5Z"/>
+<path d="M119.0 108.0 L122.7 106.3 L125.9 104.5 L128.9 102.7 L131.7 100.9 L134.3 99.2 L136.8 97.6 L139.2 96.1 L141.4 94.6 L143.5 93.2 L145.5 91.8 L147.4 90.6 L149.3 89.4 L151.1 88.2 L152.9 87.1 L154.6 86.1 L156.4 85.2 L158.2 84.4 L160.0 83.6 L161.9 83.0 L163.8 82.5 L165.8 82.2 L167.8 82.0 L169.9 82.0 L172.1 82.2 L170.2 81.1 L168.3 80.1 L166.2 79.2 L164.1 78.5 L161.9 77.9 L159.6 77.4 L157.2 77.2 L154.7 77.2 L152.2 77.4 L149.6 77.7 L147.0 78.4 L144.4 79.2 L141.9 80.3 L139.3 81.6 L136.8 83.2 L134.4 85.0 L132.0 87.0 L129.7 89.2 L127.5 91.7 L125.5 94.4 L123.5 97.4 L121.8 100.6 L120.2 104.1Z"/>
+<path d="M119.0 108.0 L122.7 107.3 L126.0 106.3 L129.1 105.4 L131.9 104.6 L134.6 103.8 L137.2 103.1 L139.6 102.4 L141.9 101.8 L144.2 101.2 L146.3 100.7 L148.4 100.2 L150.5 99.8 L152.6 99.5 L154.7 99.2 L156.9 99.1 L159.1 99.0 L161.4 99.1 L163.7 99.4 L166.1 99.8 L168.5 100.4 L171.0 101.2 L173.5 102.2 L176.1 103.5 L178.6 104.9 L176.7 102.7 L174.7 100.6 L172.6 98.6 L170.5 96.8 L168.3 95.1 L165.9 93.6 L163.5 92.2 L161.0 91.0 L158.4 90.1 L155.7 89.3 L152.9 88.8 L150.0 88.6 L147.1 88.6 L144.2 88.9 L141.3 89.5 L138.4 90.4 L135.6 91.5 L132.8 93.0 L130.1 94.7 L127.6 96.7 L125.1 99.0 L122.8 101.6 L120.7 104.5Z"/>
+<path d="M119.0 108.0 L117.4 106.0 L115.5 104.6 L113.5 103.4 L111.4 102.6 L109.2 102.1 L106.9 101.8 L104.6 101.8 L102.4 102.1 L100.2 102.7 L98.0 103.5 L95.9 104.5 L93.9 105.7 L92.0 107.1 L90.2 108.7 L88.5 110.5 L86.8 112.4 L85.2 114.4 L83.7 116.5 L82.3 118.8 L80.9 121.1 L79.6 123.6 L78.2 126.2 L77.0 128.8 L75.7 131.6 L77.7 129.3 L79.6 127.1 L81.7 125.1 L83.7 123.3 L85.7 121.6 L87.6 120.1 L89.6 118.8 L91.5 117.6 L93.3 116.6 L95.2 115.6 L96.9 114.8 L98.6 114.2 L100.2 113.5 L101.8 113.0 L103.3 112.5 L104.8 112.1 L106.3 111.6 L107.8 111.2 L109.4 110.8 L111.0 110.3 L112.7 109.8 L114.6 109.3 L116.7 108.8Z"/>
+<path d="M119.0 108.0 L121.4 108.8 L123.6 109.3 L125.6 109.8 L127.4 110.2 L129.1 110.6 L130.8 111.1 L132.4 111.5 L133.9 112.0 L135.5 112.4 L137.1 112.9 L138.8 113.5 L140.5 114.1 L142.3 114.8 L144.1 115.6 L146.0 116.6 L147.9 117.6 L149.9 118.9 L151.9 120.2 L154.0 121.8 L156.0 123.5 L158.1 125.3 L160.2 127.4 L162.2 129.6 L164.3 132.0 L162.9 129.1 L161.6 126.4 L160.2 123.8 L158.7 121.2 L157.3 118.8 L155.7 116.5 L154.2 114.4 L152.5 112.3 L150.8 110.4 L149.0 108.6 L147.1 107.0 L145.1 105.6 L143.0 104.4 L140.8 103.3 L138.6 102.6 L136.3 102.0 L133.9 101.7 L131.6 101.7 L129.3 102.0 L127.0 102.5 L124.8 103.4 L122.7 104.5 L120.7 106.0Z"/>
+</g>
+<g fill="#36a89c"><circle cx="114" cy="114" r="3.2"/><circle cx="121" cy="115" r="3.2"/><circle cx="117.5" cy="119.5" r="3"/></g>
+<g fill="none" stroke="#1f5a34" stroke-width="0.9" stroke-linecap="round" stroke-linejoin="round">
+<path d="M119 109C111 104 105 99 98.8 97.3C93 95.5 90 94.8 86.9 94.7C82 94.5 79 95 76.5 95.7C72 97 70 98 67.6 99.3"/>
+<path d="M119 108C112 99 106 95 100.9 91.9C95 88 92 86.3 90.1 85.4C86 83.6 83 82.8 80.7 82.5C77 82 75 82 72.7 82.2"/>
+<path d="M119 107C112 97 110 93 107.9 89.6C105 85 103 82.5 101.3 79.9C99 76.5 97.5 75 95.6 73.1C93.5 71 92 69.8 90.7 68.4"/>
+<path d="M119 106C117 99 116 95 115.3 90.9C114.5 86 113.8 83.5 113.1 80.4C112.3 76.5 111.8 74.5 111.2 71.7C110.6 68.5 110.1 66.5 109.6 64.5"/>
+<path d="M119 106C121 99 122 95 122.6 91.6C123.3 87 124 84.5 124.7 81.5C125.4 78 126 75.8 126.5 73.1C127 70.5 127.6 68.4 128.1 66.2"/>
+<path d="M119 107C124 99 127 94 129.7 90.3C132 87 134 84 136.1 81C138 78.5 139.8 76.4 141.6 74.4C143.2 72.7 144.8 71.3 146.3 70"/>
+<path d="M119 108C127 101 132 95 137.1 91.9C141 89.5 145 87 147.9 85.4C151 83.8 154 82.9 157.3 82.5C160 82.2 163 82.1 165.3 82.2"/>
+<path d="M119 109C127 104 133 100 139.4 97.9C143.5 96.6 147.5 95.9 151.5 95.7C155 95.6 158.5 96.1 162 97.1C165 98 168 99.4 171 101"/>
+<path d="M119 110C113 109 108 108.5 104.2 108.6C100.5 109.5 98 110.6 95.4 112C92.5 113.8 90 115.7 87.8 117.9C85.3 120.5 83.2 122.8 81.2 125.2"/>
+<path d="M119 110C125 109.5 130 108.8 134.5 108.4C137.8 109.2 140.8 110.4 143.7 111.9C146.6 113.6 149.3 115.6 151.7 117.9C154.2 120.4 156.5 122.8 158.5 125.3"/>
+<path d="M113.6 205C117 202 120 199 124.4 197C121 194 117 191 113.4 188C117 185 120 182 124 180C121 177 117 174 113.2 171C117 168 120 165 123.6 163C120 160 117 157 113.1 154C117 151 120 148 123.3 146C120 143 117 140 113 137C117 134 120 131 123 129"/>
+</g>
+<g class="t1">
+<g filter="url(#lg-glow)" opacity="0.8">
+<circle cx="98.8" cy="97.3" r="4" fill="#ff5a52"/><circle cx="76.5" cy="95.7" r="4" fill="#5ec8ff"/><circle cx="90.1" cy="85.4" r="4" fill="#ffc94a"/><circle cx="72.7" cy="82.2" r="4" fill="#ff5a52"/><circle cx="101.3" cy="79.9" r="4" fill="#5ec8ff"/><circle cx="90.7" cy="68.4" r="4" fill="#ffc94a"/><circle cx="113.1" cy="80.4" r="4" fill="#ff5a52"/><circle cx="109.6" cy="64.5" r="4" fill="#5ec8ff"/><circle cx="122.6" cy="91.6" r="4" fill="#ffc94a"/><circle cx="126.5" cy="73.1" r="4" fill="#ff5a52"/><circle cx="136.1" cy="81" r="4" fill="#5ec8ff"/><circle cx="146.3" cy="70" r="4" fill="#ffc94a"/><circle cx="137.1" cy="91.9" r="4" fill="#ff5a52"/><circle cx="157.3" cy="82.5" r="4" fill="#5ec8ff"/><circle cx="151.5" cy="95.7" r="4" fill="#ffc94a"/><circle cx="171" cy="101" r="4" fill="#ff5a52"/><circle cx="104.2" cy="108.6" r="4" fill="#5ec8ff"/><circle cx="87.8" cy="117.9" r="4" fill="#ffc94a"/><circle cx="143.7" cy="111.9" r="4" fill="#ff5a52"/><circle cx="158.5" cy="125.3" r="4" fill="#5ec8ff"/><circle cx="113.6" cy="205" r="4" fill="#ffc94a"/><circle cx="113.4" cy="188" r="4" fill="#ff5a52"/><circle cx="113.2" cy="171" r="4" fill="#5ec8ff"/><circle cx="113.1" cy="154" r="4" fill="#ffc94a"/><circle cx="113" cy="137" r="4" fill="#ff5a52"/>
+</g>
+<circle cx="98.8" cy="97.3" r="1.9" fill="#ff5a52"/><circle cx="76.5" cy="95.7" r="1.9" fill="#5ec8ff"/><circle cx="90.1" cy="85.4" r="1.9" fill="#ffc94a"/><circle cx="72.7" cy="82.2" r="1.9" fill="#ff5a52"/><circle cx="101.3" cy="79.9" r="1.9" fill="#5ec8ff"/><circle cx="90.7" cy="68.4" r="1.9" fill="#ffc94a"/><circle cx="113.1" cy="80.4" r="1.9" fill="#ff5a52"/><circle cx="109.6" cy="64.5" r="1.9" fill="#5ec8ff"/><circle cx="122.6" cy="91.6" r="1.9" fill="#ffc94a"/><circle cx="126.5" cy="73.1" r="1.9" fill="#ff5a52"/><circle cx="136.1" cy="81" r="1.9" fill="#5ec8ff"/><circle cx="146.3" cy="70" r="1.9" fill="#ffc94a"/><circle cx="137.1" cy="91.9" r="1.9" fill="#ff5a52"/><circle cx="157.3" cy="82.5" r="1.9" fill="#5ec8ff"/><circle cx="151.5" cy="95.7" r="1.9" fill="#ffc94a"/><circle cx="171" cy="101" r="1.9" fill="#ff5a52"/><circle cx="104.2" cy="108.6" r="1.9" fill="#5ec8ff"/><circle cx="87.8" cy="117.9" r="1.9" fill="#ffc94a"/><circle cx="143.7" cy="111.9" r="1.9" fill="#ff5a52"/><circle cx="158.5" cy="125.3" r="1.9" fill="#5ec8ff"/><circle cx="113.6" cy="205" r="1.9" fill="#ffc94a"/><circle cx="113.4" cy="188" r="1.9" fill="#ff5a52"/><circle cx="113.2" cy="171" r="1.9" fill="#5ec8ff"/><circle cx="113.1" cy="154" r="1.9" fill="#ffc94a"/><circle cx="113" cy="137" r="1.9" fill="#ff5a52"/>
+</g>
+<g class="t2">
+<g filter="url(#lg-glow)" opacity="0.8">
+<circle cx="86.9" cy="94.7" r="4" fill="#fff3d1"/><circle cx="67.6" cy="99.3" r="4" fill="#ffc94a"/><circle cx="100.9" cy="91.9" r="4" fill="#fff3d1"/><circle cx="80.7" cy="82.5" r="4" fill="#5ec8ff"/><circle cx="107.9" cy="89.6" r="4" fill="#fff3d1"/><circle cx="95.6" cy="73.1" r="4" fill="#ff5a52"/><circle cx="115.3" cy="90.9" r="4" fill="#fff3d1"/><circle cx="111.2" cy="71.7" r="4" fill="#ffc94a"/><circle cx="124.7" cy="81.5" r="4" fill="#fff3d1"/><circle cx="128.1" cy="66.2" r="4" fill="#5ec8ff"/><circle cx="129.7" cy="90.3" r="4" fill="#fff3d1"/><circle cx="141.6" cy="74.4" r="4" fill="#ff5a52"/><circle cx="147.9" cy="85.4" r="4" fill="#fff3d1"/><circle cx="165.3" cy="82.2" r="4" fill="#ffc94a"/><circle cx="139.4" cy="97.9" r="4" fill="#fff3d1"/><circle cx="162" cy="97.1" r="4" fill="#5ec8ff"/><circle cx="95.4" cy="112" r="4" fill="#fff3d1"/><circle cx="81.2" cy="125.2" r="4" fill="#ff5a52"/><circle cx="134.5" cy="108.4" r="4" fill="#fff3d1"/><circle cx="151.7" cy="117.9" r="4" fill="#ffc94a"/><circle cx="124.4" cy="197" r="4" fill="#fff3d1"/><circle cx="124" cy="180" r="4" fill="#fff3d1"/><circle cx="123.6" cy="163" r="4" fill="#fff3d1"/><circle cx="123.3" cy="146" r="4" fill="#fff3d1"/><circle cx="123" cy="129" r="4" fill="#fff3d1"/>
+</g>
+<circle cx="86.9" cy="94.7" r="1.9" fill="#fff3d1"/><circle cx="67.6" cy="99.3" r="1.9" fill="#ffc94a"/><circle cx="100.9" cy="91.9" r="1.9" fill="#fff3d1"/><circle cx="80.7" cy="82.5" r="1.9" fill="#5ec8ff"/><circle cx="107.9" cy="89.6" r="1.9" fill="#fff3d1"/><circle cx="95.6" cy="73.1" r="1.9" fill="#ff5a52"/><circle cx="115.3" cy="90.9" r="1.9" fill="#fff3d1"/><circle cx="111.2" cy="71.7" r="1.9" fill="#ffc94a"/><circle cx="124.7" cy="81.5" r="1.9" fill="#fff3d1"/><circle cx="128.1" cy="66.2" r="1.9" fill="#5ec8ff"/><circle cx="129.7" cy="90.3" r="1.9" fill="#fff3d1"/><circle cx="141.6" cy="74.4" r="1.9" fill="#ff5a52"/><circle cx="147.9" cy="85.4" r="1.9" fill="#fff3d1"/><circle cx="165.3" cy="82.2" r="1.9" fill="#ffc94a"/><circle cx="139.4" cy="97.9" r="1.9" fill="#fff3d1"/><circle cx="162" cy="97.1" r="1.9" fill="#5ec8ff"/><circle cx="95.4" cy="112" r="1.9" fill="#fff3d1"/><circle cx="81.2" cy="125.2" r="1.9" fill="#ff5a52"/><circle cx="134.5" cy="108.4" r="1.9" fill="#fff3d1"/><circle cx="151.7" cy="117.9" r="1.9" fill="#ffc94a"/><circle cx="124.4" cy="197" r="1.9" fill="#fff3d1"/><circle cx="124" cy="180" r="1.9" fill="#fff3d1"/><circle cx="123.6" cy="163" r="1.9" fill="#fff3d1"/><circle cx="123.3" cy="146" r="1.9" fill="#fff3d1"/><circle cx="123" cy="129" r="1.9" fill="#fff3d1"/>
+</g>
+<path d="M46 74C78 52 118 40 156 38" fill="none" stroke="#f2d58b" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="0.1 5.5" opacity="0.85"/>
+<g fill="#f2d58b">
+<path d="M70 58l1.2 3.2 3.2 1.2-3.2 1.2-1.2 3.2-1.2-3.2-3.2-1.2 3.2-1.2z" opacity="0.7"/>
+<path d="M104 41l1 2.6 2.6 1-2.6 1-1 2.6-1-2.6-2.6-1 2.6-1z" opacity="0.85"/>
+<path d="M136 32l1.4 3.6 3.6 1.4-3.6 1.4-1.4 3.6-1.4-3.6-3.6-1.4 3.6-1.4z"/>
+</g>
+<g transform="translate(184 34) rotate(-10) scale(0.82)" fill="#f2d58b" stroke="#f2d58b" stroke-linecap="round" stroke-linejoin="round">
+<ellipse cx="0" cy="0" rx="21" ry="8.5" transform="rotate(-6)" stroke="none"/>
+<path d="M12-5L22-16L29-15L21 2Z" stroke="none"/>
+<ellipse cx="30" cy="-17" rx="7.5" ry="4.6" transform="rotate(14 30 -17)" stroke="none"/>
+<path d="M33-18.5L40-15.5L38-12.5L32-13.5Z" stroke="none"/>
+<path d="M25.5-21.5L22.5-27L28-22.5Z" stroke="none"/>
+<g fill="none" stroke-width="2">
+<path d="M27-21C25-29 21-35 15-39"/><path d="M23.5-30L29.5-35"/><path d="M19.5-35L21-42"/>
+<path d="M30-21.5C31.5-30 30-37 27-43"/><path d="M30.6-31L36.5-35.5"/>
+</g>
+<g fill="none" stroke-width="3.4">
+<path d="M13 4L23 8L28 4"/><path d="M8 5.5L16 12.5L22.5 11"/>
+<path d="M-15 3.5L-27 8L-38 6"/><path d="M-17 5.5L-25 13L-36 14"/>
+</g>
+<path d="M-20-4C-25-8-28-6-27-2C-25 0-22-1-20-2Z" stroke="none"/>
+<path d="M17.6-13.9L26.4-8.1" fill="none" stroke="#2b4a2f" stroke-width="2.2"/>
+<g class="t1" stroke="none" fill="#ff3b3b"><circle cx="18.6" cy="-13.2" r="3.6" filter="url(#lg-glow)" opacity="0.85"/><circle cx="25.4" cy="-8.8" r="3.6" filter="url(#lg-glow)" opacity="0.85"/><circle cx="18.6" cy="-13.2" r="1.6"/><circle cx="25.4" cy="-8.8" r="1.6"/></g>
+<g class="t2" stroke="none" fill="#ff3b3b"><circle cx="22" cy="-11" r="3.6" filter="url(#lg-glow)" opacity="0.85"/><circle cx="22" cy="-11" r="1.6"/></g>
+</g>
+</svg></span><span><b>Reindeer Games</b><small>EMERALD BAY · <span id="gameYear">2026</span></small></span></a>
+    <button class="chip" id="seasonBtn" data-seasons aria-label="Choose game year"><span id="seasonLbl">2026</span> ▾</button>
+    <div class="who" id="who"></div>
+  </div>
+</header>
+<div class="banner" id="banner" hidden><div class="wrap" id="bannerIn"></div></div>
+
+<main class="wrap">
+  <!-- TRAIL -->
+  <section class="view" id="v-trail" data-view="trail">
+    <div class="status" id="status"></div>
+    <div class="card map-card">
+      <div class="map-head"><h3>Rudolph’s trail</h3><span class="label" id="trailCount"></span></div>
+      <div class="map-box"><svg id="trailMap" role="img" aria-label="Map of Rudolph’s moves around Emerald Bay"></svg></div>
+      <div class="map-bar"><button data-zoom="trail:out" aria-label="Zoom out">−</button><button data-zoom="trail:in" aria-label="Zoom in">+</button><button class="wide" data-zoom="trail:reset" aria-label="Show the whole map">Fit</button><span class="sp"></span><button class="wide" data-expand="trail" aria-label="Full screen map">Full screen</button></div>
+      <div class="legend"><span><i></i>Logged steal</span><span><i class="dash"></i>Unlogged move</span><span><i class="dot"></i>Last confirmed sighting</span></div>
+    </div>
+    <div class="stack"><div class="row" style="justify-content:space-between"><h2>Case file</h2><span class="label">Newest first</span></div><ol class="cases" id="timeline"></ol></div>
+    <div class="card stack"><div class="row" style="justify-content:space-between"><h2>Leaderboard</h2><span class="label">Steals</span></div><ol class="board" id="board"></ol></div>
+    <div class="card row" id="a2hsCard" hidden style="justify-content:space-between"><p style="flex:1;min-width:12rem"><b>Keep the hunt one tap away.</b> Add Reindeer Games to your phone’s home screen.</p><div class="row"><button class="btn sm ghost" data-a2hs-hide>Not now</button><button class="btn sm primary" data-a2hs>Add to home screen</button></div></div>
+  </section>
+
+  <!-- HOMES -->
+  <section class="view" id="v-homes" data-view="homes" hidden>
+    <div class="row" style="justify-content:space-between"><h2>Participating homes</h2><span class="label" id="homeCount"></span></div>
+    <div class="card map-card">
+      <div class="map-box"><svg id="homesMap" role="img" aria-label="Map of participating homes"></svg></div>
+      <div class="map-bar"><button data-zoom="homes:out" aria-label="Zoom out">−</button><button data-zoom="homes:in" aria-label="Zoom in">+</button><button class="wide" data-zoom="homes:reset" aria-label="Show the whole map">Fit</button><span class="sp"></span><button class="wide" data-expand="homes" aria-label="Full screen map">Full screen</button></div>
+    </div>
+    <div id="joinCta"></div>
+    <ul class="homes" id="homeList"></ul>
+  </section>
+
+  <!-- LOG -->
+  <section class="view" id="v-log" data-view="log" hidden>
+    <h2>Log a steal</h2>
+    <div id="logGate"></div>
+    <form class="stack" id="logForm" novalidate>
+      <div class="field" id="actingWrap" hidden><span>Logging for</span><select id="acting"></select><small>Organizer only: log on behalf of any family.</small></div>
+      <div class="seg" role="group" aria-label="What happened">
+        <button type="button" id="modeTook" aria-pressed="true">We took Rudolph</button>
+        <button type="button" id="modeLost" aria-pressed="false">He was taken from us</button>
+      </div>
+      <label class="field"><span id="otherLbl">Who did you take him from?</span><select id="other"></select></label>
+      <label class="field"><span>When</span><input type="datetime-local" id="when"></label>
+      <label class="field"><span>Note <span class="muted">(optional)</span></span><input type="text" id="note" maxlength="200" placeholder="Snuck in during the boat parade"></label>
+      <div class="field"><span>Photos &amp; videos</span>
+        <label class="drop" id="dropLbl"><input type="file" id="files" accept="image/*,video/*" multiple><b>Add photos or videos</b><br><small>Videos up to 50 MB (about 1–2 minutes at 1080p).</small></label>
+        <small id="noUpload" hidden>You can log without media. Photo uploads need Editor access to this page.</small>
+        <ul class="files" id="fileList"></ul>
+      </div>
+      <button class="btn red block" id="logSubmit" type="submit">Log it</button>
+    </form>
+  </section>
+
+  <!-- GALLERY -->
+  <section class="view" id="v-gallery" data-view="gallery" hidden>
+    <div class="row" style="justify-content:space-between"><h2>Capture gallery</h2><span class="label" id="galCount"></span></div>
+    <div id="gallery"></div>
+  </section>
+
+  <!-- RULES -->
+  <section class="view" id="v-rules" data-view="rules" hidden>
+    <div class="row" style="justify-content:space-between"><h2>Rules</h2><span class="draft" id="draftTag">DRAFT · TBD</span></div>
+    <div class="card stack" id="rulesBody"></div>
+    <button class="btn" data-a2hs hidden style="align-self:start">Add to home screen</button>
+  </section>
+
+  <!-- GATE (not yet an approved participant) -->
+  <section class="view" id="v-gate" data-view="gate" hidden>
+    <div class="status" id="gateBody"></div>
+  </section>
+
+  <!-- ADMIN -->
+  <section class="view" id="v-admin" data-view="admin" hidden>
+    <h2>Organizer</h2>
+    <div id="adminGate"></div>
+    <div class="stack" id="adminBody">
+      <div class="card stack" id="pendingCard">
+        <div class="row" style="justify-content:space-between"><h3>Join requests</h3><span class="label" id="pendingCount"></span></div>
+        <ul class="homes" id="pendingList"></ul>
+      </div>
+      <div class="card stack">
+        <div class="row" style="justify-content:space-between"><h3>Game year</h3><span class="label" id="curSeasonLbl"></span></div>
+        <p class="small muted" id="seasonNote"></p>
+        <button class="btn sm" id="newSeason" type="button" style="align-self:start"></button>
+      </div>
+      <form class="card stack" id="setForm">
+        <h3 id="setTitle">Game settings</h3>
+        <div class="row" style="align-items:start">
+          <label class="field" style="flex:1;min-width:9rem"><span>Starts</span><input type="date" id="setStart"></label>
+          <label class="field" style="flex:1;min-width:9rem"><span>Ends</span><input type="date" id="setEnd"></label>
+        </div>
+        <label class="field"><span>Rules</span><textarea id="setRules" placeholder="Write the rules here. Each line becomes its own line on the Rules page."></textarea><small>Leave empty to show the draft rules.</small></label>
+        <button class="btn primary" type="submit">Save settings</button>
+      </form>
+      <div class="card stack">
+        <div class="row" style="justify-content:space-between"><h3>Families</h3><button class="btn sm primary" id="addFam" type="button">Add a family</button></div>
+        <ul class="homes" id="adminHomes"></ul>
+      </div>
+      <div class="card stack">
+        <h3>Rudolph’s record</h3>
+        <p class="small muted">You see every entry, including the newest one that’s hidden from everyone else.</p>
+        <div class="row"><button class="btn sm" id="setStartHome" type="button">Set starting house</button><button class="btn sm" id="addMove" type="button">Add an unlogged move</button></div>
+        <ol class="cases" id="adminEvents"></ol>
+      </div>
+    </div>
+  </section>
+</main>
+
+<nav class="tabs" id="tabs" aria-label="Sections">
+  <div class="wrap">
+    <a href="#trail" data-tab="trail"><svg viewBox="0 0 24 24"><path d="M4 19c3-1 3-5 6-6s5 1 7-2 1-5 3-6"/><circle cx="4" cy="19" r="1.5"/><circle cx="20" cy="5" r="2"/></svg>Trail</a>
+    <a href="#homes" data-tab="homes"><svg viewBox="0 0 24 24"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg>Homes</a>
+    <a href="#log" data-tab="log" class="log"><span class="b"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>Log a steal</a>
+    <a href="#gallery" data-tab="gallery"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 8"/></svg>Gallery</a>
+    <a href="#rules" data-tab="rules"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M9 11h7M9 15h7M9 7h3"/></svg>Rules</a>
+  </div>
+</nav>
+
+<div class="sheet-wrap" id="sheetWrap" hidden><div class="scrim" data-close></div><div class="sheet" role="dialog" aria-modal="true" id="sheet"></div></div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const H72=72*3600e3, H12=12*3600e3;
+
+/* ---------- state ---------- */
+const S={live:{config:{},homes:[],events:[],media:[]},ready:false,demo:null,demoOrg:false,
+  me:null,isOwner:false,myJoin:undefined,joins:[],canWrite:null,db:null,assets:null,offline:false,readOnly:false};
+const D=()=>S.demo||S.live;
+const isOrg=()=>S.demo?S.demoOrg:S.isOwner;
+const myId=()=>S.demo?'demo-me':S.me;
+const homeById=id=>D().homes.find(h=>h.id===id);
+const myHome=()=>{const id=myId();return id?D().homes.find(h=>h.ownerId===id):null};
+const isMember=()=>!!S.demo||isOrg()||!!myHome();
+const canWrite=()=>!S.demo&&!!S.db&&!!S.me;
+const fam=id=>{const h=homeById(id);return h?h.family:'a home no longer in the game'};
+const famB=id=>`<b>${esc(fam(id))}</b>`;
+const hno=h=>h?`No. ${esc(h.number)}`:'';
+const sortHomes=a=>[...a].sort((x,y)=>(parseInt(x.number)||9999)-(parseInt(y.number)||9999)||String(x.family).localeCompare(y.family));
+
+/* ---------- time ---------- */
+const fmt=iso=>{if(!iso)return'';const d=new Date(iso);return d.toLocaleString(undefined,{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})};
+const ago=iso=>{const m=Math.round((Date.now()-new Date(iso))/6e4);if(m<1)return'just now';if(m<60)return m+' min ago';const h=Math.round(m/60);if(h<48)return h+' hr ago';return Math.round(h/24)+' days ago'};
+const localInput=d=>{const z=new Date(d.getTime()-d.getTimezoneOffset()*6e4);return z.toISOString().slice(0,16)};
+
+/* ---------- derived game record ---------- */
+function canSee(e){
+  if(isOrg())return true;const id=myId();if(!id)return false;
+  return e.by===id||homeById(e.from)?.ownerId===id||homeById(e.to)?.ownerId===id;
+}
+/* ---------- seasons: one game per December ---------- */
+const yearOf=iso=>{const d=new Date(iso||Date.now());return String(d.getMonth()===0?d.getFullYear()-1:d.getFullYear())};
+const curSeason=()=>String(S.live.config.current||yearOf());
+const viewSeason=()=>S.demo?String(new Date().getFullYear()):String(S.season||curSeason());
+const isPast=()=>!S.demo&&viewSeason()!==curSeason();
+const evSeason=e=>String(e.season??yearOf(e.at));
+function seasonCfg(y=viewSeason()){const c=D().config;if(S.demo)return c;const m=c.seasons||{};
+  if(m[y])return m[y];if(y===curSeason()&&(c.start||c.rules))return{start:c.start,end:c.end,rules:c.rules};return{}}
+function allSeasons(){const set=new Set([curSeason(),...Object.keys(S.live.config.seasons||{}),...S.live.events.map(evSeason)]);return[...set].sort((a,b)=>b-a)}
+function compute(){
+  const vs=viewSeason();
+  const evs=[...D().events].filter(e=>S.demo||evSeason(e)===vs).sort((a,b)=>String(a.at).localeCompare(String(b.at))||(a.createdAt||0)-(b.createdAt||0));
+  const num=new Map(evs.map((e,i)=>[e.id,i+1]));
+  const last=evs[evs.length-1];
+  const hidden=!isPast()&&last&&last.to&&!canSee(last)?last:null;
+  const vis=evs.filter(e=>e!==hidden);
+  const items=[];
+  vis.forEach((e,i)=>{
+    const p=vis[i-1];
+    if(p&&p.to&&e.from&&p.to!==e.from)items.push({gap:true,from:p.to,to:e.from,after:p.at,before:e.at});
+    items.push({ev:e});
+  });
+  const l=vis[vis.length-1];
+  let seen=null;
+  if(l)seen=l.to?{home:l.to,at:l.at,left:false}:(l.from?{home:l.from,at:l.at,left:true}:null);
+  return {evs,vis,hidden,items,seen,num,last};
+}
+
+/* ---------- toast & sheet ---------- */
+let toastT;function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,3200)}
+function openSheet(html){$('#sheet').innerHTML=html;$('#sheetWrap').hidden=false;document.body.style.overflow='hidden';return $('#sheet')}
+function closeSheet(){$('#sheetWrap').hidden=true;$('#sheet').innerHTML='';document.body.style.overflow='';sheetMap=null}
+$('#sheetWrap').addEventListener('click',e=>{if(e.target.closest('[data-close]'))closeSheet()});
+const shTop=(t,sub='')=>`<div class="sheet-top"><div>${sub?`<div class="label">${sub}</div>`:''}<h2>${t}</h2></div><button class="btn sm ghost" data-close>Close</button></div>`;
+function errMsg(e){
+  const c=e&&e.code;
+  const m=String(e&&e.message||'');
+  if(c==='42501'||/row-level security|permission/i.test(m))return'You don’t have permission to do that. Check with the organizer.';
+  if(/not a participant|join the game first/i.test(m))return'Join the game first.';
+  if(/only log steals involving your family/i.test(m))return'You can only log steals involving your family.';
+  if(c==='too_large')return'That file is over 50 MB. Trim the video and try again.';
+  if(c==='unsupported_type')return'That file type isn’t supported. Use a photo, MP4 or MOV video.';
+  if(c==='quota_or_state'||c==='quota_exceeded')return'Storage is full. Ask the organizer to clear old uploads.';
+  if(c==='rate_limited'||c==='resource_exhausted')return'Too many uploads at once. Wait a moment and try again.';
+  return'Something went wrong saving that. Check your connection and try again.';
+}
+
+/* ---------- map ---------- */
+const EB={light:'assets/map-light.webp',dark:'assets/map-dark.webp',w:2170,h:2810};
+/* house number -> position on the Emerald Bay map (fractions of width/height), read from the community map */
+const LOTS={"1":[0.9516,0.4843],"2":[0.982,0.4936],"3":[0.9442,0.5089],"4":[0.9793,0.5117],"6":[0.9797,0.5281],"7":[0.9355,0.5345],"8":[0.9816,0.5466],"9":[0.9461,0.5584],"10":[0.9834,0.5722],"11":[0.9253,0.5085],"12":[0.9806,0.5886],"13":[0.9276,0.4868],"14":[0.9797,0.6808],"15":[0.9318,0.4737],"16":[0.9751,0.6427],"17":[0.9106,0.4665],"19":[0.8912,0.4612],"20":[0.9687,0.6142],"21":[0.8719,0.4619],"22":[0.9567,0.6036],"23":[0.8516,0.469],"24":[0.9415,0.5922],"25":[0.8396,0.4854],"26":[0.9189,0.5797],"27":[0.835,0.5057],"28":[0.9041,0.5609],"30":[0.894,0.5438],"31":[0.8014,0.4377],"32":[0.8894,0.5238],"33":[0.8152,0.5174],"34":[0.8903,0.506],"35":[0.8152,0.4979],"36":[0.888,0.489],"37":[0.8198,0.4811],"38":[0.877,0.4893],"39":[0.829,0.4655],"40":[0.8696,0.5053],"41":[0.8548,0.4484],"42":[0.8696,0.5221],"43":[0.8373,0.4427],"44":[0.8714,0.5402],"45":[0.8198,0.4384],"46":[0.8774,0.5552],"47":[0.8355,0.5559],"48":[0.8876,0.5705],"49":[0.8138,0.5584],"50":[0.7853,0.437],"51":[0.7922,0.5541],"52":[0.7926,0.4577],"53":[0.7765,0.5463],"54":[0.7899,0.4765],"55":[0.7659,0.5345],"56":[0.7857,0.494],"57":[0.7599,0.511],"58":[0.7802,0.5117],"59":[0.7668,0.4797],"60":[0.7885,0.5335],"61":[0.7618,0.4541],"62":[0.8101,0.542],"63":[0.7498,0.4406],"64":[0.8327,0.5409],"65":[0.7286,0.4335],"66":[0.6092,0.573],"67":[0.7009,0.4335],"68":[0.6401,0.568],"69":[0.6788,0.4391],"70":[0.6594,0.5466],"71":[0.6599,0.4445],"72":[0.6673,0.5253],"73":[0.6194,0.4541],"74":[0.6618,0.5032],"76":[0.6382,0.4833],"77":[0.5857,0.4527],"78":[0.571,0.4826],"79":[0.5037,0.4947],"80":[0.5456,0.4847],"81":[0.5986,0.5302],"82":[0.5954,0.4843],"83":[0.577,0.5302],"84":[0.6207,0.4975],"85":[0.5539,0.5302],"86":[0.6382,0.5171],"87":[0.5295,0.5302],"88":[0.6318,0.5427],"89":[0.5065,0.5302],"90":[0.6101,0.5552],"91":[0.4797,0.5324],"92":[0.5853,0.558],"93":[0.4581,0.5342],"94":[0.5631,0.558],"95":[0.4373,0.5377],"96":[0.541,0.558],"97":[0.4157,0.5431],"98":[0.5189,0.5584],"99":[0.3631,0.5559],"100":[0.4959,0.5584],"101":[0.3419,0.5658],"102":[0.4705,0.5598],"104":[0.4433,0.563],"105":[0.2866,0.5616],"106":[0.4194,0.5747],"107":[0.2917,0.6021],"108":[0.3885,0.5836],"109":[0.2594,0.6018],"110":[0.3622,0.5929],"111":[0.23,0.5851],"112":[0.3424,0.61],"113":[0.23,0.5609],"114":[0.3249,0.6214],"115":[0.2023,0.573],"116":[0.3014,0.6285],"117":[0.1779,0.5705],"118":[0.2825,0.6445],"119":[0.1525,0.5715],"121":[0.1286,0.5754],"123":[0.1055,0.5779],"125":[0.0853,0.5801],"127":[0.0382,0.5779],"129":[0.0171,0.5779],"130":[0.0816,0.6107],"131":[0.0396,0.6107],"132":[0.0816,0.6285],"133":[0.0392,0.6285],"134":[0.0816,0.6452],"135":[0.0392,0.6448],"136":[0.0816,0.6633],"137":[0.0415,0.6747],"138":[0.0751,0.6918],"139":[0.0217,0.6754],"141":[0.0226,0.7082],"143":[0.0502,0.7178],"145":[0.0742,0.7302],"150":[0.1599,0.5989],"151":[0.1101,0.6121],"152":[0.1797,0.6125],"153":[0.1281,0.6228],"154":[0.1908,0.6299],"155":[0.1512,0.6356],"156":[0.1912,0.648],"157":[0.1424,0.6555],"158":[0.1843,0.6655],"159":[0.1327,0.6712],"160":[0.171,0.6819],"161":[0.1221,0.6854],"162":[0.1558,0.7046],"163":[0.1005,0.7057],"165":[0.0991,0.7388],"166":[0.1521,0.7363],"167":[0.1171,0.753],"168":[0.1608,0.7573],"169":[0.123,0.7737],"170":[0.1645,0.7797],"171":[0.1249,0.7961],"172":[0.1687,0.8014],"173":[0.1332,0.816],"174":[0.1765,0.8256],"176":[0.1839,0.8488],"178":[0.1885,0.8683],"180":[0.1931,0.89],"182":[0.1972,0.9132],"184":[0.1857,0.9356],"186":[0.1618,0.9445],"188":[0.1336,0.9402],"190":[0.1175,0.921],"191":[0.1553,0.9132],"192":[0.1083,0.8996],"193":[0.1442,0.8883],"194":[0.0972,0.879],"195":[0.1415,0.8669],"196":[0.0889,0.8605],"197":[0.1382,0.8399],"199":[0.1051,0.8406],"201":[0.859,0.3982],"203":[0.8853,0.4028],"204":[0.9834,0.4292],"205":[0.9074,0.4103],"206":[0.9788,0.4121],"208":[0.9783,0.395],"209":[0.9341,0.4157],"210":[0.9788,0.3751],"211":[0.9327,0.3751],"214":[0.9793,0.3505],"215":[0.9401,0.3495],"216":[0.9332,0.3043],"217":[0.9244,0.3377],"218":[0.8995,0.311],"219":[0.9037,0.3491],"220":[0.8687,0.327],"221":[0.8889,0.3573],"223":[0.8728,0.3655],"224":[0.8525,0.3352],"225":[0.8539,0.3744],"226":[0.835,0.3413],"227":[0.8313,0.3776],"228":[0.8152,0.3438],"229":[0.8106,0.3794],"230":[0.7982,0.3391],"231":[0.7862,0.374],"232":[0.7839,0.3324],"233":[0.7604,0.3701],"234":[0.7673,0.3278],"235":[0.7364,0.368],"236":[0.7562,0.3164],"237":[0.7106,0.3683],"238":[0.7424,0.3078],"239":[0.6871,0.3665],"240":[0.7295,0.2975],"241":[0.6673,0.3623],"243":[0.6447,0.3537],"245":[0.6272,0.3402],"247":[0.618,0.3256],"249":[0.6101,0.3103],"251":[0.6078,0.2947],"253":[0.6074,0.2804],"255":[0.6055,0.2669],"256":[0.6134,0.2114],"257":[0.6041,0.2502],"258":[0.594,0.2014],"259":[0.5931,0.2317],"260":[0.5922,0.1708],"261":[0.7014,0.3381],"262":[0.6074,0.1363],"263":[0.7157,0.3249],"265":[0.6733,0.326],"267":[0.6613,0.3117],"269":[0.6562,0.2943],"298":[0.9765,0.3068],"300":[0.9673,0.2918],"302":[0.9544,0.2776],"304":[0.9415,0.2641],"306":[0.9184,0.2541],"307":[0.9212,0.289],"308":[0.8908,0.2534],"309":[0.9032,0.2769],"310":[0.8636,0.2594],"311":[0.8848,0.2836],"312":[0.8488,0.2676],"313":[0.8567,0.2972],"314":[0.8327,0.2719],"315":[0.8258,0.3043],"316":[0.8147,0.274],"317":[0.8051,0.3025],"318":[0.7982,0.2712],"319":[0.7839,0.2989],"320":[0.7802,0.2655],"321":[0.7636,0.2922],"322":[0.7631,0.2587],"323":[0.7433,0.2843],"324":[0.7429,0.2534],"325":[0.7194,0.2804],"326":[0.7088,0.2566],"327":[0.6562,0.2754],"328":[0.7055,0.242],"329":[0.6548,0.2584],"330":[0.706,0.2278],"331":[0.6498,0.2413],"333":[0.6392,0.2221],"335":[0.6668,0.2114],"337":[0.6756,0.1907],"339":[0.6599,0.1751],"341":[0.6341,0.1648],"343":[0.6382,0.1416],"345":[0.6687,0.1388],"347":[0.6853,0.1544],"349":[0.7041,0.1673],"400":[0.7111,0.2093],"401":[0.7281,0.1769],"402":[0.7378,0.2057],"404":[0.7558,0.2114],"405":[0.7613,0.1751],"406":[0.7756,0.2192],"407":[0.7793,0.1822],"409":[0.7926,0.194],"410":[0.8028,0.2292],"411":[0.8138,0.2043],"412":[0.8272,0.2377],"414":[0.8484,0.237],"416":[0.8719,0.2302],"418":[0.8894,0.2196],"420":[0.9028,0.2064],"422":[0.9267,0.2199],"424":[0.9465,0.2231],"426":[0.9641,0.2224],"428":[0.9825,0.2224],"430":[0.9779,0.1872],"432":[0.9488,0.1886],"433":[0.882,0.1822],"434":[0.924,0.1843],"435":[0.8977,0.163],"436":[0.941,0.158],"437":[0.9074,0.1456],"438":[0.9751,0.1569],"440":[0.9779,0.1345],"500":[0.8585,0.1979],"502":[0.859,0.1719],"504":[0.8714,0.1473],"506":[0.8862,0.1214],"507":[0.6797,0.0932],"508":[0.8286,0.1466],"509":[0.8198,0.1779],"510":[0.806,0.1352],"511":[0.8,0.1637],"512":[0.7829,0.1242],"513":[0.7774,0.1527],"514":[0.759,0.1125],"515":[0.7535,0.1416],"516":[0.7332,0.0993],"517":[0.73,0.1295],"518":[0.7078,0.084],"519":[0.7065,0.1174],"520":[0.8719,0.0915],"521":[0.8452,0.1132],"522":[0.8447,0.0854],"523":[0.8253,0.1068],"524":[0.818,0.0783],"525":[0.8005,0.0996],"526":[0.7922,0.0698],"527":[0.7705,0.0907],"528":[0.7691,0.0548],"529":[0.7373,0.068],"530":[0.7618,0.0313],"532":[0.7276,0.0285],"540":[0.9253,0.1253],"541":[0.9548,0.095],"542":[0.9613,0.121],"543":[0.935,0.0847],"544":[0.9719,0.0705],"545":[0.9129,0.074],"546":[0.9507,0.0605],"547":[0.888,0.0641],"549":[0.859,0.0598],"551":[0.8286,0.0512],"553":[0.8032,0.0423],"555":[0.7912,0.0185],"557":[0.8355,0.0203],"558":[0.9258,0.0423],"559":[0.8719,0.0199],"561":[0.9069,0.0174],"563":[0.9406,0.0174],"565":[0.9737,0.0174],"570":[0.9783,0.0448],"701":[0.0212,0.5146],"702":[0.0438,0.4808],"703":[0.0475,0.5125],"704":[0.1009,0.479],"705":[0.0724,0.5117],"706":[0.1309,0.4769],"707":[0.123,0.5032],"708":[0.159,0.4747],"709":[0.1544,0.5014],"710":[0.1876,0.4747],"711":[0.1816,0.5],"712":[0.2161,0.4754],"713":[0.2101,0.5011],"714":[0.2429,0.4754],"715":[0.2364,0.5018],"716":[0.2691,0.474],"717":[0.2677,0.5],"718":[0.2949,0.4719],"719":[0.2968,0.4975],"720":[0.3207,0.4669],"721":[0.3244,0.4932],"722":[0.3461,0.4594],"723":[0.3507,0.4875],"724":[0.3742,0.4502],"725":[0.3774,0.4801],"727":[0.4032,0.4698],"729":[0.4171,0.4555],"731":[0.4284,0.4433],"801":[0.0839,0.4569],"803":[0.1101,0.4456],"804":[0.1041,0.4171],"805":[0.1355,0.4427],"806":[0.1092,0.3972],"807":[0.1613,0.4413],"808":[0.123,0.3786],"809":[0.1889,0.442],"810":[0.1544,0.369],"811":[0.2157,0.4434],"812":[0.1622,0.3957],"813":[0.2438,0.4441],"814":[0.1433,0.4121],"815":[0.2733,0.4413],"816":[0.1834,0.4135],"817":[0.3018,0.4377],"818":[0.1991,0.39],"819":[0.3286,0.4327],"820":[0.2373,0.3936],"821":[0.3558,0.4285],"822":[0.2304,0.4206],"823":[0.4,0.4185],"824":[0.2737,0.4178],"825":[0.4295,0.4121],"826":[0.3189,0.4014],"827":[0.4544,0.4036],"828":[0.429,0.3808],"829":[0.4779,0.4399],"830":[0.4018,0.3922],"832":[0.3733,0.3929],"834":[0.3498,0.3843],"836":[0.3281,0.3722],"837":[0.2894,0.3836],"838":[0.3074,0.3594],"839":[0.2682,0.3705],"840":[0.2843,0.3466],"841":[0.2452,0.3623],"842":[0.2576,0.3395],"843":[0.218,0.3619],"844":[0.229,0.3388],"845":[0.1894,0.3594],"846":[0.2,0.3352],"847":[0.1604,0.3488],"902":[0.0295,0.4619],"904":[0.0226,0.4399],"905":[0.0687,0.4263],"906":[0.0217,0.4171],"907":[0.0664,0.4085],"908":[0.0226,0.395],"909":[0.071,0.3886],"910":[0.0272,0.3744],"911":[0.0793,0.3708],"912":[0.0359,0.3559],"913":[0.0935,0.3552],"914":[0.0327,0.3395],"915":[0.1115,0.3413],"916":[0.0797,0.3174],"917":[0.1359,0.3274],"918":[0.1111,0.2968],"919":[0.1756,0.3181],"920":[0.1419,0.2861],"921":[0.2018,0.3053],"922":[0.177,0.2783],"923":[0.23,0.3011],"924":[0.2069,0.2733],"925":[0.2571,0.2989],"926":[0.2327,0.2705],"927":[0.2839,0.3011],"928":[0.2613,0.2698],"929":[0.3101,0.3053],"931":[0.3336,0.3125],"932":[0.3175,0.2765],"933":[0.3585,0.3217],"934":[0.3475,0.2833],"935":[0.3788,0.3327],"936":[0.3728,0.2918],"937":[0.3982,0.3459],"938":[0.3954,0.3025],"939":[0.4161,0.3633],"940":[0.4171,0.3149],"942":[0.4558,0.3335],"998":[0.0295,0.3238],"1000":[0.0235,0.3057],"1001":[0.0696,0.2947],"1002":[0.0267,0.2776],"1003":[0.0968,0.2712],"1004":[0.0382,0.2562],"1005":[0.1295,0.2463],"1006":[0.0608,0.2406],"1007":[0.1673,0.2434],"1008":[0.0825,0.2235],"1009":[0.1926,0.2399],"1010":[0.0982,0.2028],"1011":[0.2258,0.2363],"1012":[0.1456,0.2181],"1013":[0.2585,0.2406],"1014":[0.2866,0.2174],"1015":[0.2912,0.2463],"1016":[0.312,0.2085],"1017":[0.3189,0.2463],"1018":[0.3396,0.2053],"1019":[0.3484,0.2541],"1020":[0.3594,0.1858],"1021":[0.3889,0.2587],"1025":[0.371,0.2274],"1100":[0.0263,0.1733],"1101":[0.0207,0.2214],"1103":[0.0479,0.2078],"1105":[0.0613,0.1897],"1107":[0.0779,0.1708],"1109":[0.1111,0.1811],"1111":[0.1567,0.1975],"1113":[0.1908,0.2018],"1115":[0.2207,0.1975],"1117":[0.2424,0.1886],"1119":[0.2719,0.1804],"1121":[0.2977,0.1722],"1123":[0.3263,0.1637],"1125":[0.3581,0.1537],"1127":[0.388,0.1431],"1129":[0.4138,0.126],"1131":[0.4341,0.1046],"1133":[0.4507,0.079],"1201":[0.0829,0.1338],"1203":[0.1134,0.1388],"1205":[0.1392,0.1388],"1207":[0.1765,0.1388],"1209":[0.1972,0.1698],"1211":[0.2304,0.152],"1213":[0.2558,0.1388],"1215":[0.282,0.1267],"1217":[0.3134,0.1203],"1219":[0.3447,0.1125],"1221":[0.3751,0.1014],"1223":[0.3903,0.0794],"1225":[0.3903,0.0587],"1227":[0.388,0.0391],"1229":[0.388,0.0157],"1400":[0.0276,0.0847],"1401":[0.0217,0.1374],"1402":[0.0691,0.0676],"1403":[0.0456,0.1242],"1405":[0.0558,0.1046],"1407":[0.0816,0.0897],"1409":[0.1147,0.1004],"1411":[0.1442,0.1028],"1413":[0.1742,0.1028],"1415":[0.2041,0.1028],"1417":[0.2378,0.1028],"1419":[0.3355,0.0854],"1421":[0.3438,0.0641],"1423":[0.3424,0.042],"1425":[0.33,0.0149],"1501":[0.1065,0.0577],"1503":[0.1392,0.0676],"1505":[0.1691,0.0676],"1507":[0.2014,0.0676],"1509":[0.2276,0.0676],"1511":[0.2567,0.0676],"1513":[0.2912,0.0676],"1600":[0.0401,0.0128],"1601":[0.0217,0.0509],"1603":[0.0525,0.0423],"1605":[0.0783,0.0285],"1607":[0.1101,0.0306],"1609":[0.1447,0.032],"1611":[0.1797,0.032],"1613":[0.2166,0.032],"1615":[0.2521,0.032],"1617":[0.2889,0.032]};
+const lotPos=n=>{const k=String(n??'').trim().replace(/^0+/,'');return LOTS[k]||null};
+function hpos(h){if(!h)return null;if(h.x!=null&&h.y!=null)return{x:h.x,y:h.y};const p=lotPos(h.number);return p?{x:p[0],y:p[1]}:null}
+function mapSize(){return{W:1000,H:Math.round(1000*EB.h/EB.w)}}
+function baseMap(W,H){
+  return `<rect class="m-sea" width="${W}" height="${H}"/><image class="m-img-l" href="${EB.light}" x="0" y="0" width="${W}" height="${H}" preserveAspectRatio="none"/><image class="m-img-d" href="${EB.dark}" x="0" y="0" width="${W}" height="${H}" preserveAspectRatio="none"/>`;
+}
+class MapView{
+  constructor(svg,mode){this.svg=svg;this.mode=mode;this.vb=null;this.ptrs=new Map();this.onTap=null;this.sel=null;this.bind()}
+  size(){const {W,H}=mapSize();if(this.W!==W||this.H!==H){this.W=W;this.H=H;this.reset(false)}}
+  reset(apply=true){this.vb={x:0,y:0,w:this.W,h:this.H};if(apply)this.apply()}
+  focus(fx,fy,w){this.size();const v=this.vb;v.w=w||this.W/3;v.h=v.w*this.H/this.W;v.x=fx*this.W-v.w/2;v.y=fy*this.H-v.h/2;this.clamp();this.apply()}
+  apply(){const v=this.vb;this.svg.setAttribute('viewBox',`${v.x} ${v.y} ${v.w} ${v.h}`)}
+  clamp(){const v=this.vb;v.w=Math.min(this.W,Math.max(this.W/6,v.w));v.h=v.w*this.H/this.W;v.x=Math.min(this.W-v.w,Math.max(0,v.x));v.y=Math.min(this.H-v.h,Math.max(0,v.y))}
+  zoom(f,cx,cy){const v=this.vb;if(cx==null){cx=v.x+v.w/2;cy=v.y+v.h/2}const nw=v.w*f;const k=nw/v.w;v.x=cx-(cx-v.x)*k;v.y=cy-(cy-v.y)*k;v.w=nw;this.clamp();this.apply()}
+  pt(ev){const p=this.svg.createSVGPoint();p.x=ev.clientX;p.y=ev.clientY;const m=this.svg.getScreenCTM();return m?p.matrixTransform(m.inverse()):{x:0,y:0}}
+  bind(){
+    const s=this.svg;
+    s.addEventListener('pointerdown',e=>{s.setPointerCapture(e.pointerId);this.ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY,sx:e.clientX,sy:e.clientY,t:e.target});this.moved=false;if(this.ptrs.size===2){const [a,b]=[...this.ptrs.values()];this.pinch=Math.hypot(a.x-b.x,a.y-b.y)}});
+    s.addEventListener('pointermove',e=>{const p=this.ptrs.get(e.pointerId);if(!p)return;const dx=e.clientX-p.x,dy=e.clientY-p.y;
+      if(Math.hypot(e.clientX-p.sx,e.clientY-p.sy)>6)this.moved=true;
+      if(this.ptrs.size===1&&this.moved){const r=s.getBoundingClientRect();const k=Math.max(this.vb.w/r.width,this.vb.h/r.height);this.vb.x-=dx*k;this.vb.y-=dy*k;this.clamp();this.apply()}
+      p.x=e.clientX;p.y=e.clientY;
+      if(this.ptrs.size===2){const [a,b]=[...this.ptrs.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);if(this.pinch){const c=this.pt({clientX:(a.x+b.x)/2,clientY:(a.y+b.y)/2});this.zoom(this.pinch/d,c.x,c.y)}this.pinch=d}});
+    const up=e=>{const p=this.ptrs.get(e.pointerId);this.ptrs.delete(e.pointerId);if(this.ptrs.size<2)this.pinch=null;
+      if(p&&!this.moved&&this.ptrs.size===0&&this.onTap){const q=this.pt(e);this.onTap({x:q.x/this.W,y:q.y/this.H},p.t)}};
+    s.addEventListener('pointerup',up);s.addEventListener('pointercancel',e=>{this.ptrs.delete(e.pointerId);this.pinch=null});
+    s.addEventListener('wheel',e=>{e.preventDefault();const c=this.pt(e);this.zoom(e.deltaY>0?1.15:0.87,c.x,c.y)},{passive:false});
+  }
+  draw(layers){this.size();this.svg.style.aspectRatio=`${this.W}/${this.H}`;this.apply();
+    this.svg.innerHTML=`<defs><marker id="ar-${this.mode}" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path class="m-arrow" d="M0 0L10 5L0 10Z"/></marker></defs>${baseMap(this.W,this.H)}${layers}`}
+}
+const P=(h,W,H)=>{const q=hpos(h);return q?{x:q.x*W,y:q.y*H}:{x:W/2,y:H/2}};
+const pinPath=(x,y,cls)=>`<path class="${cls}" d="M${x} ${y}c-5-9-13-14-13-24a13 13 0 1 1 26 0c0 10-8 15-13 24z"/><circle class="m-pin-dot" cx="${x}" cy="${y-24}" r="4.5"/>`;
+function numTag(x,y,num,cls=''){const t=String(num).slice(0,5);const w=t.length*8.6+10;
+  return `<rect class="m-tag ${cls}" x="${x-w/2}" y="${y-10}" width="${w}" height="20" rx="5"/><text class="m-tag-t" x="${x}" y="${y+.5}">${esc(t)}</text>`}
+function pins(m,{faint=false,sel=null,skip=null}={}){
+  const mine=myHome()?.id;
+  return sortHomes(D().homes).filter(h=>h.id!==skip&&hpos(h)).map(h=>{const {x,y}=P(h,m.W,m.H);
+    const tag=numTag(x,y,h.number,(h.id===mine?'mine':'')+(faint?' faint':''));
+    if(faint)return tag;
+    return `<g data-home="${esc(h.id)}" style="cursor:pointer">${sel===h.id?`<rect class="m-sel" x="${x-String(h.number).length*4.3-11}" y="${y-16}" width="${String(h.number).length*8.6+22}" height="32" rx="9"/>`:''}${tag}<circle class="m-hit" cx="${x}" cy="${y}" r="20"/></g>`}).join('');
+}
+function arc(a,b,cls,mk,idx){
+  const dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy)||1;const off=Math.min(140,len*.28)*(idx%2?1:-1)*.9+(idx%2?8:-8);
+  const cx=(a.x+b.x)/2-dy/len*off,cy=(a.y+b.y)/2+dx/len*off;
+  // pull endpoints off the pins
+  const sh=(p,q)=>{const l=Math.hypot(q.x-p.x,q.y-p.y)||1;return{x:p.x+(q.x-p.x)/l*12,y:p.y+(q.y-p.y)/l*12}};
+  const s=sh(a,{x:cx,y:cy}),e=sh(b,{x:cx,y:cy});
+  return {d:`<path class="${cls}" d="M${s.x} ${s.y}Q${cx} ${cy} ${e.x} ${e.y}"${mk?` marker-end="url(#${mk})"`:''}/>`,mx:.25*s.x+.5*cx+.25*e.x,my:.25*s.y+.5*cy+.25*e.y};
+}
+let trailMap,homesMap,sheetMap,selHome=null;
+function drawTrail(){
+  const m=trailMap;m.size();const C=compute();let out='',badges='';
+  C.items.forEach((it,i)=>{
+    if(it.gap){const a=homeById(it.from),b=homeById(it.to);if(!a||!b||!hpos(a)||!hpos(b))return;
+      const r=arc(P(a,m.W,m.H),P(b,m.W,m.H),'m-gap',null,i);out+=r.d;badges+=`<circle class="m-gbadge" cx="${r.mx}" cy="${r.my}" r="14"/><text class="m-gbadge-t" x="${r.mx}" y="${r.my}">?</text>`;return}
+    const e=it.ev,a=homeById(e.from),b=homeById(e.to);if(!a||!b||!hpos(a)||!hpos(b))return;
+    const r=arc(P(a,m.W,m.H),P(b,m.W,m.H),'m-arc','ar-trail',i);out+=r.d;
+    badges+=`<g data-ev="${esc(e.id)}" style="cursor:pointer"><circle class="m-badge" cx="${r.mx}" cy="${r.my}" r="15"/><text class="m-badge-t" x="${r.mx}" y="${r.my}">${C.num.get(e.id)}</text></g>`;
+  });
+  let seen='';const sh=C.seen&&homeById(C.seen.home);
+  if(sh&&hpos(sh)){const {x,y}=P(sh,m.W,m.H);seen=`<circle class="m-seen" cx="${x}" cy="${y}" r="40"/><circle class="m-seen-c" cx="${x}" cy="${y}" r="9"/><text class="m-seen-t" x="${x+30}" y="${y-30}">${C.seen.left?'TAKEN FROM HERE':(C.hidden?'LAST CONFIRMED':'RUDOLPH')}</text>`}
+  m.draw(pins(m,{faint:true})+out+seen+badges);
+}
+function drawHomes(){const m=homesMap;m.size();m.draw(pins(m,{sel:selHome}))}
+
+/* ---------- renderers ---------- */
+function rWho(){
+  $('#gameYear').textContent=viewSeason();$('#seasonLbl').textContent=viewSeason();$('#seasonBtn').hidden=S.demo||!isMember()||allSeasons().length<2;
+  const w=$('#who');let h='';
+  if(isOrg()&&!S.demo){const n=S.joins.filter(j=>j.status==='pending').length;h+=`<a class="chip${n?' solid':''}" href="#admin">Organizer${n?` · ${n}`:''}</a>`}
+  const mh=myHome();
+  if(mh)h+=`<a class="chip" href="#homes">${esc(mh.family)}</a>`;
+  else if(!S.demo&&!!S.me&&!isOrg()&&S.myJoin?.status==='pending')h+=`<span class="chip">Awaiting approval</span>`;
+  else if(!S.demo&&!!S.me&&!isOrg())h+=`<button class="chip solid" data-join>Join</button>`;
+  else if(!S.demo&&isOrg()&&!mh)h+=`<button class="chip solid" data-join>Join</button>`;
+  w.innerHTML=h;
+}
+function rBanner(){
+  const b=$('#banner'),i=$('#bannerIn');
+  if(S.demo){b.hidden=false;i.innerHTML=`<span><b>Example game.</b> Made-up families. Nothing here is saved.</span><button class="btn sm" data-demo-org>${S.demoOrg?'View as a neighbor':'View as organizer'}</button><button class="btn sm" data-demo-exit>Exit example</button>`;return}
+  if(S.netErr&&S.me){b.hidden=false;i.innerHTML=`<span>Can’t reach the game right now. Check your connection. The page will keep trying.</span>`;return}
+  if(isPast()&&isMember()){b.hidden=false;i.innerHTML=`<span>You’re looking back at the <b>${esc(viewSeason())}</b> game.</span><button class="btn sm" data-season="${esc(curSeason())}">Back to ${esc(curSeason())}</button>`;return}
+  b.hidden=true;
+}
+function rStatus(C){
+  const st=$('#status');const c=seasonCfg();
+  const win=c.start?`<p class="small">Game runs ${esc(new Date(c.start+'T12:00').toLocaleDateString(undefined,{month:'short',day:'numeric'}))}${c.end?' to '+esc(new Date(c.end+'T12:00').toLocaleDateString(undefined,{month:'short',day:'numeric'})):''}.</p>`:'';
+  let h='<div class="glow" aria-hidden="true"></div>';
+  if(isPast()){
+    const l=C.last,fin=l?(l.to||l.from):null;
+    const took={};C.vis.forEach(e=>{if(e.kind==='steal'&&e.to)took[e.to]=(took[e.to]||0)+1});
+    const top=Object.entries(took).sort((a,b)=>b[1]-a[1])[0];
+    h+=`<div class="label">The ${esc(viewSeason())} game · Final</div><h2>${fin?`Rudolph finished at ${esc(fam(fin))}`:'No steals were logged'}</h2><p>${C.vis.filter(e=>e.kind==='steal').length} steals logged.${top?` Most steals: ${esc(fam(top[0]))} with ${top[1]}.`:''}</p>${win}`;
+  }else if(!C.evs.length){
+    h+=`<div class="label">Status · Not started</div><h2>Rudolph hasn’t been placed yet</h2><p>Once the organizer picks a starting house, the hunt is on.</p>${win}`;
+    if(isOrg()&&!S.demo)h+=`<a class="btn red" href="#admin">Set the starting house</a>`;
+    else if(!S.demo&&!S.ready&&!S.offline)h=h.replace('Not started','Loading');
+    if(!S.demo&&!isOrg())h+=`<button class="btn" data-demo style="margin-top:12px">See an example game</button>`;
+  }else if(C.hidden){
+    const s=C.seen;
+    h+=`<div class="label">Status · On the loose</div><h2>Where’s Rudolph?</h2><p>${s?`Last confirmed at ${esc(fam(s.home))} (${hno(homeById(s.home))}), ${esc(ago(s.at))}. `:''}He’s been stolen since. Go look. Whoever has him must keep him visible from the street.</p>${win}`;
+  }else{
+    const l=C.last;
+    if(!l.to)h+=`<div class="label">Status · Thief unknown</div><h2>Taken from ${esc(fam(l.from))}</h2><p>${esc(ago(l.at))}. Nobody has logged the steal yet. If it was your family, claim it.</p>`;
+    else h+=`<div class="label">Status · ${isOrg()?'Organizer view':'Only you can see this'}</div><h2>Rudolph is at ${esc(fam(l.to))}</h2><p>${hno(homeById(l.to))} · since ${esc(ago(l.at))}. ${isOrg()?'Everyone else sees only that he’s on the loose.':'Neighbors won’t see where he is until he’s stolen again.'}</p>`;
+    h+=win;
+  }
+  st.innerHTML=h;
+}
+function caseLine(e){
+  if(e.kind==='start')return `Rudolph starts the game at ${famB(e.to)}`;
+  if(!e.from)return `${famB(e.to)} had Rudolph. Where he came from wasn’t logged`;
+  if(!e.to)return `Rudolph was taken from ${famB(e.from)}. Thief not logged yet`;
+  return `${famB(e.to)} took Rudolph from ${famB(e.from)}`;
+}
+const pad=n=>'#'+String(n).padStart(2,'0');
+function mediaFor(id){return D().media.filter(m=>m.stealId===id).sort((a,b)=>String(a.at).localeCompare(String(b.at)))}
+function thumbs(id){const ms=mediaFor(id);if(!ms.length)return'';
+  return `<div class="thumbs">${ms.slice(0,4).map(m=>m.type==='image'?`<span style="background-image:url('${esc(murl(m))}')"></span>`:`<span>VIDEO</span>`).join('')}${ms.length>4?`<span>+${ms.length-4}</span>`:''}</div>`}
+function claimBtn(e){const mh=myHome();return (!e.to&&e.kind!=='start'&&mh&&mh.id!==e.from&&canWrite()&&!isPast())?`<button class="btn sm red" data-claim="${esc(e.id)}">It was us. Claim it</button>`:''}
+function rTimeline(C){
+  const t=$('#timeline');let h='';
+  if(C.hidden)h+=`<li class="case sealed"><div class="case-n">${pad(C.num.get(C.hidden.id))}</div><div><p><b>Sealed.</b> A new steal was logged ${esc(ago(C.hidden.at))}.</p><p class="case-meta">Details unlock when Rudolph is stolen again.</p></div></li>`;
+  [...C.items].reverse().forEach(it=>{
+    if(it.gap){h+=`<li class="case gap"><div class="case-n">?</div><div><p><b>Unlogged move.</b> Rudolph left ${famB(it.from)} and later turned up at ${famB(it.to)}.</p>${(canWrite()&&!isPast())||isOrg()?`<button class="btn sm" data-gap="${esc(it.from)}|${esc(it.to)}|${esc(it.after)}">Fill in the missing steal</button>`:''}</div></li>`;return}
+    const e=it.ev,n=mediaFor(e.id).length;
+    h+=`<li class="case" data-ev="${esc(e.id)}"><div class="case-n">${pad(C.num.get(e.id))}</div><div><p>${caseLine(e)}</p><p class="case-meta">${esc(fmt(e.at))}${n?` · ${n} ${n>1?'files':'file'}`:''}</p>${e.note?`<p class="small">“${esc(e.note)}”</p>`:''}${thumbs(e.id)}${claimBtn(e)}</div></li>`;
+  });
+  t.innerHTML=h||`<li class="empty"><h3>No steals yet</h3><p>Every capture shows up here as a numbered case.</p></li>`;
+  $('#trailCount').textContent=C.evs.length?`${C.evs.length} ${C.evs.length>1?'entries':'entry'}`:'';
+}
+function rBoard(C){
+  const took={},lost={};C.vis.forEach(e=>{if(e.kind==='steal'){if(e.to)took[e.to]=(took[e.to]||0)+1;if(e.from)lost[e.from]=(lost[e.from]||0)+1}});
+  const hs=D().homes.map(h=>({h,t:took[h.id]||0,l:lost[h.id]||0})).filter(x=>x.t||x.l).sort((a,b)=>b.t-a.t||a.l-b.l);
+  $('#board').innerHTML=hs.length?hs.map((x,i)=>`<li><span class="rank">${i+1}</span><div class="fam"><b>${esc(x.h.family)}</b><div class="case-meta">${hno(x.h)} · stolen from ${x.l}×</div></div><span class="n">${x.t}</span></li>`).join(''):`<li class="muted small">Steal counts appear after the first capture. The newest steal is counted once it unseals.</li>`;
+}
+function rGate(){
+  const g=$('#gateBody');const j=S.myJoin;let h='<div class="glow" aria-hidden="true"></div>';
+  if(S.notConfigured)h+=`<div class="label">Almost ready</div><h2>The game isn’t connected yet</h2><p>The organizer still needs to finish setting up the site.</p><button class="btn" data-demo style="margin-top:12px">See an example game</button>`;
+  else if(!S.authReady)h+=`<div class="label">Loading</div><h2>One moment…</h2>`;
+  else if(!S.me&&S.sentTo)h+=`<div class="label">Check your email</div><h2>We sent a sign-in link</h2><p>Open the email we sent to <b>${esc(S.sentTo)}</b> on this phone and tap the link. It can take a minute to arrive. Check spam too.</p>
+    <form id="codeForm" class="stack" novalidate><label class="field"><span>Or type the 6-digit code from the email</span><input type="text" id="siCode" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="123456"></label><button class="btn red" type="submit">Sign in with code</button></form>
+    <button class="btn" data-signin-reset style="margin-top:12px">Use a different email</button>`;
+  else if(!S.me)h+=`<div class="label">Members only</div><h2>Reindeer Games is for participating Emerald Bay families</h2><p>Sign in with your email. We’ll send you a link, so there’s no password to remember. New families can request to join after signing in.</p>
+    <form id="siForm" class="stack" novalidate><label class="field"><span>Email</span><input type="email" id="siEmail" autocomplete="email" placeholder="you@example.com" required></label><button class="btn red" type="submit" id="siBtn">Email me a sign-in link</button></form>
+    <button class="btn" data-demo style="margin-top:12px">See an example game</button>`;
+  else if(!S.ready||j===undefined)h+=`<div class="label">Loading</div><h2>Checking your invite…</h2>`;
+  else if(j&&j.status==='pending')h+=`<div class="label">Request sent</div><h2>Waiting for the organizer</h2><p>${esc(j.family)} · ${esc(j.number)} Emerald Bay. You’ll get full access as soon as the organizer approves you. This page updates by itself.</p><button class="btn" data-join style="margin-top:12px">Edit my request</button>`;
+  else if(j&&j.status==='declined')h+=`<div class="label">Not approved</div><h2>The organizer didn’t approve this request</h2><p>If you think that’s a mistake, check with the organizer, then send a new request.</p><button class="btn red" data-join style="margin-top:12px">Send a new request</button>`;
+  else h+=`<div class="label">Members only</div><h2>Reindeer Games is for participating Emerald Bay families</h2><p>Request to join with your family name and house number. The organizer approves each family before the map, trail and photos open up.</p><button class="btn red" data-join style="margin-top:12px">Request to join</button><button class="btn" data-demo style="margin-top:12px;margin-left:8px">See an example game</button>`;
+  if(S.me)h+=`<p class="small" style="margin-top:16px">Signed in as ${esc(S.email||'')} · <button class="btn sm ghost" data-signout style="color:inherit;border-color:currentColor">Sign out</button></p>`;
+  g.innerHTML=h;
+}
+function rHomes(){
+  const hs=sortHomes(D().homes);$('#homeCount').textContent=hs.length?`${hs.length} ${hs.length>1?'families':'family'}`:'';
+  const mh=myHome();
+  $('#joinCta').innerHTML=mh&&!S.demo?`<p class="small muted">Need to change your family name, house number or pin? Ask the organizer.</p>`:(!mh&&!S.demo&&!S.offline&&isOrg())?`<div class="card row" style="justify-content:space-between"><p style="flex:1;min-width:12rem"><b>Playing this year?</b> Add your family and drop a pin on your house.</p><button class="btn red" data-join>Join the game</button></div>`:'';
+  $('#homeList').innerHTML=hs.length?hs.map(h=>{
+    const you=mh&&mh.id===h.id;
+    return `<li data-home="${esc(h.id)}" class="${selHome===h.id?'on':''}"><span class="hno">${esc(h.number)}</span><div><b>${esc(h.family)}</b>${!hpos(h)?'<div class="case-meta">No pin yet</div>':''}</div><div class="row">${you?`<span class="tag you">You</span>`:''}${isOrg()&&!S.demo?`<button class="btn sm" data-edit-home="${esc(h.id)}">Edit</button>`:''}</div></li>`}).join('')
+    :`<li class="empty"><h3>No families yet</h3><p>Families can join themselves, or the organizer can add them.</p></li>`;
+}
+function fillSelect(sel,opts){const v=sel.value;sel.innerHTML=opts.map(([val,l])=>`<option value="${esc(val)}">${esc(l)}</option>`).join('');if(opts.some(o=>o[0]===v))sel.value=v}
+let logMode='took';
+function rLog(){
+  const mh=myHome(),org=isOrg()&&!S.demo,gate=$('#logGate'),form=$('#logForm');
+  let g='';
+  if(S.demo)g=`<div class="empty"><h3>Logging is off in the example</h3><p>Exit the example to log real steals.</p></div>`;
+  else if(!S.me)g=`<div class="empty"><h3>Sign in to log a steal</h3></div>`;
+  else if(isPast()&&!org)g=`<div class="empty"><h3>The ${esc(viewSeason())} game is over</h3><p>New steals go in the ${esc(curSeason())} game.</p><button class="btn red" data-season="${esc(curSeason())}">Go to ${esc(curSeason())}</button></div>`;
+  else if(!mh&&!org)g=`<div class="empty"><h3>Join the game first</h3><p>Add your family so the steal counts for you.</p><button class="btn red" data-join>Join the game</button></div>`;
+  gate.innerHTML=g;form.hidden=!!g;if(g)return;
+  $('#actingWrap').hidden=!org;
+  const hs=sortHomes(D().homes);
+  if(org)fillSelect($('#acting'),hs.map(h=>[h.id,`${h.family} · No. ${h.number}`]));
+  if(!org||!$('#acting').value)$('#acting').value=mh?.id||hs[0]?.id||'';
+  const acting=$('#acting').value||mh?.id;
+  const others=hs.filter(h=>h.id!==acting).map(h=>[h.id,`${h.family} · No. ${h.number}`]);
+  fillSelect($('#other'),logMode==='took'?[['','Choose a family'],...others]:[['','We don’t know yet'],...others]);
+  $('#otherLbl').textContent=logMode==='took'?'Who did you take him from?':'Who took him?';
+  $('#modeTook').setAttribute('aria-pressed',logMode==='took');$('#modeLost').setAttribute('aria-pressed',logMode==='lost');
+  if(!$('#when').value)$('#when').value=localInput(new Date());
+  $('#dropLbl').hidden=!S.assets;$('#noUpload').hidden=!!S.assets;
+}
+function rGallery(C){
+  const visIds=new Set(C.vis.map(e=>e.id));
+  const ms=D().media.filter(m=>visIds.has(m.stealId)).sort((a,b)=>String(b.at).localeCompare(String(a.at)));
+  $('#galCount').textContent=ms.length?`${ms.length} ${ms.length>1?'files':'file'}`:'';
+  $('#gallery').innerHTML=ms.length?`<div class="gallery">${ms.map(m=>`<button data-media="${esc(m.id)}" aria-label="Open ${m.type}">${m.type==='image'?`<img src="${esc(murl(m))}" alt="" loading="lazy">`:`<video src="${esc(murl(m))}#t=0.1" preload="metadata" muted playsinline></video><span class="play">VIDEO</span>`}</button>`).join('')}</div>`
+    :`<div class="empty"><h3>No captures on film yet</h3><p>Photos and videos from logged steals land here. Media from the newest steal appears once it unseals.</p></div>`;
+}
+const DRAFT=`The basics (more to come):
+
+1. Each participating family tries to “steal” the inflatable Rudolph from another participating home, as many times as possible.
+
+2. While Rudolph is at your house, he must be visible from the street.
+
+3. Log every steal on this site. Add a photo or video of the capture if you can. The family that lost him can add their own footage too.
+
+4. Where Rudolph is right now stays secret. The site reveals each stop only after he’s been stolen again.
+
+The organizer will post the full rules before the game starts.`;
+function rRules(){const c=seasonCfg();const t=(c.rules||'').trim();
+  $('#draftTag').hidden=!!t;
+  const dates=c.start?`<p class="label">Game window · ${esc(c.start)}${c.end?' → '+esc(c.end):''}</p>`:'';
+  const acct=S.me&&!S.demo?`<p class="small muted">Signed in as ${esc(S.email||'')} · <button class="btn sm ghost" data-signout>Sign out</button></p>`:'';
+  $('#rulesBody').innerHTML=`${acct}${dates}<div class="rules">${esc(t||DRAFT)}</div>${isOrg()&&!S.demo?`<a class="btn sm" href="#admin" style="align-self:start">Edit rules</a>`:''}`;
+}
+function rAdmin(C){
+  const ok=isOrg()&&!S.demo;$('#adminGate').innerHTML=ok?'':`<div class="empty"><h3>Organizer only</h3><p>This section is for the person running the game.</p></div>`;$('#adminBody').hidden=!ok;if(!ok)return;
+  const c=seasonCfg(),vs=viewSeason(),cur=curSeason();
+  const f=$('#setForm');if(f.dataset.season!==vs){f.dataset.season=vs;['#setStart','#setEnd','#setRules'].forEach(x=>delete $(x).dataset.dirty)}
+  for(const [id,k] of [['#setStart','start'],['#setEnd','end'],['#setRules','rules']]){const el=$(id);if(!el.dataset.dirty&&document.activeElement!==el)el.value=c[k]||''}
+  $('#setTitle').textContent=`${vs} game settings`;
+  $('#curSeasonLbl').textContent=`Current: ${cur}`;
+  const next=String(Math.max(...allSeasons().map(Number))+1);
+  $('#seasonNote').textContent=isPast()?`You’re viewing the ${vs} game. Changes you make here, including Rudolph’s record below, go into ${vs}.`:`Everyone lands on the ${cur} game. When it’s time for next December, start the ${next} game. ${cur} stays saved and anyone can look back at it from the year menu in the header. Families carry over.`;
+  const nb=$('#newSeason');nb.hidden=isPast();nb.dataset.next=next;if(!nb.dataset.armed)nb.textContent=`Start the ${next} game`;
+  const pend=S.joins.filter(j=>j.status==='pending').sort((a,b)=>String(a.at).localeCompare(String(b.at)));
+  $('#pendingCount').textContent=pend.length?`${pend.length} waiting`:'';
+  $('#pendingList').innerHTML=pend.length?pend.map(j=>{const taken=D().homes.find(h=>String(h.number)===String(j.number)&&h.ownerId);
+    return `<li><span class="hno">${esc(j.number)}</span><div><b>${esc(j.family)}</b><div class="case-meta">Requested ${esc(ago(j.at))}${taken?` · ${esc(taken.family)} already has this number`:''}</div></div><div class="row"><button class="btn sm danger" data-decline="${esc(j.id)}">Decline</button><button class="btn sm primary" data-approve="${esc(j.id)}">Approve</button></div></li>`}).join('')
+    :`<li class="muted small">No requests waiting. New families appear here when they ask to join.</li>`;
+  const hs=sortHomes(D().homes);
+  $('#adminHomes').innerHTML=hs.length?hs.map(h=>`<li><span class="hno">${hno(h)}</span><div><b>${esc(h.family)}</b><div class="case-meta">${h.ownerId?'Linked to a neighbor':'Added by you · not claimed'}${!hpos(h)?' · no pin':''}</div></div><button class="btn sm" data-edit-home="${esc(h.id)}">Edit</button></li>`).join(''):`<li class="muted small">No families yet. Add them here, or share the page so they can join.</li>`;
+  $('#adminEvents').innerHTML=C.evs.length?[...C.evs].reverse().map(e=>`<li class="case" data-ev="${esc(e.id)}"><div class="case-n">${pad(C.num.get(e.id))}</div><div><p>${caseLine(e)}</p><p class="case-meta">${esc(fmt(e.at))}${e===C.hidden||(e===C.last&&e.to)?' · hidden from neighbors':''}</p></div></li>`).join(''):`<li class="muted small">Nothing yet. Start by setting Rudolph’s starting house.</li>`;
+}
+
+/* ---------- routing / render ---------- */
+const VIEWS=['trail','homes','log','gallery','rules','admin'];
+function route(){let v=location.hash.slice(1);if(v==='join'){v='homes';setTimeout(()=>openHomeForm('join'),0)}if(!VIEWS.includes(v))v='trail';return v}
+let raf=0;function render(){if(raf)return;raf=requestAnimationFrame(()=>{raf=0;renderNow()})}
+function renderNow(){
+  let v=route();const C=compute();
+  const gated=!isMember();if(gated)v='gate';$('#tabs').hidden=gated;
+  document.querySelectorAll('[data-view]').forEach(s=>s.hidden=s.dataset.view!==v);
+  document.querySelectorAll('[data-tab]').forEach(a=>{if(a.dataset.tab===v)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
+  rWho();rBanner();
+  if(v==='trail'){rStatus(C);rTimeline(C);rBoard(C);drawTrail()}
+  if(v==='homes'){rHomes();drawHomes()}
+  if(v==='log')rLog();
+  if(v==='gallery')rGallery(C);
+  if(v==='rules')rRules();
+  if(v==='admin')rAdmin(C);
+  if(v==='gate')rGate();
+  if(sheetMap&&sheetMap.redraw)sheetMap.redraw();
+}
+addEventListener('hashchange',()=>{document.querySelectorAll('.map-card.full').forEach(c=>{c.classList.remove('full');const b=c.querySelector('[data-expand]');if(b)b.textContent='Full screen'});document.body.style.overflow='';renderNow();scrollTo(0,0)});
+
+/* ---------- writes ---------- */
+async function W(fn,okMsg){
+  if(!canWrite()){toast(S.demo?'The example game doesn’t save changes.':'Sign in first.');return false}
+  try{await fn();if(okMsg)toast(okMsg);return true}catch(e){console.error(e);toast(errMsg(e));render();return false}
+}
+const col=n=>S.db.collection(n);
+
+/* ---------- home form (join / add / edit) ---------- */
+function openHomeForm(mode,id){
+  if(mode==='join'){
+    if(!S.me){toast('Sign in first.');return}
+    if(myHome()){toast('Your family is already in the game.');return}
+  }
+  const req=mode==='join'&&!isOrg()?(S.myJoin&&S.myJoin.status!=='approved'?S.myJoin:null):null;
+  const h=id?homeById(id):(req?{family:req.family,number:req.number,x:req.x,y:req.y}:null);const pos={x:h?.x??null,y:h?.y??null,manual:h?.x!=null};const auto=()=>{const q=lotPos($('#hfNum').value);return q?{x:q[0],y:q[1]}:null};
+  const title=mode==='join'?(isOrg()?'Join Reindeer Games':'Request to join'):h?'Edit family':'Add a family';
+  const sh=openSheet(`${shTop(title,'Emerald Bay')}
+    <form class="stack" id="hf">
+      <label class="field"><span>Family name</span><input type="text" id="hfName" maxlength="40" placeholder="The Garcias" value="${esc(h?.family||'')}" required></label>
+      <label class="field"><span>House number</span><input type="text" id="hfNum" inputmode="numeric" maxlength="6" placeholder="153" value="${esc(h?.number||'')}" required><small>As in “153 Emerald Bay”.</small></label>
+      <div class="field"><span>Your house on the map</span>
+        <div class="map-card card" style="padding:0;overflow:hidden"><div class="map-box"><svg id="hfMap"></svg></div><div class="map-bar"><button type="button" data-zoom="sheet:out" aria-label="Zoom out">−</button><button type="button" data-zoom="sheet:in" aria-label="Zoom in">+</button><button type="button" class="wide" data-zoom="sheet:reset" aria-label="Show the whole map">Fit</button><span class="sp"></span></div></div>
+        <small id="hfPinMsg">Enter your house number and we’ll pin it for you.</small></div>
+      ${h&&isOrg()&&h.ownerId?`<button type="button" class="btn sm ghost" id="hfUnlink" style="align-self:start">Unlink from neighbor’s account</button>`:''}
+      ${mode==='join'&&!isOrg()?'<p class="small muted">The organizer approves each family before they can see the game.</p>':''}
+      <button class="btn red block" type="submit">${mode==='join'?(isOrg()?'Join the game':'Send request'):'Save'}</button>
+      ${h&&id&&isOrg()?`<button type="button" class="btn danger block" id="hfDel">Remove family</button>`:''}
+    </form>`);
+  const m=new MapView($('#hfMap'),'sheet');sheetMap=m;
+  const cur=()=>pos.manual?{x:pos.x,y:pos.y}:auto();
+  const msg=t=>{$('#hfPinMsg').textContent=t};
+  m.redraw=()=>{let drop='';const q=cur();if(q){drop=pinPath(q.x*m.W,q.y*m.H,'m-drop')}m.draw(pins(m,{faint:true,skip:h?.id})+drop)};
+  const sync=(zoom)=>{const n=$('#hfNum').value.trim();const q=cur();
+    if(pos.manual)msg('Pin placed by hand. Tap the map to move it.');
+    else if(q)msg(`Found No. ${n}. Pinned it for you. Tap the map if it’s a little off.`);
+    else if(n)msg(`No. ${n} isn’t labeled on the map. Zoom in and tap your house to place the pin.`);
+    else msg('Enter your house number and we’ll pin it for you.');
+    m.redraw();if(zoom&&q)m.focus(q.x,q.y,m.W/3)};
+  m.onTap=p=>{pos.x=Math.round(p.x*10000)/10000;pos.y=Math.round(p.y*10000)/10000;pos.manual=true;sync(false)};
+  sh.querySelector('#hfNum').addEventListener('input',()=>{pos.manual=false;sync(true)});
+  m.redraw();sync(true);
+  sh.querySelector('#hf').addEventListener('submit',async e=>{e.preventDefault();
+    const family=$('#hfName').value.trim(),number=$('#hfNum').value.trim();
+    if(!family||!number){toast('Add your family name and house number.');return}
+    if(!cur()){toast('Tap your house on the map to place the pin.');return}
+    const body={family,number,x:pos.manual?pos.x:null,y:pos.manual?pos.y:null};
+    let ok;
+    if(mode==='join'&&!isOrg())ok=await W(()=>S.db.doc('joins/'+S.me).set({...body,status:'pending',at:new Date().toISOString()}),'Request sent. The organizer will review it.');
+    else ok=await W(async()=>{if(id)await col('homes').doc(id).update(body);else await col('homes').add({...body,ownerId:mode==='join'?S.me:null,createdAt:Date.now()})},mode==='join'?'You’re in. Happy hunting.':'Saved');
+    if(ok)closeSheet();
+  });
+  const del=sh.querySelector('#hfDel');if(del)del.addEventListener('click',async()=>{if(!del.dataset.armed){del.dataset.armed=1;del.textContent='Tap again to remove';return}if(await W(()=>col('homes').doc(h.id).delete(),'Family removed'))closeSheet()});
+  const un=sh.querySelector('#hfUnlink');if(un)un.addEventListener('click',async()=>{if(await W(()=>col('homes').doc(h.id).update({ownerId:null}),'Unlinked'))closeSheet()});
+}
+
+/* ---------- event detail / edit ---------- */
+function openEvent(id){
+  const e=D().events.find(x=>x.id===id);if(!e)return;const C=compute();
+  if(e===C.hidden){toast('This one is sealed until the next steal.');return}
+  const ms=mediaFor(id),involved=canSee(e)&&(isOrg()||e.by===myId()||[e.from,e.to].includes(myHome()?.id));
+  const byHome=D().homes.find(h=>h.ownerId&&h.ownerId===e.by);
+  const sh=openSheet(`${shTop('Case '+pad(C.num.get(id)),esc(fmt(e.at)))}
+    <p>${caseLine(e)}.</p>
+    ${e.note?`<p class="small">“${esc(e.note)}”</p>`:''}
+    <p class="case-meta">Logged by ${byHome?esc(byHome.family):'the organizer'}</p>
+    ${claimBtn(e)}
+    ${ms.length?`<div class="gallery">${ms.map(m=>`<button data-media="${esc(m.id)}" aria-label="Open ${m.type}">${m.type==='image'?`<img src="${esc(murl(m))}" alt="">`:`<video src="${esc(murl(m))}#t=0.1" preload="metadata" muted playsinline></video><span class="play">VIDEO</span>`}</button>`).join('')}</div>`:'<p class="muted small">No photos or videos yet.</p>'}
+    ${involved&&S.assets&&canWrite()&&(!isPast()||isOrg())?`<label class="drop"><input type="file" id="evFiles" accept="image/*,video/*" multiple><b>Add your photos or videos</b><br><small>Both the stealer and the family who lost him can add footage.</small></label><ul class="files" id="evFileList"></ul>`:''}
+    ${(isOrg()||e.by===myId())&&canWrite()?`<button class="btn" id="evEdit">Edit entry</button>`:''}`);
+  const f=sh.querySelector('#evFiles');if(f)f.addEventListener('change',async()=>{await uploadAll([...f.files],id,$('#evFileList'));f.value=''});
+  const ed=sh.querySelector('#evEdit');if(ed)ed.addEventListener('click',()=>openEventForm(e));
+}
+function homeOpts(unknownLabel){return [...(unknownLabel?[['',unknownLabel]]:[]),...sortHomes(D().homes).map(h=>[h.id,`${h.family} · No. ${h.number}`])]}
+function openEventForm(e,preset={}){
+  const isNew=!e;const kind=e?.kind||preset.kind||'steal';
+  const sh=openSheet(`${shTop(isNew?(kind==='start'?'Set starting house':'Add an unlogged move'):'Edit entry')}
+    <form class="stack" id="ef">
+      ${kind==='start'?'':`<label class="field"><span>Taken from</span><select id="efFrom"></select></label>`}
+      <label class="field"><span>${kind==='start'?'Rudolph starts at':'Taken by'}</span><select id="efTo"></select></label>
+      <label class="field"><span>When</span><input type="datetime-local" id="efAt" required></label>
+      <label class="field"><span>Note</span><input type="text" id="efNote" maxlength="200"></label>
+      <button class="btn red block" type="submit">Save</button>
+      ${isNew?'':`<button type="button" class="btn danger block" id="efDel">Delete entry</button>`}
+    </form>`);
+  if(kind!=='start'){fillSelect($('#efFrom'),homeOpts('Unknown'));$('#efFrom').value=e?.from??preset.from??''}
+  fillSelect($('#efTo'),homeOpts(kind==='start'?null:'Unknown'));$('#efTo').value=e?.to??preset.to??'';
+  $('#efAt').value=localInput(new Date(e?.at||preset.at||Date.now()));$('#efNote').value=e?.note||'';
+  sh.querySelector('#ef').addEventListener('submit',async ev=>{ev.preventDefault();
+    const from=kind==='start'?null:($('#efFrom').value||null),to=$('#efTo').value||null,atv=$('#efAt').value;
+    if(!atv){toast('Pick a date and time.');return}
+    if(kind==='start'&&!to){toast('Pick the starting house.');return}
+    if(kind!=='start'&&!from&&!to){toast('Pick at least one family.');return}
+    if(from&&from===to){toast('Pick two different families.');return}
+    const body={kind,from,to,at:new Date(atv).toISOString(),note:$('#efNote').value.trim()};
+    const ok=await W(()=>isNew?col('steals').add({...body,season:viewSeason(),by:S.me,createdAt:Date.now()}):col('steals').doc(e.id).update(body),'Saved');
+    if(ok)closeSheet();
+  });
+  const del=sh.querySelector('#efDel');if(del)del.addEventListener('click',async()=>{if(!del.dataset.armed){del.dataset.armed=1;del.textContent='Tap again to delete';return}
+    const ok=await W(async()=>{for(const m of mediaFor(e.id))await col('media').doc(m.id).delete();await col('steals').doc(e.id).delete()},'Entry deleted');if(ok)closeSheet()});
+}
+function openMedia(id){
+  const m=D().media.find(x=>x.id===id);if(!m)return;const e=D().events.find(x=>x.id===m.stealId);const C=compute();
+  const byH=homeById(m.byHome);
+  const sh=openSheet(`${shTop(e?'Case '+pad(C.num.get(e.id)):'Capture',esc(fmt(m.at)))}
+    ${m.type==='image'?`<img class="media-full" src="${esc(murl(m))}" alt="Capture photo">`:`<video class="media-full" src="${esc(murl(m))}" controls playsinline></video>`}
+    ${e?`<p>${caseLine(e)}.</p>`:''}<p class="case-meta">Uploaded by ${byH?esc(byH.family):'the organizer'}</p>
+    ${(isOrg()||m.by===myId())&&canWrite()?`<button class="btn danger" id="mDel">Remove this ${m.type==='image'?'photo':'video'}</button>`:''}`);
+  const d=sh.querySelector('#mDel');if(d)d.addEventListener('click',async()=>{if(!d.dataset.armed){d.dataset.armed=1;d.textContent='Tap again to remove';return}if(await W(()=>col('media').doc(m.id).delete(),'Removed'))closeSheet()});
+}
+
+/* ---------- add to home screen ---------- */
+const SITE_URL=location.origin+location.pathname;
+try{if(localStorage.getItem('rg-a2hs-hide'))$('#a2hsCard').hidden=true}catch{}
+function openA2HS(){
+  const ua=navigator.userAgent||'',ios=/iPhone|iPad|iPod/i.test(ua)||(/Macintosh/.test(ua)&&'ontouchend' in document),android=/Android/i.test(ua);
+  const iosSteps=`<ol class="stack" style="padding-left:20px;margin:0"><li>Open the link below in <b>Safari</b>.</li><li>Tap the <b>Share</b> button (the square with an arrow pointing up).</li><li>Scroll down and tap <b>Add to Home Screen</b>, then <b>Add</b>.</li></ol>`;
+  const andSteps=`<ol class="stack" style="padding-left:20px;margin:0"><li>Open the link below in <b>Chrome</b>.</li><li>Tap the <b>⋮</b> menu in the top corner.</li><li>Tap <b>Add to Home screen</b>, then <b>Add</b>.</li></ol>`;
+  const sh=openSheet(`${shTop('Add to home screen','Reindeer Games')}
+    <p class="small muted">Phones only allow this from the browser, so open the site there first.</p>
+    ${ios?`<h3>iPhone</h3>${iosSteps}`:android?`<h3>Android</h3>${andSteps}`:`<h3>iPhone</h3>${iosSteps}<h3>Android</h3>${andSteps}`}
+    <div class="field"><span>Site link</span><input type="text" id="a2hsUrl" readonly value="${SITE_URL}"></div>
+    <div class="row"><button class="btn primary" id="a2hsCopy">Copy link</button><a class="btn" href="${SITE_URL}" target="_blank" rel="noopener">Open in browser</a></div>
+    <p class="small muted">Sign in once in that browser and the shortcut stays signed in.</p>`);
+  sh.querySelector('#a2hsCopy').addEventListener('click',async()=>{const i=$('#a2hsUrl');
+    try{await navigator.clipboard.writeText(SITE_URL);toast('Link copied')}catch{i.focus();i.select();toast('Link selected. Copy it from the menu.')}});
+}
+/* ---------- uploads ---------- */
+async function prep(f){
+  const t=(f.type||'').toLowerCase(),n=(f.name||'').toLowerCase();
+  if(t.startsWith('video/')||/\.(mov|mp4|m4v|webm)$/.test(n)){
+    if(f.size>50*1024*1024)throw{code:'too_large'};
+    return{blob:f,type:(t==='video/webm'||n.endsWith('.webm'))?'video/webm':'video/mp4',kind:'video'};
+  }
+  if(['image/jpeg','image/png','image/webp','image/gif'].includes(t)&&f.size<1.5e6)return{blob:f,type:t,kind:'image'};
+  let src;try{src=await createImageBitmap(f,{imageOrientation:'from-image'})}catch{src=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej({code:'unsupported_type'});i.src=URL.createObjectURL(f)})}
+  const w=src.width,h=src.height,k=Math.min(1,2048/Math.max(w,h));const c=document.createElement('canvas');c.width=Math.round(w*k);c.height=Math.round(h*k);
+  c.getContext('2d').drawImage(src,0,0,c.width,c.height);
+  const b=await new Promise(r=>c.toBlob(r,'image/jpeg',.85));if(!b)throw{code:'unsupported_type'};
+  return{blob:b,type:'image/jpeg',kind:'image'};
+}
+async function uploadAll(files,stealId,list){
+  if(!files.length)return 0;let ok=0;
+  list.innerHTML=files.map((f,i)=>`<li><span>${esc(f.name||'file')}</span><span class="mono" id="up${i}">waiting</span></li>`).join('');
+  for(let i=0;i<files.length;i++){const st=list.querySelector('#up'+i);
+    try{st.textContent='uploading…';const p=await prep(files[i]);const r=await S.assets.upload(p.blob,{type:p.type});
+      await col('media').add({stealId,assetId:r.id,type:p.kind,by:S.me,byHome:myHome()?.id||null,at:new Date().toISOString()});st.textContent='done';ok++}
+    catch(e){console.error(e);st.textContent=e&&e.code==='too_large'?'over 50 MB':'failed';toast(errMsg(e))}}
+  return ok;
+}
+$('#files').addEventListener('change',()=>{const fs=[...$('#files').files];$('#fileList').innerHTML=fs.map(f=>`<li><span>${esc(f.name)}</span><span class="mono">${(f.size/1048576).toFixed(1)} MB</span></li>`).join('')});
+
+/* ---------- log form ---------- */
+$('#modeTook').addEventListener('click',()=>{logMode='took';rLog()});
+$('#modeLost').addEventListener('click',()=>{logMode='lost';rLog()});
+$('#acting').addEventListener('change',rLog);
+$('#logForm').addEventListener('submit',async ev=>{ev.preventDefault();
+  const acting=$('#acting').value||myHome()?.id;const other=$('#other').value||null;const atv=$('#when').value;
+  if(!acting){toast('Join the game first.');return}
+  if(logMode==='took'&&!other){toast('Pick the family you took him from.');return}
+  if(!atv){toast('Pick when it happened.');return}
+  const at=new Date(atv).toISOString(),t=+new Date(at);
+  const from=logMode==='took'?other:acting,to=logMode==='took'?acting:other;
+  const near=(e,win)=>Math.abs(+new Date(e.at)-t)<win;
+  const btn=$('#logSubmit');btn.disabled=true;btn.textContent='Saving…';
+  let stealId=null;
+  const ok=await W(async()=>{
+    const r=await sb.rpc('log_steal',{p_from:from,p_to:to,p_at:at,p_note:$('#note').value.trim(),p_season:isOrg()?viewSeason():null});
+    if(r.error)throw r.error;stealId=r.data;queueRefresh();
+  });
+  if(ok&&stealId){const fs=[...$('#files').files];if(fs.length&&S.assets)await uploadAll(fs,stealId,$('#fileList'));
+    toast(logMode==='took'?'Logged. Keep him visible from the street.':'Logged. The hunt continues.');
+    $('#logForm').reset();$('#when').value='';$('#fileList').innerHTML='';location.hash='#trail'}
+  btn.disabled=false;btn.textContent='Log it';
+});
+
+/* ---------- global clicks ---------- */
+document.addEventListener('click',async e=>{
+  const t=e.target;let el;
+  if(el=t.closest('[data-zoom]')){const [w,a]=el.dataset.zoom.split(':');const m={trail:trailMap,homes:homesMap,sheet:sheetMap}[w];if(m){a==='in'?m.zoom(.7):a==='out'?m.zoom(1.4):m.reset()}return}
+  if(el=t.closest('[data-expand]')){const card=el.closest('.map-card');const on=!card.classList.contains('full');card.classList.toggle('full',on);document.body.style.overflow=on?'hidden':'';el.textContent=on?'Close':'Full screen';el.setAttribute('aria-label',on?'Close full screen map':'Full screen map');return}
+  if(el=t.closest('[data-season]')){S.season=el.dataset.season===curSeason()?null:el.dataset.season;closeSheet();renderNow();scrollTo(0,0);return}
+  if(t.closest('[data-seasons]')){const vs=viewSeason();
+    openSheet(`${shTop('Game year','Reindeer Games')}<ul class="homes">${allSeasons().map(y=>{const n=S.live.events.filter(e=>e.kind==='steal'&&evSeason(e)===y).length;
+      return `<li class="${y===vs?'on':''}"><span class="hno">${esc(y)}</span><div><b>December ${esc(y)}</b><div class="case-meta">${y===curSeason()?'Current game · ':''}${n} ${n===1?'steal':'steals'}</div></div><button class="btn sm${y===vs?' primary':''}" data-season="${esc(y)}">${y===vs?'Viewing':'View'}</button></li>`}).join('')}</ul>`);return}
+  if(t.closest('[data-a2hs]')){openA2HS();return}
+  if(t.closest('[data-a2hs-hide]')){$('#a2hsCard').hidden=true;try{localStorage.setItem('rg-a2hs-hide','1')}catch{};return}
+  if(t.closest('[data-join]')){openHomeForm('join');return}
+  if(t.closest('[data-demo]')){S.demo=makeDemo();S.demoOrg=false;renderNow();scrollTo(0,0);return}
+  if(t.closest('[data-demo-exit]')){S.demo=null;renderNow();return}
+  if(t.closest('[data-demo-org]')){S.demoOrg=!S.demoOrg;renderNow();return}
+  if(el=t.closest('[data-claim]')){e.stopPropagation();const id=el.dataset.claim;await W(async()=>{const r=await sb.rpc('claim_steal',{p_id:id});if(r.error)throw r.error;queueRefresh()},'Claimed. It counts for you now.');return}
+  if(el=t.closest('[data-approve]')){const j=S.joins.find(x=>x.id===el.dataset.approve);if(!j)return;
+    const open=D().homes.find(h=>String(h.number)===String(j.number)&&!h.ownerId);
+    const body={family:j.family,number:j.number,x:j.x??null,y:j.y??null};
+    await W(async()=>{if(open)await col('homes').doc(open.id).update({...body,ownerId:j.id});else await col('homes').add({...body,ownerId:j.id,createdAt:Date.now()});
+      await S.db.doc('joins/'+j.id).update({status:'approved'})},`${j.family} approved`);return}
+  if(el=t.closest('[data-decline]')){if(!el.dataset.armed){el.dataset.armed=1;el.textContent='Tap to confirm';return}
+    await W(()=>S.db.doc('joins/'+el.dataset.decline).update({status:'declined'}),'Request declined');return}
+  if(el=t.closest('[data-claim-home]')){await W(()=>col('homes').doc(el.dataset.claimHome).update({ownerId:S.me}),'Linked to your account');return}
+  if(el=t.closest('[data-edit-home]')){openHomeForm(isOrg()?'admin':'self',el.dataset.editHome);return}
+  if(el=t.closest('[data-gap]')){const [from,to,after]=el.dataset.gap.split('|');const at=new Date(+new Date(after)+60e3).toISOString();
+    if(isOrg()&&!S.demo){openEventForm(null,{kind:'steal',from,to,at});return}
+    logMode='took';location.hash='#log';setTimeout(()=>{rLog();$('#other').value=from;$('#when').value=localInput(new Date(at))},30);return}
+  if(el=t.closest('[data-media]')){openMedia(el.dataset.media);return}
+  if(el=t.closest('[data-ev]')){if(t.closest('button'))return;openEvent(el.dataset.ev);return}
+  if(el=t.closest('#homeList [data-home]')){selHome=el.dataset.home;renderNow();return}
+});
+$('#addFam').addEventListener('click',()=>openHomeForm('admin'));
+$('#newSeason').addEventListener('click',async()=>{const b=$('#newSeason'),next=b.dataset.next;
+  if(!b.dataset.armed){b.dataset.armed=1;b.textContent=`Tap again to start ${next}`;b.classList.add('red');return}
+  delete b.dataset.armed;b.classList.remove('red');
+  const cfg=S.live.config,prev=seasonCfg(curSeason());
+  const body={...cfg,current:next,seasons:{...(cfg.seasons||{}),[curSeason()]:{...prev},[next]:{start:null,end:null,rules:prev.rules||''}}};
+  if(await W(()=>S.db.doc('config/game').set(body),`The ${next} game is ready. Set Rudolph’s starting house when it begins.`)){S.season=null;renderNow()}});
+$('#setStartHome').addEventListener('click',()=>{if(!D().homes.length){toast('Add a family first.');return}openEventForm(null,{kind:'start'})});
+$('#addMove').addEventListener('click',()=>{if(D().homes.length<2){toast('Add at least two families first.');return}openEventForm(null,{kind:'steal'})});
+['#setStart','#setEnd','#setRules'].forEach(s=>$(s).addEventListener('input',()=>$(s).dataset.dirty=1));
+$('#setForm').addEventListener('submit',async e=>{e.preventDefault();
+  const cfg=S.live.config,vs=viewSeason();
+  const body={...cfg,current:cfg.current||curSeason(),seasons:{...(cfg.seasons||{}),[vs]:{start:$('#setStart').value||null,end:$('#setEnd').value||null,rules:$('#setRules').value}}};
+  if(await W(()=>S.db.doc('config/game').set(body),'Settings saved'))['#setStart','#setEnd','#setRules'].forEach(s=>delete $(s).dataset.dirty)});
+
+/* ---------- example game (in memory only) ---------- */
+function makeDemo(){
+  const H=(id,family,number,x,y,ownerId=null)=>({id,family,number,x,y,ownerId});
+  const homes=[H('a','The Hartwells','1405',null,null),H('b','The Okafors','846',null,null),H('c','The Lindqvists','924',null,null),H('d','The Brennans','119',null,null),
+    H('e','The Moraleses','36',null,null),H('f','The Tanakas','508',null,null),H('g','The Pruitts','322',null,null),H('h','The Duvals','1013',null,null)];
+  const day=(n,h)=>{const d=new Date();d.setDate(d.getDate()-n);d.setHours(h,12,0,0);return d.toISOString()};
+  const E=(id,kind,from,to,at,note='')=>({id,kind,from,to,at,note,by:'x'});
+  const events=[E('1','start',null,'a',day(9,9),'Game on.'),E('2','steal','a','f',day(8,21),'Ladder was involved.'),E('3','steal','f','b',day(7,19)),
+    E('4','steal','c','g',day(5,22),'Grabbed during the HOA holiday party.'),E('5','steal','g','e',day(4,20)),E('6','steal','e',null,day(2,18)),
+    E('7','steal','h','d',day(1,21),'Wrapped him in lights for disguise.'),E('8','steal','d','a',day(0,7))];
+  return{config:{start:null,end:null,rules:''},homes,events,media:[]};
+}
+
+/* ---------- boot ---------- */
+trailMap=new MapView($('#trailMap'),'trail');homesMap=new MapView($('#homesMap'),'homes');
+homesMap.onTap=(p,t)=>{const g=t&&t.closest&&t.closest('[data-home]');selHome=g?g.dataset.home:null;renderNow();if(g){const li=document.querySelector(`#homeList [data-home="${CSS.escape(selHome)}"]`);li&&li.scrollIntoView({behavior:'smooth',block:'nearest'})}};
+renderNow();
+/* ---------- Supabase data layer ---------- */
+const CFG=window.RG_CONFIG||{};
+let sb=null;
+const FIELD={homes:{ownerId:'owner_id',createdAt:'created_at'},
+  steals:{from:'from_home',to:'to_home',by:'by_user',createdAt:'created_at'},
+  media:{stealId:'steal_id',assetId:'path',by:'by_user',byHome:'by_home'},joins:{}};
+const toDb=(t,o)=>{const m=FIELD[t]||{},r={};for(const [k,v] of Object.entries(o)){if(v===undefined||k==='id')continue;r[m[k]||k]=v}return r};
+const fromDb=(t,o)=>{const m=FIELD[t]||{},inv={};for(const [k,v] of Object.entries(m))inv[v]=k;const r={};for(const [k,v] of Object.entries(o))r[inv[k]||k]=v;
+  if(t==='joins')r.id=o.user_id;if(r.at)r.at=new Date(r.at).toISOString();if(r.createdAt!=null)r.createdAt=Number(r.createdAt);return r};
+const chk=({data,error})=>{if(error)throw error;return data};
+function table(t){const key=t==='joins'?'user_id':'id';return{
+  async add(o){const d=chk(await sb.from(t).insert(toDb(t,o)).select(key).single());queueRefresh();return{id:d[key]}},
+  doc(id){return{
+    async update(o){chk(await sb.from(t).update(toDb(t,o)).eq(key,id));queueRefresh()},
+    async set(o){chk(await sb.from(t).upsert({...toDb(t,o),[key]:id}));queueRefresh()},
+    async delete(){const path=t==='media'?S.live.media.find(m=>m.id===id)?.assetId:null;
+      chk(await sb.from(t).delete().eq(key,id));if(path)sb.storage.from('media').remove([path]).catch(()=>{});queueRefresh()}}}}}
+const dbShim={collection:table,doc(path){const [t,id]=path.split('/');
+  if(t==='config')return{async set(o){chk(await sb.from('config').upsert({id:1,data:o}));queueRefresh()}};return table(t).doc(id)}};
+const assetShim={async upload(blob,{type}){
+  const ext=({'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif','video/webm':'webm','video/quicktime':'mov'})[type]||'mp4';
+  const path=`${viewSeason()}/${crypto.randomUUID()}.${ext}`;
+  const {error}=await sb.storage.from('media').upload(path,blob,{contentType:type,upsert:false});
+  if(error){const m=String(error.message||'');if(String(error.statusCode)==='413'||/size|too large|exceed/i.test(m))throw{code:'too_large'};if(/mime|type/i.test(m))throw{code:'unsupported_type'};throw error}
+  return{id:path}}};
+/* private photos/videos are shown through short-lived signed links */
+S.urls={};let urlsAt=0;
+const murl=m=>S.urls[m.assetId]||'';
+async function signUrls(){
+  if(Date.now()-urlsAt>5*3600e3){S.urls={};urlsAt=Date.now()}
+  const need=S.live.media.map(m=>m.assetId).filter(p=>p&&!S.urls[p]);if(!need.length)return;
+  const {data,error}=await sb.storage.from('media').createSignedUrls(need,6*3600);
+  if(!error)for(const d of data||[])if(d.signedUrl&&d.path)S.urls[d.path]=d.signedUrl;
+}
+let refreshT=0,refreshing=false;
+function queueRefresh(){clearTimeout(refreshT);refreshT=setTimeout(refresh,250)}
+async function refresh(){
+  if(!sb||!S.me||refreshing)return;refreshing=true;
+  try{
+    const [cfg,homes,steals,media,joins,org]=await Promise.all([sb.from('config').select('data').eq('id',1).maybeSingle(),
+      sb.from('homes').select('*'),sb.from('steals').select('*'),sb.from('media').select('*'),sb.from('joins').select('*'),sb.rpc('is_org')]);
+    for(const r of [cfg,homes,steals,media,joins,org])if(r.error)throw r.error;
+    S.isOwner=!!org.data;
+    S.live.config=cfg.data?.data||{};
+    S.live.homes=homes.data.map(r=>fromDb('homes',r));
+    const ev=steals.data.map(r=>fromDb('steals',r));
+    // the newest steal may be sealed (hidden by the database); show that it exists, never where
+    const cur=curSeason(),lat=await sb.rpc('season_latest',{p_season:cur});
+    const L=!lat.error&&lat.data&&lat.data[0];
+    if(L&&!ev.some(e=>e.id===L.id))ev.push({id:L.id,kind:'steal',season:cur,from:null,to:'sealed',at:new Date(L.at).toISOString(),createdAt:Number(L.created_at),sealed:true});
+    S.live.events=ev;
+    S.live.media=media.data.map(r=>fromDb('media',r));
+    const js=joins.data.map(r=>fromDb('joins',r));
+    S.myJoin=js.find(j=>j.id===S.me)||null;S.joins=S.isOwner?js:[];
+    await signUrls();
+    S.ready=true;S.netErr=false;
+  }catch(e){console.error(e);S.netErr=true}
+  finally{refreshing=false}
+  render();
+}
+function signedOut(){S.me=null;S.email='';S.isOwner=false;S.ready=false;S.myJoin=undefined;S.joins=[];S.live={config:{},homes:[],events:[],media:[]};S.urls={}}
+document.addEventListener('submit',async e=>{
+  if(e.target.id==='siForm'){e.preventDefault();const em=$('#siEmail').value.trim();
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){toast('Enter a valid email address.');return}
+    const btn=$('#siBtn');btn.disabled=true;btn.textContent='Sending…';
+    const {error}=await sb.auth.signInWithOtp({email:em,options:{emailRedirectTo:location.origin+location.pathname}});
+    if(error){btn.disabled=false;btn.textContent='Email me a sign-in link';toast(/rate|seconds/i.test(error.message)?'Too many tries. Wait a minute, then try again.':'Couldn’t send the email. Check the address and try again.');return}
+    S.sentTo=em;renderNow()}
+  if(e.target.id==='codeForm'){e.preventDefault();const code=$('#siCode').value.replace(/\D/g,'');if(code.length<6){toast('Enter the 6-digit code.');return}
+    const {error}=await sb.auth.verifyOtp({email:S.sentTo,token:code,type:'email'});if(error)toast('That code didn’t work. Use the newest email, or tap its link.')}
+});
+document.addEventListener('click',async e=>{
+  if(e.target.closest('[data-signin-reset]')){S.sentTo='';renderNow();return}
+  if(e.target.closest('[data-signout]')&&sb){await sb.auth.signOut();toast('Signed out');location.hash='';}
+});
+(async()=>{
+  if(!window.supabase||!CFG.supabaseUrl||!CFG.supabaseAnonKey){S.notConfigured=true;S.authReady=true;renderNow();return}
+  sb=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseAnonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+  S.db=dbShim;S.assets=assetShim;
+  const apply=session=>{const id=session?.user?.id||null;
+    if(id===S.me)return;
+    if(!id){signedOut();S.authReady=true;render();return}
+    S.me=id;S.email=session.user.email||'';S.sentTo='';S.authReady=true;
+    if(/access_token|error_description/.test(location.hash))history.replaceState(null,'',location.pathname);
+    refresh()};
+  sb.auth.onAuthStateChange((_ev,session)=>apply(session));
+  const {data}=await sb.auth.getSession();apply(data.session);if(!data.session){S.authReady=true;render()}
+  sb.channel('rg-live').on('postgres_changes',{event:'*',schema:'public'},()=>queueRefresh()).subscribe();
+  setInterval(()=>{if(document.visibilityState==='visible')refresh()},45000);
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refresh()});
+})();
+</script>
+</body>
+</html>

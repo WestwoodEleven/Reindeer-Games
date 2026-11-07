@@ -663,7 +663,8 @@ function rGate(){
   if(S.notConfigured)h+=`<div class="label">Almost ready</div><h2>The game isn’t connected yet</h2><p>The organizer still needs to finish setting up the site.</p><button class="btn" data-demo style="margin-top:12px">See an example game</button>`;
   else if(!S.authReady)h+=`<div class="label">Loading</div><h2>One moment…</h2>`;
   else if(!S.me&&S.needEmail)h+=`<div class="label">Almost there</div><h2>Confirm your email</h2><p>You opened the sign-in link on a different phone or browser. Enter the same email you used to finish signing in.</p>
-    <form id="linkForm" class="stack" novalidate><label class="field"><span>Email</span><input type="email" id="linkEmail" autocomplete="email" placeholder="you@example.com"></label><button class="btn red" type="submit">Finish signing in</button></form>`;
+    <form id="linkForm" class="stack" novalidate><label class="field"><span>Email</span><input type="email" id="linkEmail" autocomplete="email" placeholder="you@example.com"></label><button class="btn red" type="submit">Finish signing in</button></form>
+    <button class="btn ghost" data-signin-start style="margin-top:12px;color:inherit;border-color:currentColor">Back to sign-in options</button>`;
   else if(!S.me&&S.phoneTo)h+=`<div class="label">Check your texts</div><h2>Enter the code we texted you</h2><p>We sent a 6-digit code to <b>${esc(S.phoneTo)}</b>. It can take a minute to arrive.</p>
     <form id="smsCodeForm" class="stack" novalidate><label class="field"><span>Code</span><input type="text" id="smsCode" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="123456"></label><button class="btn red" type="submit" id="smsCodeBtn">Sign in</button></form>
     <button class="btn ghost" data-phone-reset style="margin-top:12px;color:inherit;border-color:currentColor">Use a different number</button>`;
@@ -1110,8 +1111,9 @@ document.addEventListener('click',async e=>{
   if(e.target.closest('[data-google]')&&fbAuth){try{await fbAuth.signInWithPopup(new firebase.auth.GoogleAuthProvider())}
     catch(err){if(!/popup-closed|cancelled-popup/.test(err.code||''))toast(/popup-blocked/.test(err.code||'')?'Your browser blocked the sign-in window. Allow pop-ups and try again.':'Google sign-in didn’t finish. Try again, or use the email link.')}return}
   if(e.target.closest('[data-signin-reset]')){S.sentTo='';renderNow();return}
+  if(e.target.closest('[data-signin-start]')){S.needEmail=false;S.sentTo='';S.phoneTo='';history.replaceState(null,'',linkUrl());renderNow();return}
   if(e.target.closest('[data-phone-reset]')){S.phoneTo='';smsConfirm=null;resetRecaptcha();renderNow();return}
-  if(e.target.closest('[data-signout]')&&fbAuth){await fbAuth.signOut();toast('Signed out');location.hash=''}
+  if(e.target.closest('[data-signout]')&&fbAuth){await fbAuth.signOut();S.needEmail=false;S.sentTo='';S.phoneTo='';closeSheet();history.replaceState(null,'',linkUrl());toast('Signed out');renderNow();scrollTo(0,0)}
 });
 (async()=>{
   if(!window.firebase||!CFG.apiKey||!CFG.projectId){S.notConfigured=true;S.authReady=true;renderNow();return}

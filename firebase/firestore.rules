@@ -1,0 +1,75 @@
+rules_version = '2';
+// Reindeer Games: Firestore security rules.
+// Paste into Firebase console > Firestore Database > Rules, then Publish.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function email() { return request.auth.token.email.lower(); }
+    function isOrg() {
+      return signedIn() && request.auth.token.email_verified == true
+        && exists(/databases/$(database)/documents/organizers/$(email()));
+    }
+    function isMember() {
+      return isOrg() || (signedIn() && exists(/databases/$(database)/documents/members/$(request.auth.uid)));
+    }
+    function myHome() {
+      return get(/databases/$(database)/documents/members/$(request.auth.uid)).data.homeId;
+    }
+    function shortText(v, n) { return v is string && v.size() > 0 && v.size() <= n; }
+
+    // Organizers: one document per organizer, named with their email in lower case.
+    match /organizers/{e} {
+      allow read: if signedIn() && email() == e;
+      allow write: if false;            // add organizers in the Firebase console
+    }
+
+    // members/{uid} = { homeId }. Written by the organizer when approving a family.
+    match /members/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isOrg());
+      allow write: if isOrg();
+    }
+
+    match /config/{doc} {
+      allow read: if isMember();
+      allow write: if isOrg();
+    }
+
+    match /homes/{id} {
+      allow read: if isMember();
+      allow write: if isOrg();
+    }
+
+    // Join requests: each person can create or edit only their own pending request.
+    match /joins/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isOrg());
+      allow create, update: if isOrg() || (
+        signedIn() && request.auth.uid == uid
+        && request.resource.data.status == 'pending'
+        && shortText(request.resource.data.family, 60)
+        && shortText(request.resource.data.number, 10)
+        && (resource == null || resource.data.status != 'approved'));
+      allow delete: if isOrg();
+    }
+
+    match /steals/{id} {
+      allow read: if isMember();
+      allow create: if isOrg() || (
+        isMember() && request.resource.data.by == request.auth.uid
+        && (request.resource.data.from == myHome() || request.resource.data.to == myHome()));
+      allow update: if isOrg()
+        || (isMember() && resource.data.by == request.auth.uid)
+        // the thief fills in a steal the other family reported as "unknown"
+        || (isMember() && resource.data.to == null
+            && request.resource.data.to == myHome()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['to', 'at']));
+      allow delete: if isOrg() || (isMember() && resource.data.by == request.auth.uid);
+    }
+
+    match /media/{id} {
+      allow read: if isMember();
+      allow create: if isMember() && request.resource.data.by == request.auth.uid;
+      allow delete: if isOrg() || (isMember() && resource.data.by == request.auth.uid);
+    }
+  }
+}

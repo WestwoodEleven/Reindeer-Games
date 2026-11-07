@@ -3,48 +3,51 @@
 Emerald Bay's neighborhood Rudolph-stealing game. Families steal an inflatable Rudolph from each other all December and log each capture here with photos and videos.
 
 - **Site:** hosted on GitHub Pages from this repo (`index.html`).
-- **Data:** families, steals, photos and sign-ins live in a [Supabase](https://supabase.com) project. Nothing about the game is stored in this repo.
+- **Data:** families, steals, sign-ins, photos and videos live in a Firebase project. Nothing about the game is stored in this repo.
 
 ## Files
 
 | File | What it is |
 | --- | --- |
 | `index.html` | The whole site |
-| `config.js` | Your Supabase project URL and public (anon) key |
+| `config.js` | Your Firebase web app settings (public by design) |
 | `assets/` | Emerald Bay map images (light and dark) |
-| `supabase/setup.sql` | Creates the database, security rules and photo storage |
+| `firebase/firestore.rules` | Who can read and change game data |
+| `firebase/storage.rules` | Who can view and upload photos and videos |
 
 ## One-time setup
 
-### 1. Create the Supabase project
-1. Sign up at supabase.com and click **New project**. Any name works (for example `reindeer-games`). Pick the region closest to California (West US).
-2. When it finishes, open **SQL Editor → New query**, paste all of `supabase/setup.sql`, and click **Run**.
-3. Make yourself the organizer. In a new query, run (with your email):
-   ```sql
-   insert into public.organizers (email) values ('you@example.com');
-   ```
+### 1. Create the Firebase project
+1. At [console.firebase.google.com](https://console.firebase.google.com), click **Create a project**. Google Analytics isn't needed.
+2. Upgrade to the **Blaze** plan (bottom left, **Upgrade**). Firebase requires it for photo and video storage. A neighborhood game stays within the no-cost amounts. Set a budget alert (for example $1) when asked.
 
-### 2. Connect the site
-1. In Supabase, open **Project Settings → API** and copy the **Project URL** and the **anon public** key.
-2. Paste them into `config.js`. The anon key is designed to be public: the database rules decide who can see what.
+### 2. Register the website
+1. Go to **Project settings → General → Your apps**, click the **</>** (Web) icon, and register an app named `Reindeer Games`. Don't enable Firebase Hosting.
+2. Copy the `firebaseConfig` values into `config.js`.
 
-### 3. Sign-in emails
-1. In Supabase, open **Authentication → URL Configuration**:
-   - **Site URL:** `https://westwoodeleven.github.io/Reindeer-Games/`
-   - **Redirect URLs:** add the same address.
-2. Recommended: open **Authentication → Emails → Magic Link** and add this line to the message, so people can type a code instead of tapping the link:
-   `Or enter this code: {{ .Token }}`
-3. Before inviting the neighborhood, set up custom email sending (**Authentication → Emails → SMTP Settings**). Supabase's built-in sender only allows a few emails per hour and is meant for testing. A free [Resend](https://resend.com) account works well.
+### 3. Turn on sign-in
+1. Go to **Build → Authentication → Get started → Sign-in method**.
+2. Enable **Google**, and **Email/Password** with **Email link (passwordless sign-in)** switched on.
+3. Under **Authentication → Settings → Authorized domains**, add `westwoodeleven.github.io`.
 
-### 4. Turn on GitHub Pages
-In this repo: **Settings → Pages → Build and deployment → Deploy from a branch → `main` / root**.
+### 4. Create the database
+1. Go to **Build → Firestore Database → Create database**. Pick a US location (for example `us-west1`) and **production mode**.
+2. Open the **Rules** tab, replace everything with `firebase/firestore.rules`, and click **Publish**.
+3. Make yourself the organizer. On the **Data** tab, **Start collection** `organizers`. Set the document ID to your sign-in email in lower case, and add any field (for example `role` = `organizer`).
+
+### 5. Create photo storage
+1. Go to **Build → Storage → Get started**. Use the same US location (US-WEST1, US-CENTRAL1 or US-EAST1 are in the no-cost tier).
+2. Open the **Rules** tab, replace everything with `firebase/storage.rules`, and click **Publish**.
+
+### 6. Turn on GitHub Pages
+In this repo: **Settings → Pages → Deploy from a branch → `main` / root**.
 
 ## How access works
 - Anyone can open the site, but they only see a sign-in screen.
-- After signing in by email, a family requests to join. The organizer approves them under **Organizer → Join requests**.
-- The organizer is whoever is listed in the `organizers` table.
-- The newest steal is hidden by the database itself from everyone except the organizer and the two families involved, until Rudolph is stolen again. Its photos and videos stay hidden too.
+- After signing in with Google or an emailed link, a family requests to join. The organizer approves them under **Organizer → Join requests**, which creates their home and a `members` entry.
+- Only approved families and organizers can read anything. Only organizers can add, edit or remove families.
+- The newest steal is hidden on screen from everyone except the organizer and the two families involved, until Rudolph is stolen again.
 
-## Limits (Supabase free plan)
-- Photos and videos: up to 50 MB per file, 1 GB total storage.
-- Free projects pause after a week with no visitors. Opening the Supabase dashboard wakes it up. During the game, daily use keeps it awake.
+## Limits
+- Photos and videos: up to 100 MB per file.
+- Storage no-cost tier (US regions): about 5 GB stored and plenty of downloads for a neighborhood. Check **Usage and billing** in Firebase now and then.

@@ -83,6 +83,20 @@ main{padding-block:16px calc(96px + env(safe-area-inset-bottom,0px))}
 .status .btn{margin-top:12px}
 .status input{color:var(--ink);background:var(--surface);border-color:transparent}
 .status form{margin-top:14px}
+.gsteps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.gsteps li{display:flex;flex-direction:column;gap:6px;font:600 .66rem/1.2 var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.gsteps li::before{content:"";height:4px;border-radius:2px;background:var(--line)}
+.gsteps li.done{color:var(--accent)}.gsteps li.done::before{background:var(--accent)}
+.gsteps li.on{color:var(--ink)}.gsteps li.on::before{background:var(--nose)}
+.or{display:flex;align-items:center;gap:10px;font:600 .7rem var(--f-mono);letter-spacing:.08em;opacity:.75}
+.or::before,.or::after{content:"";flex:1;height:1px;background:currentColor;opacity:.35}
+.btn.outline-c{background:transparent;color:inherit;border:1.5px solid currentColor}
+.linkbtn{background:none;border:0;padding:6px 0;font-weight:700;color:inherit;text-decoration:underline;cursor:pointer;align-self:center;font-size:.92rem}
+.code-inp{font:600 1.5rem var(--f-mono)!important;letter-spacing:.45em;text-align:center}
+.famrow{display:flex;align-items:center;gap:12px;background:var(--surface);color:var(--ink);border-radius:12px;padding:12px}
+.famrow .hno{color:var(--ink)}
+.status .stack{gap:12px}
+.status .map-card{color:var(--ink)}
 @keyframes pulse{50%{transform:scale(1.12);opacity:.8}}
 
 /* buttons */
@@ -376,7 +390,9 @@ textarea{min-height:120px;resize:vertical}
 
   <!-- GATE (not yet an approved participant) -->
   <section class="view" id="v-gate" data-view="gate" hidden>
+    <ol class="gsteps" id="gateSteps" aria-label="Joining steps"><li>Sign in</li><li>Your house</li><li>Approval</li></ol>
     <div class="status" id="gateBody"></div>
+    <p class="small muted" id="gateAcct" style="text-align:center"></p>
   </section>
 
   <!-- ADMIN -->
@@ -595,8 +611,6 @@ function rWho(){
   const mh=myHome();
   if(mh&&S.demo)h+=`<span class="chip">${esc(mh.family)}</span>`;
   else if(S.me&&isMember())h+=`<button class="chip" data-account aria-label="Account and sign out">${esc(mh?mh.family:"Account")} ▾</button>`;
-  else if(!S.demo&&!!S.me&&!isOrg()&&S.myJoin?.status==='pending')h+=`<span class="chip">Awaiting approval</span>`;
-  else if(!S.demo&&!!S.me&&!isOrg())h+=`<button class="chip solid" data-join>Join</button>`;
   else if(!S.demo&&isOrg()&&!mh)h+=`<button class="chip solid" data-join>Join</button>`;
   w.innerHTML=h;
 }
@@ -660,28 +674,91 @@ function rBoard(C){
   $('#board').innerHTML=hs.length?hs.map((x,i)=>`<li><span class="rank">${i+1}</span><div class="fam"><b>${esc(x.h.family)}</b><div class="case-meta">${hno(x.h)} · stolen from ${x.l}×</div></div><span class="n">${x.t}</span></li>`).join(''):`<li class="muted small">Steal counts appear after the first capture. The newest steal is counted once it unseals.</li>`;
 }
 function rGate(){
-  const g=$('#gateBody');const j=S.myJoin;let h='<div class="glow" aria-hidden="true"></div>';
-  if(S.notConfigured)h+=`<div class="label">Almost ready</div><h2>The game isn’t connected yet</h2><p>The organizer still needs to finish setting up the site.</p><button class="btn" data-demo style="margin-top:12px">See an example game</button>`;
-  else if(!S.authReady)h+=`<div class="label">Loading</div><h2>One moment…</h2>`;
-  else if(!S.me&&S.needEmail)h+=`<div class="label">Almost there</div><h2>Confirm your email</h2><p>You opened the sign-in link on a different phone or browser. Enter the same email you used to finish signing in.</p>
+  const g=$('#gateBody'),j=S.myJoin,glow='<div class="glow" aria-hidden="true"></div>';
+  let key,h='',step=0;
+  if(S.notConfigured){key='nc';h=`<div class="label">Almost ready</div><h2>The game isn’t connected yet</h2><p>The organizer still needs to finish setting up the site.</p><button class="btn" data-demo>See an example game</button>`}
+  else if(!S.authReady){key='load';h=`<div class="label">Loading</div><h2>One moment…</h2>`}
+  else if(!S.me&&S.needEmail){key='needEmail';step=1;h=`<div class="label">Almost there</div><h2>Confirm your email</h2><p>Your email app opened the link in a different browser. Enter your email once more to finish signing in.</p>
     <form id="linkForm" class="stack" novalidate><label class="field"><span>Email</span><input type="email" id="linkEmail" autocomplete="email" placeholder="you@example.com"></label><button class="btn red" type="submit">Finish signing in</button></form>
-    <button class="btn ghost" data-signin-start style="margin-top:12px;color:inherit;border-color:currentColor">Back to sign-in options</button>`;
-  else if(!S.me&&S.phoneTo)h+=`<div class="label">Check your texts</div><h2>Enter the code we texted you</h2><p>We sent a 6-digit code to <b>${esc(S.phoneTo)}</b>. It can take a minute to arrive.</p>
-    <form id="smsCodeForm" class="stack" novalidate><label class="field"><span>Code</span><input type="text" id="smsCode" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="123456"></label><button class="btn red" type="submit" id="smsCodeBtn">Sign in</button></form>
-    <button class="btn ghost" data-phone-reset style="margin-top:12px;color:inherit;border-color:currentColor">Use a different number</button>`;
-  else if(!S.me&&S.sentTo)h+=`<div class="label">Check your email</div><h2>We sent a sign-in link</h2><p>Open the email we sent to <b>${esc(S.sentTo)}</b> on this phone and tap the link. It can take a minute to arrive. Check spam too.</p>
-    <button class="btn" data-signin-reset style="margin-top:12px">Use a different email</button>`;
-  else if(!S.me)h+=`<div class="label">Members only</div><h2>Reindeer Games is for participating Emerald Bay families</h2><p>Sign in to see the game. New families can request to join after signing in.</p>
-    <button class="btn red" data-google style="margin-top:14px">Continue with Google</button>
-    <form id="phoneForm" class="stack" novalidate><label class="field"><span>Or get a code by text</span><input type="tel" id="phoneNum" autocomplete="tel" inputmode="tel" placeholder="(949) 555-0123"></label><button class="btn" type="submit" id="phoneBtn">Text me a code</button></form>
-    <form id="siForm" class="stack" novalidate><label class="field"><span>Or get a sign-in link by email</span><input type="email" id="siEmail" autocomplete="email" placeholder="you@example.com" required></label><button class="btn" type="submit" id="siBtn">Email me a link</button></form>
-    <button class="btn ghost" data-demo style="margin-top:12px;color:inherit;border-color:currentColor">See an example game</button>`;
-  else if(!S.ready||j===undefined)h+=`<div class="label">Loading</div><h2>Checking your invite…</h2>`;
-  else if(j&&j.status==='pending')h+=`<div class="label">Request sent</div><h2>Waiting for the organizer</h2><p>${esc(j.family)} · ${esc(j.number)} Emerald Bay. You’ll get full access as soon as the organizer approves you. This page updates by itself.</p><button class="btn" data-join style="margin-top:12px">Edit my request</button>`;
-  else if(j&&j.status==='declined')h+=`<div class="label">Not approved</div><h2>The organizer didn’t approve this request</h2><p>If you think that’s a mistake, check with the organizer, then send a new request.</p><button class="btn red" data-join style="margin-top:12px">Send a new request</button>`;
-  else h+=`<div class="label">Members only</div><h2>Reindeer Games is for participating Emerald Bay families</h2><p>Request to join with your family name and house number. The organizer approves each family before the map, trail and photos open up.</p><button class="btn red" data-join style="margin-top:12px">Request to join</button><button class="btn" data-demo style="margin-top:12px;margin-left:8px">See an example game</button>`;
-  if(S.me)h+=`<p class="small" style="margin-top:16px">Signed in as ${esc(S.email||S.phone||'')} · <button class="btn sm ghost" data-signout style="color:inherit;border-color:currentColor">Sign out</button></p>`;
-  g.innerHTML=h;
+    <button class="linkbtn" data-signin-start>Back to sign-in options</button>`}
+  else if(!S.me&&S.phoneTo){key='code:'+S.phoneTo;step=1;h=`<div class="label">Check your texts</div><h2>Enter your code</h2><p>We texted a 6-digit code to <b>${esc(S.phoneTo)}</b>. It can take a minute to arrive.</p>
+    <form id="smsCodeForm" class="stack" novalidate><input type="text" id="smsCode" class="code-inp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••" aria-label="6-digit code"><button class="btn red" type="submit" id="smsCodeBtn">Sign in</button></form>
+    <button class="linkbtn" data-phone-reset>Use a different number</button>`}
+  else if(!S.me&&S.sentTo){key='sent:'+S.sentTo;step=1;h=`<div class="label">Check your email</div><h2>Tap the link we emailed you</h2><p>We sent a sign-in link to <b>${esc(S.sentTo)}</b>. Open it on this phone. It can take a minute to arrive, so check spam too.</p>
+    <button class="linkbtn" data-signin-reset>Use a different email or phone</button>`}
+  else if(!S.me){key='signin';step=1;h=`<div class="label">Emerald Bay families</div><h2>Sign in to play</h2><p>New here? You’ll pick your house next.</p>
+    <form id="signinForm" class="stack" novalidate><label class="field"><span>Phone number or email</span><input type="text" id="signinId" autocomplete="username" inputmode="email" placeholder="(949) 555-0123 or you@example.com"></label><button class="btn red" type="submit" id="signinBtn">Continue</button></form>
+    <div class="or" style="margin-top:12px">OR</div>
+    <button class="btn outline-c block" data-google style="margin-top:12px">Continue with Google</button>
+    <button class="linkbtn" data-demo style="display:block;margin:12px auto 0">See an example game</button>`}
+  else if(!S.ready||j===undefined){key='load2';h=`<div class="label">Loading</div><h2>Checking your invite…</h2>`}
+  else if(j&&j.status==='pending'&&!S.editJoin){key='pending:'+j.family+'|'+j.number;step=3;h=`<div class="label">Request sent</div><h2>Waiting for the organizer</h2>
+    <div class="famrow"><span class="hno">${esc(j.number)}</span><div><b>${esc(j.family)}</b><div class="case-meta">Requested ${esc(ago(j.at))}</div></div></div>
+    <p style="margin-top:12px">You’ll get in as soon as the organizer approves you. This page updates by itself.</p>
+    <button class="linkbtn" data-join-edit style="display:block;margin:10px auto 0">Change my request</button>`}
+  else if(j&&j.status==='declined'&&!S.editJoin){key='declined';step=2;h=`<div class="label">Not approved</div><h2>The organizer didn’t approve this request</h2><p>If you think that’s a mistake, check with the organizer, then send a new request.</p><button class="btn red" data-join-edit style="margin-top:12px">Send a new request</button>`}
+  else{key='house';step=2}
+  // progress bar
+  const st=$('#gateSteps');st.hidden=!step;
+  [...st.children].forEach((li,i)=>{li.className=i+1<step?'done':i+1===step?'on':'';li.textContent=i===0&&step>1?'Signed in':['Sign in','Your house','Approval'][i]});
+  $('#gateAcct').innerHTML=S.me?`Signed in as ${esc(S.email||S.phone||'')} · <button class="linkbtn" data-signout style="display:inline;padding:0">Sign out</button>`:'';
+  if(g.dataset.key===key)return; // keep what the person is typing
+  g.dataset.key=key;
+  if(key!=='house'&&$('#sheetWrap').hidden)sheetMap=null;
+  if(key==='house'){mountJoinStep(g);return}
+  g.innerHTML=glow+h;
+}
+/* step 2: house number first, then join the existing family or name a new one */
+function mountJoinStep(root){
+  const req=S.myJoin&&S.myJoin.status!=='approved'?S.myJoin:null;
+  const pos={x:req?.x??null,y:req?.y??null,manual:req?.x!=null};let found=null;
+  root.innerHTML=`<div class="glow" aria-hidden="true"></div><div class="label">Your house</div><h2 id="jhTitle">Which house is yours?</h2>
+    <form id="jhForm" class="stack" novalidate>
+      <label class="field"><span>House number</span><input type="text" id="jhNum" inputmode="numeric" maxlength="6" placeholder="153" value="${esc(req?.number||'')}"></label>
+      <div class="map-card card" style="padding:0;overflow:hidden"><div class="map-box"><svg id="jhMap" aria-label="Map of Emerald Bay"></svg></div><div class="map-bar"><button type="button" data-zoom="sheet:out" aria-label="Zoom out">−</button><button type="button" data-zoom="sheet:in" aria-label="Zoom in">+</button><button type="button" class="wide" data-zoom="sheet:reset" aria-label="Show the whole map">Fit</button><span class="sp"></span></div></div>
+      <small id="jhMsg">Enter your house number and we’ll pin it for you.</small>
+      <button class="btn red" type="submit" id="jhNext">Next</button>
+    </form>
+    <div class="stack" id="jhStep2" hidden></div>`;
+  const m=new MapView(root.querySelector('#jhMap'),'sheet');sheetMap=m;
+  const auto=()=>{const q=lotPos($('#jhNum').value);return q?{x:q[0],y:q[1]}:null};
+  const cur=()=>pos.manual?{x:pos.x,y:pos.y}:auto();
+  const msg=t=>{$('#jhMsg').textContent=t};
+  m.redraw=()=>{const q=cur();m.draw(pins(m,{faint:true})+(q?pinPath(q.x*m.W,q.y*m.H,'m-drop'):''))};
+  const sync=zoom=>{const n=$('#jhNum').value.trim(),q=cur();
+    if(pos.manual)msg('Pin placed by hand. Tap the map to move it.');
+    else if(q)msg(`Found ${n} Emerald Bay and pinned it. Tap the map if it’s a little off.`);
+    else if(n)msg(`${n} isn’t labeled on the map. Zoom in and tap your house to place the pin.`);
+    else msg('Enter your house number and we’ll pin it for you.');
+    m.redraw();if(zoom&&q)m.focus(q.x,q.y,m.W/3)};
+  m.onTap=p=>{pos.x=Math.round(p.x*1e4)/1e4;pos.y=Math.round(p.y*1e4)/1e4;pos.manual=true;sync(false)};
+  root.querySelector('#jhNum').addEventListener('input',()=>{pos.manual=false;sync(true)});
+  sync(true);
+  const showForm=()=>{$('#jhTitle').textContent='Which house is yours?';$('#jhForm').hidden=false;const s2=$('#jhStep2');s2.hidden=true;s2.innerHTML='';sheetMap=m;m.redraw()};
+  root.querySelector('#jhForm').addEventListener('submit',async e=>{e.preventDefault();
+    const number=$('#jhNum').value.trim();
+    if(!number){toast('Enter your house number.');return}
+    if(!cur()){toast('Tap your house on the map to place the pin.');return}
+    const b=$('#jhNext');b.disabled=true;b.textContent='Checking…';
+    found=null;try{const d=await S.db.doc('houseIndex/'+numKey(number)).get();if(d.exists)found=d.data()}catch(err){console.warn(err)}
+    b.disabled=false;b.textContent='Next';
+    $('#jhForm').hidden=true;const s2=$('#jhStep2');s2.hidden=false;
+    if(found){$('#jhTitle').textContent=`${found.family} play from ${number}`;
+      s2.innerHTML=`<p>Join them and you’ll play as one family.</p><div class="famrow"><span class="hno">${esc(number)}</span><b>${esc(found.family)}</b></div>
+        <button class="btn red" id="jhSend">Request to join ${esc(found.family)}</button><button class="linkbtn" id="jhBack">Not your family? Change house number</button>`}
+    else{$('#jhTitle').textContent=`You’re the first from ${number}`;
+      s2.innerHTML=`<p>Name your family. Everyone in your household will join under this name.</p>
+        <label class="field"><span>Family name</span><input type="text" id="jhFam" maxlength="40" placeholder="The Garcias" value="${esc(req&&!found?req.family:'')}"></label>
+        <button class="btn red" id="jhSend">Send request</button><button class="linkbtn" id="jhBack">Change house number</button>`;
+      setTimeout(()=>$('#jhFam')?.focus(),30)}
+    $('#jhBack').addEventListener('click',showForm);
+    $('#jhSend').addEventListener('click',async()=>{
+      const family=found?found.family:($('#jhFam')?.value||'').trim();
+      if(!family){toast('Give your family a name.');return}
+      const sb=$('#jhSend');sb.disabled=true;
+      const ok=await W(()=>S.db.doc('joins/'+S.me).set({family,number,x:pos.manual?pos.x:null,y:pos.manual?pos.y:null,email:S.email||'',phone:S.phone||'',name:S.name||'',status:'pending',at:new Date().toISOString()}),'Request sent');
+      sb.disabled=false;if(ok){S.editJoin=false;sheetMap=null;render()}});
+  });
 }
 function rHomes(){
   const hs=sortHomes(D().homes);$('#homeCount').textContent=hs.length?`${hs.length} ${hs.length>1?'families':'family'}`:'';
@@ -1110,16 +1187,19 @@ async function finishLink(email){
   catch(e){console.error(e);S.needEmail=false;history.replaceState(null,'',linkUrl());toast('That sign-in link expired or was already used. Request a new one.');renderNow()}
 }
 document.addEventListener('submit',async e=>{
-  if(e.target.id==='siForm'){e.preventDefault();const em=$('#siEmail').value.trim();
-    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){toast('Enter a valid email address.');return}
-    const btn=$('#siBtn');btn.disabled=true;btn.textContent='Sending…';
-    try{await fbAuth.sendSignInLinkToEmail(em,{url:linkUrl(),handleCodeInApp:true});try{localStorage.setItem('rg-email',em)}catch{};S.sentTo=em;renderNow()}
-    catch(err){console.error(err);btn.disabled=false;btn.textContent='Email me a link';toast(/too-many/.test(err.code)?'Too many tries. Wait a few minutes, then try again.':'Couldn’t send the email. Check the address and try again.')}}
-  if(e.target.id==='phoneForm'){e.preventDefault();const num=toE164($('#phoneNum').value);
-    if(!num){toast('Enter a 10-digit phone number, including area code.');return}
-    const btn=$('#phoneBtn');btn.disabled=true;btn.textContent='Sending…';
-    try{smsConfirm=await fbAuth.signInWithPhoneNumber(num,getRecaptcha());S.phoneTo=prettyPhone(num);renderNow();setTimeout(()=>$('#smsCode')?.focus(),50)}
-    catch(err){console.error(err);resetRecaptcha();btn.disabled=false;btn.textContent='Text me a code';toast(phoneErr(err))}}
+  if(e.target.id==='signinForm'){e.preventDefault();const v=$('#signinId').value.trim(),btn=$('#signinBtn');
+    if(!v){toast('Enter your phone number or email.');return}
+    if(v.includes('@')){
+      if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)){toast('That email doesn’t look right.');return}
+      btn.disabled=true;btn.textContent='Sending…';
+      try{await fbAuth.sendSignInLinkToEmail(v,{url:linkUrl(),handleCodeInApp:true});try{localStorage.setItem('rg-email',v)}catch{};S.sentTo=v;renderNow()}
+      catch(err){console.error(err);btn.disabled=false;btn.textContent='Continue';toast(/too-many/.test(err.code)?'Too many tries. Wait a few minutes, then try again.':'Couldn’t send the email. Check the address and try again.')}
+    }else{
+      const num=toE164(v);if(!num){toast('Enter a 10-digit phone number with area code, or an email.');return}
+      btn.disabled=true;btn.textContent='Sending…';
+      try{smsConfirm=await fbAuth.signInWithPhoneNumber(num,getRecaptcha());S.phoneTo=prettyPhone(num);renderNow();setTimeout(()=>$('#smsCode')?.focus(),50)}
+      catch(err){console.error(err);resetRecaptcha();btn.disabled=false;btn.textContent='Continue';toast(phoneErr(err))}
+    }}
   if(e.target.id==='smsCodeForm'){e.preventDefault();const code=$('#smsCode').value.replace(/\D/g,'');
     if(code.length<6){toast('Enter the 6-digit code.');return}
     if(!smsConfirm){toast('That code expired. Send a new one.');S.phoneTo='';renderNow();return}
@@ -1132,6 +1212,7 @@ document.addEventListener('click',async e=>{
   if(e.target.closest('[data-google]')&&fbAuth){try{await fbAuth.signInWithPopup(new firebase.auth.GoogleAuthProvider())}
     catch(err){if(!/popup-closed|cancelled-popup/.test(err.code||''))toast(/popup-blocked/.test(err.code||'')?'Your browser blocked the sign-in window. Allow pop-ups and try again.':'Google sign-in didn’t finish. Try again, or use the email link.')}return}
   if(e.target.closest('[data-signin-reset]')){S.sentTo='';renderNow();return}
+  if(e.target.closest('[data-join-edit]')){S.editJoin=true;renderNow();return}
   if(e.target.closest('[data-signin-start]')){S.needEmail=false;S.sentTo='';S.phoneTo='';history.replaceState(null,'',linkUrl());renderNow();return}
   if(e.target.closest('[data-phone-reset]')){S.phoneTo='';smsConfirm=null;resetRecaptcha();renderNow();return}
   if(e.target.closest('[data-signout]')&&fbAuth){await fbAuth.signOut();S.needEmail=false;S.sentTo='';S.phoneTo='';closeSheet();history.replaceState(null,'',linkUrl());toast('Signed out');renderNow();scrollTo(0,0)}

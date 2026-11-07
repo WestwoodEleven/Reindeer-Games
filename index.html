@@ -441,12 +441,14 @@ const H72=72*3600e3, H12=12*3600e3;
 
 /* ---------- state ---------- */
 const S={live:{config:{},homes:[],events:[],media:[]},ready:false,demo:null,demoOrg:false,
-  me:null,isOwner:false,myJoin:undefined,joins:[],canWrite:null,db:null,assets:null,offline:false,readOnly:false};
+  me:null,isOwner:false,myJoin:undefined,joins:[],members:[],memberHome:null,canWrite:null,db:null,assets:null,offline:false,readOnly:false};
 const D=()=>S.demo||S.live;
 const isOrg=()=>S.demo?S.demoOrg:S.isOwner;
 const myId=()=>S.demo?'demo-me':S.me;
 const homeById=id=>D().homes.find(h=>h.id===id);
-const myHome=()=>{const id=myId();return id?D().homes.find(h=>h.ownerId===id):null};
+const myHome=()=>{if(S.demo)return D().homes.find(h=>h.ownerId==='demo-me')||null;return (S.memberHome&&homeById(S.memberHome))||(S.me?D().homes.find(h=>h.ownerId===S.me):null)||null};
+const peopleOf=hid=>S.members.filter(m=>m.homeId===hid);
+const personLabel=m=>m.name&&m.email?`${m.name} (${m.email})`:(m.name||m.email||'Someone');
 const isMember=()=>!!S.demo||isOrg()||!!myHome()||!!S.memberDoc;
 const canWrite=()=>!S.demo&&!!S.db&&!!S.me;
 const fam=id=>{const h=homeById(id);return h?h.family:'a home no longer in the game'};
@@ -462,7 +464,7 @@ const localInput=d=>{const z=new Date(d.getTime()-d.getTimezoneOffset()*6e4);ret
 /* ---------- derived game record ---------- */
 function canSee(e){
   if(isOrg())return true;const id=myId();if(!id)return false;
-  return e.by===id||homeById(e.from)?.ownerId===id||homeById(e.to)?.ownerId===id;
+  const mh=myHome()?.id;return e.by===id||(!!mh&&(e.from===mh||e.to===mh));
 }
 /* ---------- seasons: one game per December ---------- */
 const yearOf=iso=>{const d=new Date(iso||Date.now());return String(d.getMonth()===0?d.getFullYear()-1:d.getFullYear())};
@@ -740,11 +742,11 @@ function rAdmin(C){
   const nb=$('#newSeason');nb.hidden=isPast();nb.dataset.next=next;if(!nb.dataset.armed)nb.textContent=`Start the ${next} game`;
   const pend=S.joins.filter(j=>j.status==='pending').sort((a,b)=>String(a.at).localeCompare(String(b.at)));
   $('#pendingCount').textContent=pend.length?`${pend.length} waiting`:'';
-  $('#pendingList').innerHTML=pend.length?pend.map(j=>{const taken=D().homes.find(h=>String(h.number)===String(j.number)&&h.ownerId);
-    return `<li><span class="hno">${esc(j.number)}</span><div><b>${esc(j.family)}</b><div class="case-meta">Requested ${esc(ago(j.at))}${taken?` · ${esc(taken.family)} already has this number`:''}</div></div><div class="row"><button class="btn sm danger" data-decline="${esc(j.id)}">Decline</button><button class="btn sm primary" data-approve="${esc(j.id)}">Approve</button></div></li>`}).join('')
+  $('#pendingList').innerHTML=pend.length?pend.map(j=>{const match=D().homes.find(h=>String(h.number)===String(j.number));const who=personLabel(j);
+    return `<li><span class="hno">${esc(j.number)}</span><div><b>${esc(j.family)}</b><div class="case-meta">${esc(who)} · requested ${esc(ago(j.at))}${match?` · ${esc(match.family)} already plays from ${esc(match.number)}`:''}</div></div><div class="row"><button class="btn sm danger" data-decline="${esc(j.id)}">Decline</button><button class="btn sm primary" data-approve="${esc(j.id)}">${match?`Add to ${esc(match.family)}`:'Approve'}</button></div></li>`}).join('')
     :`<li class="muted small">No requests waiting. New families appear here when they ask to join.</li>`;
   const hs=sortHomes(D().homes);
-  $('#adminHomes').innerHTML=hs.length?hs.map(h=>`<li><span class="hno">${hno(h)}</span><div><b>${esc(h.family)}</b><div class="case-meta">${h.ownerId?'Linked to a neighbor':'Added by you · not claimed'}${!hpos(h)?' · no pin':''}</div></div><button class="btn sm" data-edit-home="${esc(h.id)}">Edit</button></li>`).join(''):`<li class="muted small">No families yet. Add them here, or share the page so they can join.</li>`;
+  $('#adminHomes').innerHTML=hs.length?hs.map(h=>`<li><span class="hno">${hno(h)}</span><div><b>${esc(h.family)}</b><div class="case-meta">${(n=>n?`${n} ${n===1?'person':'people'}`:'No one linked yet')(peopleOf(h.id).length)}${!hpos(h)?' · no pin':''}</div></div><button class="btn sm" data-edit-home="${esc(h.id)}">Edit</button></li>`).join(''):`<li class="muted small">No families yet. Add them here, or share the page so they can join.</li>`;
   $('#adminEvents').innerHTML=C.evs.length?[...C.evs].reverse().map(e=>`<li class="case" data-ev="${esc(e.id)}"><div class="case-n">${pad(C.num.get(e.id))}</div><div><p>${caseLine(e)}</p><p class="case-meta">${esc(fmt(e.at))}${e===C.hidden||(e===C.last&&e.to)?' · hidden from neighbors':''}</p></div></li>`).join(''):`<li class="muted small">Nothing yet. Start by setting Rudolph’s starting house.</li>`;
 }
 
@@ -792,8 +794,8 @@ function openHomeForm(mode,id){
       <div class="field"><span>Your house on the map</span>
         <div class="map-card card" style="padding:0;overflow:hidden"><div class="map-box"><svg id="hfMap"></svg></div><div class="map-bar"><button type="button" data-zoom="sheet:out" aria-label="Zoom out">−</button><button type="button" data-zoom="sheet:in" aria-label="Zoom in">+</button><button type="button" class="wide" data-zoom="sheet:reset" aria-label="Show the whole map">Fit</button><span class="sp"></span></div></div>
         <small id="hfPinMsg">Enter your house number and we’ll pin it for you.</small></div>
-      ${h&&isOrg()&&h.ownerId?`<button type="button" class="btn sm ghost" id="hfUnlink" style="align-self:start">Unlink from neighbor’s account</button>`:''}
-      ${mode==='join'&&!isOrg()?'<p class="small muted">The organizer approves each family before they can see the game.</p>':''}
+      ${h&&id&&isOrg()&&!S.demo?`<div class="field"><span>People in this family</span>${peopleOf(id).length?`<ul class="homes">${peopleOf(id).map(m=>`<li><div style="grid-column:1/3"><b>${esc(m.name||m.email||'Someone')}</b>${m.name&&m.email?`<div class="case-meta">${esc(m.email)}</div>`:''}</div><button type="button" class="btn sm danger" data-unlink-member="${esc(m.id)}">Remove</button></li>`).join('')}</ul>`:'<small>No one linked yet. When someone requests to join with this house number, you can add them here.</small>'}</div>`:''}
+      ${mode==='join'&&!isOrg()?'<p class="small muted">The organizer approves each person before they can see the game. If your family is already playing, use the same house number and the organizer will add you to your family.</p>':''}
       <button class="btn red block" type="submit">${mode==='join'?(isOrg()?'Join the game':'Send request'):'Save'}</button>
       ${h&&id&&isOrg()?`<button type="button" class="btn danger block" id="hfDel">Remove family</button>`:''}
     </form>`);
@@ -816,12 +818,12 @@ function openHomeForm(mode,id){
     if(!cur()){toast('Tap your house on the map to place the pin.');return}
     const body={family,number,x:pos.manual?pos.x:null,y:pos.manual?pos.y:null};
     let ok;
-    if(mode==='join'&&!isOrg())ok=await W(()=>S.db.doc('joins/'+S.me).set({...body,status:'pending',at:new Date().toISOString()}),'Request sent. The organizer will review it.');
-    else ok=await W(async()=>{if(id)await col('homes').doc(id).update(body);else{const r=await col('homes').add({...body,ownerId:mode==='join'?S.me:null,createdAt:Date.now()});if(mode==='join')await S.db.doc('members/'+S.me).set({homeId:r.id})}},mode==='join'?'You’re in. Happy hunting.':'Saved');
+    if(mode==='join'&&!isOrg())ok=await W(()=>S.db.doc('joins/'+S.me).set({...body,email:S.email||'',name:S.name||'',status:'pending',at:new Date().toISOString()}),'Request sent. The organizer will review it.');
+    else ok=await W(async()=>{if(id)await col('homes').doc(id).update(body);else{const r=await col('homes').add({...body,ownerId:mode==='join'?S.me:null,createdAt:Date.now()});if(mode==='join')await S.db.doc('members/'+S.me).set({homeId:r.id,email:S.email||'',name:S.name||''})}},mode==='join'?'You’re in. Happy hunting.':'Saved');
     if(ok)closeSheet();
   });
-  const del=sh.querySelector('#hfDel');if(del)del.addEventListener('click',async()=>{if(!del.dataset.armed){del.dataset.armed=1;del.textContent='Tap again to remove';return}if(await W(async()=>{await col('homes').doc(h.id).delete();if(h.ownerId)await S.db.doc('members/'+h.ownerId).delete()},'Family removed'))closeSheet()});
-  const un=sh.querySelector('#hfUnlink');if(un)un.addEventListener('click',async()=>{if(await W(async()=>{await col('homes').doc(h.id).update({ownerId:null});await S.db.doc('members/'+h.ownerId).delete()},'Unlinked'))closeSheet()});
+  const del=sh.querySelector('#hfDel');if(del)del.addEventListener('click',async()=>{if(!del.dataset.armed){del.dataset.armed=1;del.textContent='Tap again to remove';return}if(await W(async()=>{const ids=new Set(peopleOf(h.id).map(m=>m.id));if(h.ownerId)ids.add(h.ownerId);for(const u of ids){await S.db.doc('members/'+u).delete();await S.db.doc('joins/'+u).delete().catch(()=>{})}await col('homes').doc(h.id).delete()},'Family removed'))closeSheet()});
+  
 }
 
 /* ---------- event detail / edit ---------- */
@@ -829,7 +831,7 @@ function openEvent(id){
   const e=D().events.find(x=>x.id===id);if(!e)return;const C=compute();
   if(e===C.hidden){toast('This one is sealed until the next steal.');return}
   const ms=mediaFor(id),involved=canSee(e)&&(isOrg()||e.by===myId()||[e.from,e.to].includes(myHome()?.id));
-  const byHome=D().homes.find(h=>h.ownerId&&h.ownerId===e.by);
+  const byHome=homeById(e.byHome)||homeById(S.members.find(m=>m.id===e.by)?.homeId)||D().homes.find(h=>h.ownerId&&h.ownerId===e.by);
   const sh=openSheet(`${shTop('Case '+pad(C.num.get(id)),esc(fmt(e.at)))}
     <p>${caseLine(e)}.</p>
     ${e.note?`<p class="small">“${esc(e.note)}”</p>`:''}
@@ -938,7 +940,7 @@ $('#logForm').addEventListener('submit',async ev=>{ev.preventDefault();
     const evs=D().events.filter(e=>e.kind==='steal'&&evSeason(e)===viewSeason());
     const same=evs.find(e=>e.from===from&&(e.to===to||(!to&&e.to)||(!e.to&&to))&&near(e,H72));
     if(same){stealId=same.id;if(!same.to&&to)await col('steals').doc(same.id).update({to,at})}
-    else{const r=await col('steals').add({kind:'steal',season:viewSeason(),from,to,at,note:$('#note').value.trim(),by:S.me,createdAt:Date.now()});stealId=r.id}
+    else{const r=await col('steals').add({kind:'steal',season:viewSeason(),byHome:myHome()?.id||null,from,to,at,note:$('#note').value.trim(),by:S.me,createdAt:Date.now()});stealId=r.id}
   });
   if(ok&&stealId){const fs=[...$('#files').files];if(fs.length&&S.assets)await uploadAll(fs,stealId,$('#fileList'));
     toast(logMode==='took'?'Logged. Keep him visible from the street.':'Logged. The hunt continues.');
@@ -963,11 +965,18 @@ document.addEventListener('click',async e=>{
   if(t.closest('[data-demo-org]')){S.demoOrg=!S.demoOrg;renderNow();return}
   if(el=t.closest('[data-claim]')){e.stopPropagation();const id=el.dataset.claim;await W(()=>col('steals').doc(id).update({to:myHome().id}),'Claimed. It counts for you now.');return}
   if(el=t.closest('[data-approve]')){const j=S.joins.find(x=>x.id===el.dataset.approve);if(!j)return;
-    const open=D().homes.find(h=>String(h.number)===String(j.number)&&!h.ownerId);
+    const match=D().homes.find(h=>String(h.number)===String(j.number));
     const body={family:j.family,number:j.number,x:j.x??null,y:j.y??null};
-    await W(async()=>{let hid;if(open){hid=open.id;await col('homes').doc(open.id).update({...body,ownerId:j.id})}else hid=(await col('homes').add({...body,ownerId:j.id,createdAt:Date.now()})).id;
-      await S.db.doc('members/'+j.id).set({homeId:hid});
-      await S.db.doc('joins/'+j.id).update({status:'approved'})},`${j.family} approved`);return}
+    await W(async()=>{let hid;
+      if(match){hid=match.id;if(!match.ownerId)await col('homes').doc(match.id).update({ownerId:j.id})}
+      else hid=(await col('homes').add({...body,ownerId:j.id,createdAt:Date.now()})).id;
+      await S.db.doc('members/'+j.id).set({homeId:hid,email:j.email||'',name:j.name||''});
+      await S.db.doc('joins/'+j.id).update({status:'approved'})},match?`${personLabel(j)} added to ${match.family}`:`${j.family} approved`);return}
+  if(el=t.closest('[data-unlink-member]')){if(!el.dataset.armed){el.dataset.armed=1;el.textContent='Tap to confirm';return}
+    const uid=el.dataset.unlinkMember,m=S.members.find(x=>x.id===uid),h=homeById(m?.homeId);
+    await W(async()=>{await S.db.doc('members/'+uid).delete();await S.db.doc('joins/'+uid).delete().catch(()=>{});
+      if(h&&h.ownerId===uid){const next=peopleOf(h.id).find(x=>x.id!==uid);await col('homes').doc(h.id).update({ownerId:next?next.id:null})}},'Removed. They can request to join again.');
+    el.closest('li')?.remove();return}
   if(el=t.closest('[data-decline]')){if(!el.dataset.armed){el.dataset.armed=1;el.textContent='Tap to confirm';return}
     await W(()=>S.db.doc('joins/'+el.dataset.decline).update({status:'declined'}),'Request declined');return}
   if(el=t.closest('[data-claim-home]')){await W(()=>col('homes').doc(el.dataset.claimHome).update({ownerId:S.me}),'Linked to your account');return}
@@ -1034,16 +1043,17 @@ function startMain(){
   subs.push(db.collection('homes').onSnapshot(q=>{S.live.homes=q.docs.map(d=>({...d.data(),id:d.id}));done()},err));
   subs.push(db.collection('steals').onSnapshot(q=>{S.live.events=q.docs.map(d=>({...d.data(),id:d.id}));done()},err));
   subs.push(db.collection('media').onSnapshot(q=>{S.live.media=q.docs.map(d=>({...d.data(),id:d.id}));loadUrls();done()},err));
+  if(S.isOwner)subs.push(db.collection('members').onSnapshot(q=>{S.members=q.docs.map(d=>({...d.data(),id:d.id}));render()},err));
   if(S.isOwner)subs.push(db.collection('joins').onSnapshot(q=>{S.joins=q.docs.map(d=>({...d.data(),id:d.id}));render()},err));
 }
-function signedOut(){unsubAll();S.me=null;S.email='';S.isOwner=false;S.memberDoc=false;S.ready=false;S.myJoin=undefined;S.joins=[];S.live={config:{},homes:[],events:[],media:[]};S.urls={}}
+function signedOut(){unsubAll();S.me=null;S.email='';S.isOwner=false;S.memberDoc=false;S.memberHome=null;S.members=[];S.ready=false;S.myJoin=undefined;S.joins=[];S.live={config:{},homes:[],events:[],media:[]};S.urls={}}
 function watchUser(user){
   const db=S.db;let seen={org:false,mem:false,join:false};
   const check=()=>{if(!(seen.org&&seen.mem&&seen.join))return;
     if(isOrg()||S.memberDoc)startMain();else{S.ready=true;render()}};
   const em=(user.email||'').toLowerCase();
   subs.push(db.doc('organizers/'+em).onSnapshot(d=>{const was=S.isOwner;S.isOwner=d.exists;seen.org=true;if(was!==S.isOwner&&mainOn){unsubAll();watchUser(user);return}check();render()},()=>{seen.org=true;check()}));
-  subs.push(db.doc('members/'+user.uid).onSnapshot(d=>{S.memberDoc=d.exists;seen.mem=true;check();render()},()=>{seen.mem=true;check()}));
+  subs.push(db.doc('members/'+user.uid).onSnapshot(d=>{S.memberDoc=d.exists;S.memberHome=d.exists?d.data().homeId||null:null;seen.mem=true;check();render()},()=>{seen.mem=true;check()}));
   subs.push(db.doc('joins/'+user.uid).onSnapshot(d=>{S.myJoin=d.exists?{...d.data(),id:d.id}:null;seen.join=true;check();render()},()=>{S.myJoin=null;seen.join=true;check()}));
 }
 const linkUrl=()=>location.origin+location.pathname;
@@ -1075,7 +1085,7 @@ document.addEventListener('click',async e=>{
     S.authReady=true;
     if(!user){signedOut();render();return}
     if(user.uid===S.me)return;
-    signedOut();S.me=user.uid;S.email=user.email||'';S.sentTo='';
+    signedOut();S.me=user.uid;S.email=user.email||'';S.name=user.displayName||'';S.sentTo='';
     watchUser(user);render();
   });
 })();

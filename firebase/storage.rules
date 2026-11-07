@@ -16,7 +16,7 @@ service firebase.storage {
     match /media/{season}/{file} {
       allow read: if isMember();
       allow create: if isMember()
-        && request.resource.size < 100 * 1024 * 1024
+        && request.resource.size < 500 * 1024 * 1024
         && request.resource.contentType.matches('image/.*|video/.*');
       allow delete: if isOrg() || (isMember() && resource.metadata.by == request.auth.uid);
     }

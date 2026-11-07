@@ -383,7 +383,7 @@ textarea{min-height:120px;resize:vertical}
       <label class="field"><span>When</span><input type="datetime-local" id="when"></label>
       <label class="field"><span>Note <span class="muted">(optional)</span></span><input type="text" id="note" maxlength="200" placeholder="Snuck in during the boat parade"></label>
       <div class="field"><span>Photos &amp; videos</span>
-        <label class="drop" id="dropLbl"><input type="file" id="files" accept="image/*,video/*" multiple><b>Add photos or videos</b><br><small>Videos up to 100 MB (about 2–3 minutes at 1080p).</small></label>
+        <label class="drop" id="dropLbl"><input type="file" id="files" accept="image/*,video/*" multiple><b>Add photos or videos</b><br><small>Videos up to 500 MB (about 10 minutes at 1080p, or 2–3 minutes in 4K).</small></label>
         <small id="noUpload" hidden>You can log without media. Photo uploads need Editor access to this page.</small>
         <ul class="files" id="fileList"></ul>
       </div>
@@ -541,7 +541,7 @@ function errMsg(e){
   if(c==='permission-denied'||c==='storage/unauthorized'||/permission/i.test(m))return'You don’t have permission to do that. Check with the organizer.';
   if(/not a participant|join the game first/i.test(m))return'Join the game first.';
   if(/only log steals involving your family/i.test(m))return'You can only log steals involving your family.';
-  if(c==='too_large')return'That file is over 100 MB. Trim the video and try again.';
+  if(c==='too_large')return'That file is over 500 MB. Trim the video and try again.';
   if(c==='storage/quota-exceeded')return'Photo storage is full. Ask the organizer.';
   if(c==='unavailable')return'Can’t reach the game right now. Check your connection.';
   if(c==='unsupported_type')return'That file type isn’t supported. Use a photo, MP4 or MOV video.';
@@ -1015,7 +1015,7 @@ function openA2HS(){
 async function prep(f){
   const t=(f.type||'').toLowerCase(),n=(f.name||'').toLowerCase();
   if(t.startsWith('video/')||/\.(mov|mp4|m4v|webm)$/.test(n)){
-    if(f.size>100*1024*1024)throw{code:'too_large'};
+    if(f.size>500*1024*1024)throw{code:'too_large'};
     return{blob:f,type:(t==='video/webm'||n.endsWith('.webm'))?'video/webm':'video/mp4',kind:'video'};
   }
   if(['image/jpeg','image/png','image/webp','image/gif'].includes(t)&&f.size<1.5e6)return{blob:f,type:t,kind:'image'};
@@ -1029,9 +1029,9 @@ async function uploadAll(files,stealId,list,extra={}){
   if(!files.length)return 0;let ok=0;
   list.innerHTML=files.map((f,i)=>`<li><span>${esc(f.name||'file')}</span><span class="mono" id="up${i}">waiting</span></li>`).join('');
   for(let i=0;i<files.length;i++){const st=list.querySelector('#up'+i);
-    try{st.textContent='uploading…';const p=await prep(files[i]);const r=await S.assets.upload(p.blob,{type:p.type});
+    try{st.textContent='uploading…';const p=await prep(files[i]);const r=await S.assets.upload(p.blob,{type:p.type,onProgress:pct=>{st.textContent=`uploading ${pct}%`}});
       await col('media').add({stealId:stealId||null,season:viewSeason(),...extra,assetId:r.id,type:p.kind,by:S.me,byHome:myHome()?.id||null,at:new Date().toISOString()});st.textContent='done';ok++}
-    catch(e){console.error(e);st.textContent=e&&e.code==='too_large'?'over 100 MB':'failed';toast(errMsg(e))}}
+    catch(e){console.error(e);st.textContent=e&&e.code==='too_large'?'over 500 MB':'failed';toast(errMsg(e))}}
   return ok;
 }
 $('#files').addEventListener('change',()=>{const fs=[...$('#files').files];$('#fileList').innerHTML=fs.map(f=>`<li><span>${esc(f.name)}</span><span class="mono">${(f.size/1048576).toFixed(1)} MB</span></li>`).join('')});
@@ -1071,7 +1071,7 @@ document.addEventListener('click',async e=>{
   if(t.closest('[data-gal-add]')){
     const sh=openSheet(`${shTop('Add to the gallery',esc(viewSeason())+' game')}
       <label class="field"><span>Caption <span class="muted">(optional)</span></span><input type="text" id="galCap" maxlength="140" placeholder="Rudolph’s new disguise"></label>
-      <label class="drop"><input type="file" id="galFiles" accept="image/*,video/*" multiple><b>Choose photos or videos</b><br><small>Videos up to 100 MB.</small></label>
+      <label class="drop"><input type="file" id="galFiles" accept="image/*,video/*" multiple><b>Choose photos or videos</b><br><small>Videos up to 500 MB.</small></label>
       <ul class="files" id="galList"></ul>
       <p class="small muted">Heads up: a photo of Rudolph at someone’s house gives away where he is. Save those for when you log a steal.</p>`);
     sh.querySelector('#galFiles').addEventListener('change',async ev=>{const fs=[...ev.target.files];if(!fs.length)return;
@@ -1152,11 +1152,13 @@ renderNow();
 /* ---------- Firebase data layer ---------- */
 const CFG=window.RG_FIREBASE||{};
 let fbAuth=null,fbStore=null;
-const assetShim={async upload(blob,{type}){
+const assetShim={async upload(blob,{type,onProgress}){
   const ext=({'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif','video/webm':'webm','video/quicktime':'mov'})[type]||'mp4';
   const path=`media/${viewSeason()}/${crypto.randomUUID()}.${ext}`;
-  try{await fbStore.ref(path).put(blob,{contentType:type,customMetadata:{by:S.me}})}
-  catch(e){if(e&&e.code==='storage/unauthorized'&&blob.size>100*1024*1024)throw{code:'too_large'};throw e}
+  try{const task=fbStore.ref(path).put(blob,{contentType:type,customMetadata:{by:S.me}});
+    if(onProgress)task.on('state_changed',snap=>{if(snap.totalBytes)onProgress(Math.floor(snap.bytesTransferred/snap.totalBytes*100))});
+    await task}
+  catch(e){if(e&&e.code==='storage/unauthorized'&&blob.size>500*1024*1024)throw{code:'too_large'};throw e}
   return{id:path}}};
 async function delMedia(m){await col('media').doc(m.id).delete();if(m.assetId)fbStore.ref(m.assetId).delete().catch(()=>{})}
 S.urls={};const urlPending=new Set();

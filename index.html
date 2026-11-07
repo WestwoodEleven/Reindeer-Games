@@ -428,6 +428,7 @@ textarea{min-height:120px;resize:vertical}
 
 <div class="sheet-wrap" id="sheetWrap" hidden><div class="scrim" data-close></div><div class="sheet" role="dialog" aria-modal="true" id="sheet"></div></div>
 <div class="toast" id="toast" hidden></div>
+<div id="recaptcha"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -448,7 +449,7 @@ const myId=()=>S.demo?'demo-me':S.me;
 const homeById=id=>D().homes.find(h=>h.id===id);
 const myHome=()=>{if(S.demo)return D().homes.find(h=>h.ownerId==='demo-me')||null;return (S.memberHome&&homeById(S.memberHome))||(S.me?D().homes.find(h=>h.ownerId===S.me):null)||null};
 const peopleOf=hid=>S.members.filter(m=>m.homeId===hid);
-const personLabel=m=>m.name&&m.email?`${m.name} (${m.email})`:(m.name||m.email||'Someone');
+const personLabel=m=>{const c=m.email||m.phone||'';return m.name&&c?`${m.name} (${c})`:(m.name||c||'Someone')};
 const isMember=()=>!!S.demo||isOrg()||!!myHome()||!!S.memberDoc;
 const canWrite=()=>!S.demo&&!!S.db&&!!S.me;
 const fam=id=>{const h=homeById(id);return h?h.family:'a home no longer in the game'};
@@ -662,17 +663,21 @@ function rGate(){
   else if(!S.authReady)h+=`<div class="label">Loading</div><h2>One moment…</h2>`;
   else if(!S.me&&S.needEmail)h+=`<div class="label">Almost there</div><h2>Confirm your email</h2><p>You opened the sign-in link on a different phone or browser. Enter the same email you used to finish signing in.</p>
     <form id="linkForm" class="stack" novalidate><label class="field"><span>Email</span><input type="email" id="linkEmail" autocomplete="email" placeholder="you@example.com"></label><button class="btn red" type="submit">Finish signing in</button></form>`;
+  else if(!S.me&&S.phoneTo)h+=`<div class="label">Check your texts</div><h2>Enter the code we texted you</h2><p>We sent a 6-digit code to <b>${esc(S.phoneTo)}</b>. It can take a minute to arrive.</p>
+    <form id="smsCodeForm" class="stack" novalidate><label class="field"><span>Code</span><input type="text" id="smsCode" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="123456"></label><button class="btn red" type="submit" id="smsCodeBtn">Sign in</button></form>
+    <button class="btn ghost" data-phone-reset style="margin-top:12px;color:inherit;border-color:currentColor">Use a different number</button>`;
   else if(!S.me&&S.sentTo)h+=`<div class="label">Check your email</div><h2>We sent a sign-in link</h2><p>Open the email we sent to <b>${esc(S.sentTo)}</b> on this phone and tap the link. It can take a minute to arrive. Check spam too.</p>
     <button class="btn" data-signin-reset style="margin-top:12px">Use a different email</button>`;
   else if(!S.me)h+=`<div class="label">Members only</div><h2>Reindeer Games is for participating Emerald Bay families</h2><p>Sign in to see the game. New families can request to join after signing in.</p>
     <button class="btn red" data-google style="margin-top:14px">Continue with Google</button>
+    <form id="phoneForm" class="stack" novalidate><label class="field"><span>Or get a code by text</span><input type="tel" id="phoneNum" autocomplete="tel" inputmode="tel" placeholder="(949) 555-0123"></label><button class="btn" type="submit" id="phoneBtn">Text me a code</button></form>
     <form id="siForm" class="stack" novalidate><label class="field"><span>Or get a sign-in link by email</span><input type="email" id="siEmail" autocomplete="email" placeholder="you@example.com" required></label><button class="btn" type="submit" id="siBtn">Email me a link</button></form>
     <button class="btn ghost" data-demo style="margin-top:12px;color:inherit;border-color:currentColor">See an example game</button>`;
   else if(!S.ready||j===undefined)h+=`<div class="label">Loading</div><h2>Checking your invite…</h2>`;
   else if(j&&j.status==='pending')h+=`<div class="label">Request sent</div><h2>Waiting for the organizer</h2><p>${esc(j.family)} · ${esc(j.number)} Emerald Bay. You’ll get full access as soon as the organizer approves you. This page updates by itself.</p><button class="btn" data-join style="margin-top:12px">Edit my request</button>`;
   else if(j&&j.status==='declined')h+=`<div class="label">Not approved</div><h2>The organizer didn’t approve this request</h2><p>If you think that’s a mistake, check with the organizer, then send a new request.</p><button class="btn red" data-join style="margin-top:12px">Send a new request</button>`;
   else h+=`<div class="label">Members only</div><h2>Reindeer Games is for participating Emerald Bay families</h2><p>Request to join with your family name and house number. The organizer approves each family before the map, trail and photos open up.</p><button class="btn red" data-join style="margin-top:12px">Request to join</button><button class="btn" data-demo style="margin-top:12px;margin-left:8px">See an example game</button>`;
-  if(S.me)h+=`<p class="small" style="margin-top:16px">Signed in as ${esc(S.email||'')} · <button class="btn sm ghost" data-signout style="color:inherit;border-color:currentColor">Sign out</button></p>`;
+  if(S.me)h+=`<p class="small" style="margin-top:16px">Signed in as ${esc(S.email||S.phone||'')} · <button class="btn sm ghost" data-signout style="color:inherit;border-color:currentColor">Sign out</button></p>`;
   g.innerHTML=h;
 }
 function rHomes(){
@@ -727,7 +732,7 @@ The organizer will post the full rules before the game starts.`;
 function rRules(){const c=seasonCfg();const t=(c.rules||'').trim();
   $('#draftTag').hidden=!!t;
   const dates=c.start?`<p class="label">Game window · ${esc(c.start)}${c.end?' → '+esc(c.end):''}</p>`:'';
-  const acct=S.me&&!S.demo?`<p class="small muted">Signed in as ${esc(S.email||'')} · <button class="btn sm ghost" data-signout>Sign out</button></p>`:'';
+  const acct=S.me&&!S.demo?`<p class="small muted">Signed in as ${esc(S.email||S.phone||'')} · <button class="btn sm ghost" data-signout>Sign out</button></p>`:'';
   $('#rulesBody').innerHTML=`${acct}${dates}<div class="rules">${esc(t||DRAFT)}</div>${isOrg()&&!S.demo?`<a class="btn sm" href="#admin" style="align-self:start">Edit rules</a>`:''}`;
 }
 function rAdmin(C){
@@ -794,7 +799,7 @@ function openHomeForm(mode,id){
       <div class="field"><span>Your house on the map</span>
         <div class="map-card card" style="padding:0;overflow:hidden"><div class="map-box"><svg id="hfMap"></svg></div><div class="map-bar"><button type="button" data-zoom="sheet:out" aria-label="Zoom out">−</button><button type="button" data-zoom="sheet:in" aria-label="Zoom in">+</button><button type="button" class="wide" data-zoom="sheet:reset" aria-label="Show the whole map">Fit</button><span class="sp"></span></div></div>
         <small id="hfPinMsg">Enter your house number and we’ll pin it for you.</small></div>
-      ${h&&id&&isOrg()&&!S.demo?`<div class="field"><span>People in this family</span>${peopleOf(id).length?`<ul class="homes">${peopleOf(id).map(m=>`<li><div style="grid-column:1/3"><b>${esc(m.name||m.email||'Someone')}</b>${m.name&&m.email?`<div class="case-meta">${esc(m.email)}</div>`:''}</div><button type="button" class="btn sm danger" data-unlink-member="${esc(m.id)}">Remove</button></li>`).join('')}</ul>`:'<small>No one linked yet. When someone requests to join with this house number, you can add them here.</small>'}</div>`:''}
+      ${h&&id&&isOrg()&&!S.demo?`<div class="field"><span>People in this family</span>${peopleOf(id).length?`<ul class="homes">${peopleOf(id).map(m=>`<li><div style="grid-column:1/3"><b>${esc(m.name||m.email||m.phone||'Someone')}</b>${m.name&&(m.email||m.phone)?`<div class="case-meta">${esc(m.email||m.phone)}</div>`:''}</div><button type="button" class="btn sm danger" data-unlink-member="${esc(m.id)}">Remove</button></li>`).join('')}</ul>`:'<small>No one linked yet. When someone requests to join with this house number, you can add them here.</small>'}</div>`:''}
       ${mode==='join'&&!isOrg()?'<p class="small muted">The organizer approves each person before they can see the game. If your family is already playing, use the same house number and the organizer will add you to your family.</p>':''}
       <button class="btn red block" type="submit">${mode==='join'?(isOrg()?'Join the game':'Send request'):'Save'}</button>
       ${h&&id&&isOrg()?`<button type="button" class="btn danger block" id="hfDel">Remove family</button>`:''}
@@ -818,8 +823,8 @@ function openHomeForm(mode,id){
     if(!cur()){toast('Tap your house on the map to place the pin.');return}
     const body={family,number,x:pos.manual?pos.x:null,y:pos.manual?pos.y:null};
     let ok;
-    if(mode==='join'&&!isOrg())ok=await W(()=>S.db.doc('joins/'+S.me).set({...body,email:S.email||'',name:S.name||'',status:'pending',at:new Date().toISOString()}),'Request sent. The organizer will review it.');
-    else ok=await W(async()=>{if(id)await col('homes').doc(id).update(body);else{const r=await col('homes').add({...body,ownerId:mode==='join'?S.me:null,createdAt:Date.now()});if(mode==='join')await S.db.doc('members/'+S.me).set({homeId:r.id,email:S.email||'',name:S.name||''})}},mode==='join'?'You’re in. Happy hunting.':'Saved');
+    if(mode==='join'&&!isOrg())ok=await W(()=>S.db.doc('joins/'+S.me).set({...body,email:S.email||'',phone:S.phone||'',name:S.name||'',status:'pending',at:new Date().toISOString()}),'Request sent. The organizer will review it.');
+    else ok=await W(async()=>{if(id)await col('homes').doc(id).update(body);else{const r=await col('homes').add({...body,ownerId:mode==='join'?S.me:null,createdAt:Date.now()});if(mode==='join')await S.db.doc('members/'+S.me).set({homeId:r.id,email:S.email||'',phone:S.phone||'',name:S.name||''})}},mode==='join'?'You’re in. Happy hunting.':'Saved');
     if(ok)closeSheet();
   });
   const del=sh.querySelector('#hfDel');if(del)del.addEventListener('click',async()=>{if(!del.dataset.armed){del.dataset.armed=1;del.textContent='Tap again to remove';return}if(await W(async()=>{const ids=new Set(peopleOf(h.id).map(m=>m.id));if(h.ownerId)ids.add(h.ownerId);for(const u of ids){await S.db.doc('members/'+u).delete();await S.db.doc('joins/'+u).delete().catch(()=>{})}await col('homes').doc(h.id).delete()},'Family removed'))closeSheet()});
@@ -970,7 +975,7 @@ document.addEventListener('click',async e=>{
     await W(async()=>{let hid;
       if(match){hid=match.id;if(!match.ownerId)await col('homes').doc(match.id).update({ownerId:j.id})}
       else hid=(await col('homes').add({...body,ownerId:j.id,createdAt:Date.now()})).id;
-      await S.db.doc('members/'+j.id).set({homeId:hid,email:j.email||'',name:j.name||''});
+      await S.db.doc('members/'+j.id).set({homeId:hid,email:j.email||'',phone:j.phone||'',name:j.name||''});
       await S.db.doc('joins/'+j.id).update({status:'approved'})},match?`${personLabel(j)} added to ${match.family}`:`${j.family} approved`);return}
   if(el=t.closest('[data-unlink-member]')){if(!el.dataset.armed){el.dataset.armed=1;el.textContent='Tap to confirm';return}
     const uid=el.dataset.unlinkMember,m=S.members.find(x=>x.id===uid),h=homeById(m?.homeId);
@@ -1052,11 +1057,26 @@ function watchUser(user){
   const check=()=>{if(!(seen.org&&seen.mem&&seen.join))return;
     if(isOrg()||S.memberDoc)startMain();else{S.ready=true;render()}};
   const em=(user.email||'').toLowerCase();
+  if(!em){S.isOwner=false;seen.org=true}else
   subs.push(db.doc('organizers/'+em).onSnapshot(d=>{const was=S.isOwner;S.isOwner=d.exists;seen.org=true;if(was!==S.isOwner&&mainOn){unsubAll();watchUser(user);return}check();render()},()=>{seen.org=true;check()}));
   subs.push(db.doc('members/'+user.uid).onSnapshot(d=>{S.memberDoc=d.exists;S.memberHome=d.exists?d.data().homeId||null:null;seen.mem=true;check();render()},()=>{seen.mem=true;check()}));
   subs.push(db.doc('joins/'+user.uid).onSnapshot(d=>{S.myJoin=d.exists?{...d.data(),id:d.id}:null;seen.join=true;check();render()},()=>{S.myJoin=null;seen.join=true;check()}));
 }
 const linkUrl=()=>location.origin+location.pathname;
+let recaptcha=null,smsConfirm=null;
+function getRecaptcha(){if(!recaptcha)recaptcha=new firebase.auth.RecaptchaVerifier('recaptcha',{size:'invisible'});return recaptcha}
+function resetRecaptcha(){try{recaptcha&&recaptcha.clear()}catch{}recaptcha=null;const el=$('#recaptcha');if(el)el.innerHTML=''}
+function toE164(v){const t=String(v||'').trim();const d=t.replace(/\D/g,'');
+  if(t.startsWith('+'))return d.length>=8?'+'+d:null;if(d.length===10)return'+1'+d;if(d.length===11&&d[0]==='1')return'+'+d;return null}
+const prettyPhone=p=>{const d=p.replace(/\D/g,'');return d.length===11&&d[0]==='1'?`(${d.slice(1,4)}) ${d.slice(4,7)}-${d.slice(7)}`:p};
+function phoneErr(e){const c=(e&&e.code)||'';
+  if(/invalid-phone-number|missing-phone-number/.test(c))return'That phone number doesn’t look right. Include the area code.';
+  if(/too-many-requests|quota-exceeded/.test(c))return'Too many tries. Wait a few minutes, then try again.';
+  if(/invalid-verification-code|missing-verification-code/.test(c))return'That code didn’t match. Check the text and try again.';
+  if(/code-expired|session-expired/.test(c))return'That code expired. Send a new one.';
+  if(/operation-not-allowed/.test(c))return'Text sign-in isn’t turned on yet. Use Google or email for now.';
+  if(/captcha/.test(c))return'The security check didn’t finish. Try again.';
+  return'Couldn’t send the text. Try again, or use Google or email.'}
 async function finishLink(email){
   try{await fbAuth.signInWithEmailLink(email,location.href);try{localStorage.removeItem('rg-email')}catch{};S.needEmail=false;history.replaceState(null,'',linkUrl())}
   catch(e){console.error(e);S.needEmail=false;history.replaceState(null,'',linkUrl());toast('That sign-in link expired or was already used. Request a new one.');renderNow()}
@@ -1067,12 +1087,24 @@ document.addEventListener('submit',async e=>{
     const btn=$('#siBtn');btn.disabled=true;btn.textContent='Sending…';
     try{await fbAuth.sendSignInLinkToEmail(em,{url:linkUrl(),handleCodeInApp:true});try{localStorage.setItem('rg-email',em)}catch{};S.sentTo=em;renderNow()}
     catch(err){console.error(err);btn.disabled=false;btn.textContent='Email me a link';toast(/too-many/.test(err.code)?'Too many tries. Wait a few minutes, then try again.':'Couldn’t send the email. Check the address and try again.')}}
+  if(e.target.id==='phoneForm'){e.preventDefault();const num=toE164($('#phoneNum').value);
+    if(!num){toast('Enter a 10-digit phone number, including area code.');return}
+    const btn=$('#phoneBtn');btn.disabled=true;btn.textContent='Sending…';
+    try{smsConfirm=await fbAuth.signInWithPhoneNumber(num,getRecaptcha());S.phoneTo=prettyPhone(num);renderNow();setTimeout(()=>$('#smsCode')?.focus(),50)}
+    catch(err){console.error(err);resetRecaptcha();btn.disabled=false;btn.textContent='Text me a code';toast(phoneErr(err))}}
+  if(e.target.id==='smsCodeForm'){e.preventDefault();const code=$('#smsCode').value.replace(/\D/g,'');
+    if(code.length<6){toast('Enter the 6-digit code.');return}
+    if(!smsConfirm){toast('That code expired. Send a new one.');S.phoneTo='';renderNow();return}
+    const btn=$('#smsCodeBtn');btn.disabled=true;btn.textContent='Signing in…';
+    try{await smsConfirm.confirm(code);smsConfirm=null;resetRecaptcha()}
+    catch(err){console.error(err);btn.disabled=false;btn.textContent='Sign in';toast(phoneErr(err))}}
   if(e.target.id==='linkForm'){e.preventDefault();const em=$('#linkEmail').value.trim();if(em)finishLink(em)}
 });
 document.addEventListener('click',async e=>{
   if(e.target.closest('[data-google]')&&fbAuth){try{await fbAuth.signInWithPopup(new firebase.auth.GoogleAuthProvider())}
     catch(err){if(!/popup-closed|cancelled-popup/.test(err.code||''))toast(/popup-blocked/.test(err.code||'')?'Your browser blocked the sign-in window. Allow pop-ups and try again.':'Google sign-in didn’t finish. Try again, or use the email link.')}return}
   if(e.target.closest('[data-signin-reset]')){S.sentTo='';renderNow();return}
+  if(e.target.closest('[data-phone-reset]')){S.phoneTo='';smsConfirm=null;resetRecaptcha();renderNow();return}
   if(e.target.closest('[data-signout]')&&fbAuth){await fbAuth.signOut();toast('Signed out');location.hash=''}
 });
 (async()=>{
@@ -1085,7 +1117,7 @@ document.addEventListener('click',async e=>{
     S.authReady=true;
     if(!user){signedOut();render();return}
     if(user.uid===S.me)return;
-    signedOut();S.me=user.uid;S.email=user.email||'';S.name=user.displayName||'';S.sentTo='';
+    signedOut();S.me=user.uid;S.email=user.email||'';S.name=user.displayName||'';S.phone=user.phoneNumber||'';S.sentTo='';S.phoneTo='';
     watchUser(user);render();
   });
 })();

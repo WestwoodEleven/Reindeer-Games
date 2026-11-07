@@ -4,8 +4,10 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     function isOrg() {
-      return request.auth != null && request.auth.token.email_verified == true
-        && firestore.exists(/databases/(default)/documents/organizers/$(request.auth.token.email.lower()));
+      return request.auth != null
+        && request.auth.token.get('email', '') != ''
+        && request.auth.token.get('email_verified', false) == true
+        && firestore.exists(/databases/(default)/documents/organizers/$(request.auth.token.get('email', '').lower()));
     }
     function isMember() {
       return isOrg() || (request.auth != null

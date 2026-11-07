@@ -5,9 +5,11 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     function signedIn() { return request.auth != null; }
-    function email() { return request.auth.token.email.lower(); }
+    // Phone sign-ins have no email, so read it safely.
+    function email() { return request.auth.token.get('email', '').lower(); }
     function isOrg() {
-      return signedIn() && request.auth.token.email_verified == true
+      return signedIn() && email() != ''
+        && request.auth.token.get('email_verified', false) == true
         && exists(/databases/$(database)/documents/organizers/$(email()));
     }
     function isMember() {

@@ -448,6 +448,7 @@ const isOrg=()=>S.demo?S.demoOrg:S.isOwner;
 const myId=()=>S.demo?'demo-me':S.me;
 const homeById=id=>D().homes.find(h=>h.id===id);
 const myHome=()=>{if(S.demo)return D().homes.find(h=>h.ownerId==='demo-me')||null;return (S.memberHome&&homeById(S.memberHome))||(S.me?D().homes.find(h=>h.ownerId===S.me):null)||null};
+const numKey=n=>String(n??'').trim().replace(/^0+/,'')||'0';
 const peopleOf=hid=>S.members.filter(m=>m.homeId===hid);
 const personLabel=m=>{const c=m.email||m.phone||'';return m.name&&c?`${m.name} (${c})`:(m.name||c||'Someone')};
 const isMember=()=>!!S.demo||isOrg()||!!myHome()||!!S.memberDoc;
@@ -749,8 +750,8 @@ function rAdmin(C){
   const nb=$('#newSeason');nb.hidden=isPast();nb.dataset.next=next;if(!nb.dataset.armed)nb.textContent=`Start the ${next} game`;
   const pend=S.joins.filter(j=>j.status==='pending').sort((a,b)=>String(a.at).localeCompare(String(b.at)));
   $('#pendingCount').textContent=pend.length?`${pend.length} waiting`:'';
-  $('#pendingList').innerHTML=pend.length?pend.map(j=>{const match=D().homes.find(h=>String(h.number)===String(j.number));const who=personLabel(j);
-    return `<li><span class="hno">${esc(j.number)}</span><div><b>${esc(j.family)}</b><div class="case-meta">${esc(who)} · requested ${esc(ago(j.at))}${match?` · ${esc(match.family)} already plays from ${esc(match.number)}`:''}</div></div><div class="row"><button class="btn sm danger" data-decline="${esc(j.id)}">Decline</button><button class="btn sm primary" data-approve="${esc(j.id)}">${match?`Add to ${esc(match.family)}`:'Approve'}</button></div></li>`}).join('')
+  $('#pendingList').innerHTML=pend.length?pend.map(j=>{const match=D().homes.find(h=>numKey(h.number)===numKey(j.number));const who=personLabel(j);
+    return `<li><span class="hno">${esc(j.number)}</span><div><b>${esc(j.family)}</b><div class="case-meta">${esc(who)} · requested ${esc(ago(j.at))}${match?` · ${esc(match.family)} already plays from ${esc(match.number)}`:(o=>o?` · ${esc(personLabel(o))} also asked to join from this house`:'')(pend.find(o=>o!==j&&numKey(o.number)===numKey(j.number)))}</div></div><div class="row"><button class="btn sm danger" data-decline="${esc(j.id)}">Decline</button><button class="btn sm primary" data-approve="${esc(j.id)}">${match?`Add to ${esc(match.family)}`:'Approve'}</button></div></li>`}).join('')
     :`<li class="muted small">No requests waiting. New families appear here when they ask to join.</li>`;
   const hs=sortHomes(D().homes);
   $('#adminHomes').innerHTML=hs.length?hs.map(h=>`<li><span class="hno">${hno(h)}</span><div><b>${esc(h.family)}</b><div class="case-meta">${(n=>n?`${n} ${n===1?'person':'people'}`:'No one linked yet')(peopleOf(h.id).length)}${!hpos(h)?' · no pin':''}</div></div><button class="btn sm" data-edit-home="${esc(h.id)}">Edit</button></li>`).join(''):`<li class="muted small">No families yet. Add them here, or share the page so they can join.</li>`;
@@ -794,16 +795,17 @@ function openHomeForm(mode,id){
   const req=mode==='join'&&!isOrg()?(S.myJoin&&S.myJoin.status!=='approved'?S.myJoin:null):null;
   const h=id?homeById(id):(req?{family:req.family,number:req.number,x:req.x,y:req.y}:null);const pos={x:h?.x??null,y:h?.y??null,manual:h?.x!=null};const auto=()=>{const q=lotPos($('#hfNum').value);return q?{x:q[0],y:q[1]}:null};
   const title=mode==='join'?(isOrg()?'Join Reindeer Games':'Request to join'):h?'Edit family':'Add a family';
+  const asker=mode==='join'&&!isOrg();let step=1,found=null;
   const sh=openSheet(`${shTop(title,'Emerald Bay')}
     <form class="stack" id="hf">
-      <label class="field"><span>Family name</span><input type="text" id="hfName" maxlength="40" placeholder="The Garcias" value="${esc(h?.family||'')}" required></label>
+      ${asker?'':`<label class="field"><span>Family name</span><input type="text" id="hfName" maxlength="40" placeholder="The Garcias" value="${esc(h?.family||'')}" required></label>`}
       <label class="field"><span>House number</span><input type="text" id="hfNum" inputmode="numeric" maxlength="6" placeholder="153" value="${esc(h?.number||'')}" required><small>As in “153 Emerald Bay”.</small></label>
       <div class="field"><span>Your house on the map</span>
         <div class="map-card card" style="padding:0;overflow:hidden"><div class="map-box"><svg id="hfMap"></svg></div><div class="map-bar"><button type="button" data-zoom="sheet:out" aria-label="Zoom out">−</button><button type="button" data-zoom="sheet:in" aria-label="Zoom in">+</button><button type="button" class="wide" data-zoom="sheet:reset" aria-label="Show the whole map">Fit</button><span class="sp"></span></div></div>
         <small id="hfPinMsg">Enter your house number and we’ll pin it for you.</small></div>
       ${h&&id&&isOrg()&&!S.demo?`<div class="field"><span>People in this family</span>${peopleOf(id).length?`<ul class="homes">${peopleOf(id).map(m=>`<li><div style="grid-column:1/3"><b>${esc(m.name||m.email||m.phone||'Someone')}</b>${m.name&&(m.email||m.phone)?`<div class="case-meta">${esc(m.email||m.phone)}</div>`:''}</div><button type="button" class="btn sm danger" data-unlink-member="${esc(m.id)}">Remove</button></li>`).join('')}</ul>`:'<small>No one linked yet. When someone requests to join with this house number, you can add them here.</small>'}</div>`:''}
-      ${mode==='join'&&!isOrg()?'<p class="small muted">The organizer approves each person before they can see the game. If your family is already playing, use the same house number and the organizer will add you to your family.</p>':''}
-      <button class="btn red block" type="submit">${mode==='join'?(isOrg()?'Join the game':'Send request'):'Save'}</button>
+      ${asker?`<div class="card stack" id="hfStep2" hidden></div><p class="small muted">The organizer approves each person before they can see the game.</p>`:''}
+      <button class="btn red block" type="submit" id="hfSubmit">${asker?'Next':mode==='join'?'Join the game':'Save'}</button>
       ${h&&id&&isOrg()?`<button type="button" class="btn danger block" id="hfDel">Remove family</button>`:''}
     </form>`);
   const m=new MapView($('#hfMap'),'sheet');sheetMap=m;
@@ -817,10 +819,20 @@ function openHomeForm(mode,id){
     else msg('Enter your house number and we’ll pin it for you.');
     m.redraw();if(zoom&&q)m.focus(q.x,q.y,m.W/3)};
   m.onTap=p=>{pos.x=Math.round(p.x*10000)/10000;pos.y=Math.round(p.y*10000)/10000;pos.manual=true;sync(false)};
-  sh.querySelector('#hfNum').addEventListener('input',()=>{pos.manual=false;sync(true)});
+  const back1=()=>{if(!asker||step===1)return;step=1;found=null;$('#hfStep2').hidden=true;$('#hfStep2').innerHTML='';$('#hfSubmit').textContent='Next'};
+  sh.querySelector('#hfNum').addEventListener('input',()=>{pos.manual=false;back1();sync(true)});
   m.redraw();sync(true);
   sh.querySelector('#hf').addEventListener('submit',async e=>{e.preventDefault();
-    const family=$('#hfName').value.trim(),number=$('#hfNum').value.trim();
+    if(asker&&step===1){const number=$('#hfNum').value.trim();
+      if(!number){toast('Enter your house number.');return}
+      if(!cur()){toast('Tap your house on the map to place the pin.');return}
+      const b=$('#hfSubmit');b.disabled=true;b.textContent='Checking…';
+      found=null;try{const d=await S.db.doc('houseIndex/'+numKey(number)).get();if(d.exists)found=d.data()}catch(err){console.warn(err)}
+      b.disabled=false;step=2;const box=$('#hfStep2');box.hidden=false;
+      if(found){box.innerHTML=`<p><b>${esc(found.family)}</b> already play from ${esc(number)} Emerald Bay.</p><p class="small muted">Send a request and the organizer will add you to your family.</p>`;b.textContent=`Request to join ${found.family}`}
+      else{box.innerHTML=`<p>You’re the first from <b>${esc(number)}</b> Emerald Bay. Name your family. Everyone else in your household will join under this name.</p><label class="field"><span>Family name</span><input type="text" id="hfName" maxlength="40" placeholder="The Garcias" value="${esc(req?.family||'')}"></label>`;b.textContent='Send request';setTimeout(()=>$('#hfName')?.focus(),30)}
+      return}
+    const family=asker&&found?found.family:($('#hfName')?.value||'').trim(),number=$('#hfNum').value.trim();
     if(!family||!number){toast('Add your family name and house number.');return}
     if(!cur()){toast('Tap your house on the map to place the pin.');return}
     const body={family,number,x:pos.manual?pos.x:null,y:pos.manual?pos.y:null};
@@ -977,7 +989,7 @@ document.addEventListener('click',async e=>{
   if(t.closest('[data-demo-org]')){S.demoOrg=!S.demoOrg;renderNow();return}
   if(el=t.closest('[data-claim]')){e.stopPropagation();const id=el.dataset.claim;await W(()=>col('steals').doc(id).update({to:myHome().id}),'Claimed. It counts for you now.');return}
   if(el=t.closest('[data-approve]')){const j=S.joins.find(x=>x.id===el.dataset.approve);if(!j)return;
-    const match=D().homes.find(h=>String(h.number)===String(j.number));
+    const match=D().homes.find(h=>numKey(h.number)===numKey(j.number));
     const body={family:j.family,number:j.number,x:j.x??null,y:j.y??null};
     await W(async()=>{let hid;
       if(match){hid=match.id;if(!match.ownerId)await col('homes').doc(match.id).update({ownerId:j.id})}
@@ -1047,14 +1059,21 @@ const murl=m=>S.urls[m.assetId]||'';
 function loadUrls(){for(const m of S.live.media){const p=m.assetId;if(!p||S.urls[p]||urlPending.has(p))continue;urlPending.add(p);
   fbStore.ref(p).getDownloadURL().then(u=>{S.urls[p]=u;render()}).catch(()=>{}).finally(()=>urlPending.delete(p))}}
 let subs=[],mainOn=false;
+/* organizer's browser keeps houseIndex/{number} = {family, homeId} in step with the homes list */
+let idxT=0;function syncIndex(){clearTimeout(idxT);idxT=setTimeout(async()=>{
+  if(!S.isOwner||!S.houseIdx||!S.ready)return;const want={};
+  for(const h of sortHomes(S.live.homes)){const k=numKey(h.number);if(!want[k])want[k]={family:h.family,homeId:h.id}}
+  try{for(const [k,v] of Object.entries(want)){const c=S.houseIdx[k];if(!c||c.family!==v.family||c.homeId!==v.homeId)await S.db.doc('houseIndex/'+k).set(v)}
+    for(const k of Object.keys(S.houseIdx))if(!want[k])await S.db.doc('houseIndex/'+k).delete()}catch(e){console.warn('house index',e)}},800)}
 const unsubAll=()=>{subs.forEach(u=>{try{u()}catch{}});subs=[];mainOn=false};
 function startMain(){
   if(mainOn)return;mainOn=true;const db=S.db;let got=0;const done=()=>{if(++got>=4)S.ready=true;render()};
   const err=e=>{console.error(e);if(e&&e.code==='permission-denied'){mainOn=false}S.netErr=e&&e.code==='unavailable';render()};
   subs.push(db.doc('config/game').onSnapshot(d=>{S.live.config=d.exists?{...d.data()}:{};done()},err));
-  subs.push(db.collection('homes').onSnapshot(q=>{S.live.homes=q.docs.map(d=>({...d.data(),id:d.id}));done()},err));
+  subs.push(db.collection('homes').onSnapshot(q=>{S.live.homes=q.docs.map(d=>({...d.data(),id:d.id}));done();syncIndex()},err));
   subs.push(db.collection('steals').onSnapshot(q=>{S.live.events=q.docs.map(d=>({...d.data(),id:d.id}));done()},err));
   subs.push(db.collection('media').onSnapshot(q=>{S.live.media=q.docs.map(d=>({...d.data(),id:d.id}));loadUrls();done()},err));
+  if(S.isOwner)subs.push(db.collection('houseIndex').onSnapshot(q=>{S.houseIdx=Object.fromEntries(q.docs.map(d=>[d.id,d.data()]));syncIndex()},err));
   if(S.isOwner)subs.push(db.collection('members').onSnapshot(q=>{S.members=q.docs.map(d=>({...d.data(),id:d.id}));render()},err));
   if(S.isOwner)subs.push(db.collection('joins').onSnapshot(q=>{S.joins=q.docs.map(d=>({...d.data(),id:d.id}));render()},err));
 }

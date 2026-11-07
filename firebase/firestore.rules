@@ -32,6 +32,13 @@ service cloud.firestore {
       allow write: if isOrg();
     }
 
+    // houseIndex/{houseNumber} = { family, homeId }. Lets someone signed in check
+    // whether their house is already playing (one number at a time, no listing).
+    match /houseIndex/{n} {
+      allow get: if signedIn();
+      allow list, write: if isOrg();
+    }
+
     match /config/{doc} {
       allow read: if isMember();
       allow write: if isOrg();

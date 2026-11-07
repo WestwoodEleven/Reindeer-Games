@@ -592,7 +592,8 @@ function rWho(){
   const w=$('#who');let h='';
   if(isOrg()&&!S.demo){const n=S.joins.filter(j=>j.status==='pending').length;h+=`<a class="chip${n?' solid':''}" href="#admin">Organizer${n?` · ${n}`:''}</a>`}
   const mh=myHome();
-  if(mh)h+=`<a class="chip" href="#homes">${esc(mh.family)}</a>`;
+  if(mh&&S.demo)h+=`<span class="chip">${esc(mh.family)}</span>`;
+  else if(S.me&&isMember())h+=`<button class="chip" data-account aria-label="Account and sign out">${esc(mh?mh.family:"Account")} ▾</button>`;
   else if(!S.demo&&!!S.me&&!isOrg()&&S.myJoin?.status==='pending')h+=`<span class="chip">Awaiting approval</span>`;
   else if(!S.demo&&!!S.me&&!isOrg())h+=`<button class="chip solid" data-join>Join</button>`;
   else if(!S.demo&&isOrg()&&!mh)h+=`<button class="chip solid" data-join>Join</button>`;
@@ -959,6 +960,11 @@ document.addEventListener('click',async e=>{
   if(el=t.closest('[data-zoom]')){const [w,a]=el.dataset.zoom.split(':');const m={trail:trailMap,homes:homesMap,sheet:sheetMap}[w];if(m){a==='in'?m.zoom(.7):a==='out'?m.zoom(1.4):m.reset()}return}
   if(el=t.closest('[data-expand]')){const card=el.closest('.map-card');const on=!card.classList.contains('full');card.classList.toggle('full',on);document.body.style.overflow=on?'hidden':'';el.textContent=on?'Close':'Full screen';el.setAttribute('aria-label',on?'Close full screen map':'Full screen map');return}
   if(el=t.closest('[data-season]')){S.season=el.dataset.season===curSeason()?null:el.dataset.season;closeSheet();renderNow();scrollTo(0,0);return}
+  if(t.closest('[data-account]')){const mh=myHome();
+    openSheet(`${shTop(mh?esc(mh.family):'Your account','Reindeer Games')}
+      <p>Signed in as <b>${esc(S.email||S.phone||'')}</b>${isOrg()?' · Organizer':''}</p>
+      ${mh?`<p class="small muted">${esc(mh.number)} Emerald Bay. To change your family name, house number or pin, ask the organizer.</p>`:''}
+      <div class="row">${mh?`<a class="btn" href="#homes" data-close>See participating homes</a>`:''}<button class="btn danger" data-signout data-close>Sign out</button></div>`);return}
   if(t.closest('[data-seasons]')){const vs=viewSeason();
     openSheet(`${shTop('Game year','Reindeer Games')}<ul class="homes">${allSeasons().map(y=>{const n=S.live.events.filter(e=>e.kind==='steal'&&evSeason(e)===y).length;
       return `<li class="${y===vs?'on':''}"><span class="hno">${esc(y)}</span><div><b>December ${esc(y)}</b><div class="case-meta">${y===curSeason()?'Current game · ':''}${n} ${n===1?'steal':'steals'}</div></div><button class="btn sm${y===vs?' primary':''}" data-season="${esc(y)}">${y===vs?'Viewing':'View'}</button></li>`}).join('')}</ul>`);return}

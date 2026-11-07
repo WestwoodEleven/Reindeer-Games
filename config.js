@@ -1,12 +1,11 @@
 // Reindeer Games: Firebase settings.
-// Paste the firebaseConfig values from Firebase console >
-// Project settings > General > Your apps > (web app) > SDK setup and configuration > Config.
+// From Firebase console > Project settings > General > Your apps > Reindeer Games.
 // These values are meant to be public. The security rules protect the data.
 window.RG_FIREBASE = {
-  apiKey: '',
-  authDomain: '',
-  projectId: '',
-  storageBucket: '',
-  messagingSenderId: '',
-  appId: ''
+  apiKey: 'AIzaSyDdjJngBqConOOtqtmWLOu0-yn-RVkfH90',
+  authDomain: 'reindeer-games-6ffcc.firebaseapp.com',
+  projectId: 'reindeer-games-6ffcc',
+  storageBucket: 'reindeer-games-6ffcc.firebasestorage.app',
+  messagingSenderId: '1003177174871',
+  appId: '1:1003177174871:web:0aa9cad6ecbfd9eb558012'
 };

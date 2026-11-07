@@ -394,6 +394,7 @@ textarea{min-height:120px;resize:vertical}
   <!-- GALLERY -->
   <section class="view" id="v-gallery" data-view="gallery" hidden>
     <div class="row" style="justify-content:space-between"><h2>Capture gallery</h2><span class="label" id="galCount"></span></div>
+    <button class="btn primary block" id="galAdd" data-gal-add hidden>Add photos or videos</button>
     <div id="gallery"></div>
   </section>
 
@@ -809,10 +810,11 @@ function rLog(){
 }
 function rGallery(C){
   const visIds=new Set(C.vis.map(e=>e.id));
-  const ms=D().media.filter(m=>visIds.has(m.stealId)).sort((a,b)=>String(b.at).localeCompare(String(a.at)));
+  const ms=D().media.filter(m=>m.stealId?visIds.has(m.stealId):(S.demo||String(m.season||yearOf(m.at))===viewSeason())).sort((a,b)=>String(b.at).localeCompare(String(a.at)));
+  $('#galAdd').hidden=S.demo||!S.assets||!canWrite()||(isPast()&&!isOrg());
   $('#galCount').textContent=ms.length?`${ms.length} ${ms.length>1?'files':'file'}`:'';
   $('#gallery').innerHTML=ms.length?`<div class="gallery">${ms.map(m=>`<button data-media="${esc(m.id)}" aria-label="Open ${m.type}">${m.type==='image'?`<img src="${esc(murl(m))}" alt="" loading="lazy">`:`<video src="${esc(murl(m))}#t=0.1" preload="metadata" muted playsinline></video><span class="play">VIDEO</span>`}</button>`).join('')}</div>`
-    :`<div class="empty"><h3>No captures on film yet</h3><p>Photos and videos from logged steals land here. Media from the newest steal appears once it unseals.</p></div>`;
+    :`<div class="empty"><h3>No captures on film yet</h3><p>Add your own holiday photos and videos, or attach them when you log a steal. Media from the newest steal appears once it unseals.</p></div>`;
 }
 const DRAFT=`The basics (more to come):
 
@@ -986,9 +988,9 @@ function openEventForm(e,preset={}){
 function openMedia(id){
   const m=D().media.find(x=>x.id===id);if(!m)return;const e=D().events.find(x=>x.id===m.stealId);const C=compute();
   const byH=homeById(m.byHome);
-  const sh=openSheet(`${shTop(e?'Case '+pad(C.num.get(e.id)):'Capture',esc(fmt(m.at)))}
+  const sh=openSheet(`${shTop(e?'Case '+pad(C.num.get(e.id)):(byH?esc(byH.family):'Gallery'),esc(fmt(m.at)))}
     ${m.type==='image'?`<img class="media-full" src="${esc(murl(m))}" alt="Capture photo">`:`<video class="media-full" src="${esc(murl(m))}" controls playsinline></video>`}
-    ${e?`<p>${caseLine(e)}.</p>`:''}<p class="case-meta">Uploaded by ${byH?esc(byH.family):'the organizer'}</p>
+    ${e?`<p>${caseLine(e)}.</p>`:''}${m.caption?`<p>${esc(m.caption)}</p>`:''}<p class="case-meta">Shared by ${byH?esc(byH.family):'the organizer'}</p>
     ${(isOrg()||m.by===myId())&&canWrite()?`<button class="btn danger" id="mDel">Remove this ${m.type==='image'?'photo':'video'}</button>`:''}`);
   const d=sh.querySelector('#mDel');if(d)d.addEventListener('click',async()=>{if(!d.dataset.armed){d.dataset.armed=1;d.textContent='Tap again to remove';return}if(await W(()=>delMedia(m),'Removed'))closeSheet()});
 }
@@ -1023,12 +1025,12 @@ async function prep(f){
   const b=await new Promise(r=>c.toBlob(r,'image/jpeg',.85));if(!b)throw{code:'unsupported_type'};
   return{blob:b,type:'image/jpeg',kind:'image'};
 }
-async function uploadAll(files,stealId,list){
+async function uploadAll(files,stealId,list,extra={}){
   if(!files.length)return 0;let ok=0;
   list.innerHTML=files.map((f,i)=>`<li><span>${esc(f.name||'file')}</span><span class="mono" id="up${i}">waiting</span></li>`).join('');
   for(let i=0;i<files.length;i++){const st=list.querySelector('#up'+i);
     try{st.textContent='uploading…';const p=await prep(files[i]);const r=await S.assets.upload(p.blob,{type:p.type});
-      await col('media').add({stealId,assetId:r.id,type:p.kind,by:S.me,byHome:myHome()?.id||null,at:new Date().toISOString()});st.textContent='done';ok++}
+      await col('media').add({stealId:stealId||null,season:viewSeason(),...extra,assetId:r.id,type:p.kind,by:S.me,byHome:myHome()?.id||null,at:new Date().toISOString()});st.textContent='done';ok++}
     catch(e){console.error(e);st.textContent=e&&e.code==='too_large'?'over 100 MB':'failed';toast(errMsg(e))}}
   return ok;
 }
@@ -1066,6 +1068,16 @@ document.addEventListener('click',async e=>{
   if(el=t.closest('[data-zoom]')){const [w,a]=el.dataset.zoom.split(':');const m={trail:trailMap,homes:homesMap,sheet:sheetMap}[w];if(m){a==='in'?m.zoom(.7):a==='out'?m.zoom(1.4):m.reset()}return}
   if(el=t.closest('[data-expand]')){const card=el.closest('.map-card');const on=!card.classList.contains('full');card.classList.toggle('full',on);document.body.style.overflow=on?'hidden':'';el.textContent=on?'Close':'Full screen';el.setAttribute('aria-label',on?'Close full screen map':'Full screen map');return}
   if(el=t.closest('[data-season]')){S.season=el.dataset.season===curSeason()?null:el.dataset.season;closeSheet();renderNow();scrollTo(0,0);return}
+  if(t.closest('[data-gal-add]')){
+    const sh=openSheet(`${shTop('Add to the gallery',esc(viewSeason())+' game')}
+      <label class="field"><span>Caption <span class="muted">(optional)</span></span><input type="text" id="galCap" maxlength="140" placeholder="Rudolph’s new disguise"></label>
+      <label class="drop"><input type="file" id="galFiles" accept="image/*,video/*" multiple><b>Choose photos or videos</b><br><small>Videos up to 100 MB.</small></label>
+      <ul class="files" id="galList"></ul>
+      <p class="small muted">Heads up: a photo of Rudolph at someone’s house gives away where he is. Save those for when you log a steal.</p>`);
+    sh.querySelector('#galFiles').addEventListener('change',async ev=>{const fs=[...ev.target.files];if(!fs.length)return;
+      const cap=$('#galCap').value.trim();const n=await uploadAll(fs,null,$('#galList'),cap?{caption:cap}:{});
+      ev.target.value='';if(n){toast(n>1?`Added ${n} files`:'Added to the gallery');setTimeout(closeSheet,700)}});
+    return}
   if(t.closest('[data-account]')){const mh=myHome();
     openSheet(`${shTop(mh?esc(mh.family):'Your account','Reindeer Games')}
       <p>Signed in as <b>${esc(S.email||S.phone||'')}</b>${isOrg()?' · Organizer':''}</p>

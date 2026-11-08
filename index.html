@@ -193,6 +193,13 @@ main{padding-block:16px calc(96px + env(safe-area-inset-bottom,0px))}
 .board .rank{font:600 .9rem var(--f-mono);color:var(--muted)}
 .board .n{font:600 1.15rem var(--f-mono);color:var(--nose)}
 .board .fam{min-width:0;overflow-wrap:anywhere}
+.board .medal{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font:600 .85rem var(--f-mono);color:#2B1A12;border:2px solid var(--edge)}
+.medal.m1{background:linear-gradient(145deg,#FBE38E,#E0A92B)}
+.medal.m2{background:linear-gradient(145deg,#F1F3F5,#AEB6BE)}
+.medal.m3{background:linear-gradient(145deg,#F0C08F,#B87333)}
+.board li.mine{background:color-mix(in srgb,var(--accent) 14%,var(--surface));border-radius:10px;margin-inline:-8px;padding-inline:8px;border-top-color:transparent}
+.board li.mine+li{border-top-color:transparent}
+.board .you{font:600 .62rem var(--f-mono);letter-spacing:.06em;text-transform:uppercase;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:1px 7px;margin-left:6px;vertical-align:2px}
 
 /* homes list */
 .homes{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
@@ -688,7 +695,9 @@ function rTimeline(C){
 function rBoard(C){
   const took={},lost={};C.vis.forEach(e=>{if(e.kind==='steal'){if(e.to)took[e.to]=(took[e.to]||0)+1;if(e.from)lost[e.from]=(lost[e.from]||0)+1}});
   const hs=D().homes.map(h=>({h,t:took[h.id]||0,l:lost[h.id]||0})).filter(x=>x.t||x.l).sort((a,b)=>b.t-a.t||a.l-b.l);
-  $('#board').innerHTML=hs.length?hs.map((x,i)=>`<li><span class="rank">${i+1}</span><div class="fam"><b>${esc(x.h.family)}</b><div class="case-meta">${hno(x.h)} · stolen from ${x.l}×</div></div><span class="n">${x.t}</span></li>`).join(''):`<li class="muted small">Steal counts appear after the first capture. The newest steal is counted once it unseals.</li>`;
+  const mine=myHome()?.id;
+  $('#board').innerHTML=hs.length?hs.map((x,i)=>{const medal=i<3&&x.t>0;const you=x.h.id===mine;
+    return `<li class="${you?'mine':''}">${medal?`<span class="medal m${i+1}" aria-label="${['Gold','Silver','Bronze'][i]}, place ${i+1}">${i+1}</span>`:`<span class="rank">${i+1}</span>`}<div class="fam"><b>${esc(x.h.family)}</b>${you?'<span class="you">You</span>':''}<div class="case-meta">${hno(x.h)} · stolen from ${x.l}×</div></div><span class="n">${x.t}</span></li>`}).join(''):`<li class="muted small">Steal counts appear after the first capture. The newest steal is counted once it unseals.</li>`;
 }
 function rGate(){
   const g=$('#gateBody'),j=S.myJoin,glow='<div class="glow" aria-hidden="true"></div>';
@@ -1136,7 +1145,7 @@ $('#setForm').addEventListener('submit',async e=>{e.preventDefault();
 function makeDemo(){
   const H=(id,family,number,x,y,ownerId=null)=>({id,family,number,x,y,ownerId});
   const homes=[H('a','The Hartwells','1405',null,null),H('b','The Okafors','846',null,null),H('c','The Lindqvists','924',null,null),H('d','The Brennans','119',null,null),
-    H('e','The Moraleses','36',null,null),H('f','The Tanakas','508',null,null),H('g','The Pruitts','322',null,null),H('h','The Duvals','1013',null,null)];
+    H('e','The Moraleses','36',null,null),H('f','The Tanakas','508',null,null),H('g','The Pruitts','322',null,null,'demo-me'),H('h','The Duvals','1013',null,null)];
   const day=(n,h)=>{const d=new Date();d.setDate(d.getDate()-n);d.setHours(h,12,0,0);return d.toISOString()};
   const E=(id,kind,from,to,at,note='')=>({id,kind,from,to,at,note,by:'x'});
   const events=[E('1','start',null,'a',day(9,9),'Game on.'),E('2','steal','a','f',day(8,21),'Ladder was involved.'),E('3','steal','f','b',day(7,19)),

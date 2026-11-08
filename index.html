@@ -383,13 +383,13 @@ textarea{min-height:120px;resize:vertical}
   <section class="view" id="v-homes" data-view="homes">
     <div class="status" id="status"></div>
     <div class="card map-card">
-      <div class="map-head"><h3>Rudolph’s trail &amp; homes</h3><span class="label" id="trailCount"></span></div>
-      <div class="map-box"><svg id="trailMap" role="img" aria-label="Map of participating homes and Rudolph’s moves around Emerald Bay"></svg></div>
+      <div class="map-head"><h3>Rudolph’s trail &amp; houses</h3><span class="label" id="trailCount"></span></div>
+      <div class="map-box"><svg id="trailMap" role="img" aria-label="Map of participating houses and Rudolph’s moves around Emerald Bay"></svg></div>
       <div class="map-bar"><button data-zoom="trail:out" aria-label="Zoom out">−</button><button data-zoom="trail:in" aria-label="Zoom in">+</button><button class="wide" data-zoom="trail:reset" aria-label="Show the whole map">Fit</button><span class="sp"></span><button class="wide" data-expand="trail" aria-label="Full screen map">Full screen</button></div>
       <div class="legend"><span><i></i>Logged steal</span><span><i class="dash"></i>Unlogged move</span><span><i class="dot"></i>Last confirmed sighting</span><span><i class="tagkey">153</i>Playing</span></div>
     </div>
     <div id="joinCta"></div>
-    <div class="stack"><div class="row" style="justify-content:space-between"><h2>Participating homes</h2><span class="label" id="homeCount"></span></div>
+    <div class="stack"><div class="row" style="justify-content:space-between"><h2>Participating houses</h2><span class="label" id="homeCount"></span></div>
     <ul class="homes" id="homeList"></ul></div>
     <div class="stack"><div class="row" style="justify-content:space-between"><h2>Case file</h2><span class="label">Newest first</span></div><ol class="cases" id="timeline"></ol></div>
     <div class="card row" id="a2hsCard" hidden style="justify-content:space-between"><p style="flex:1;min-width:12rem"><b>Keep the hunt one tap away.</b> Add Reindeer Games to your phone’s home screen.</p><div class="row"><button class="btn sm ghost" data-a2hs-hide>Not now</button><button class="btn sm primary" data-a2hs>Add to home screen</button></div></div>
@@ -526,7 +526,7 @@ const peopleOf=hid=>S.members.filter(m=>m.homeId===hid);
 const personLabel=m=>{const c=m.email||m.phone||'';return m.name&&c?`${m.name} (${c})`:(m.name||c||'Someone')};
 const isMember=()=>!!S.demo||isOrg()||!!myHome()||!!S.memberDoc;
 const canWrite=()=>!S.demo&&!!S.db&&!!S.me;
-const fam=id=>{const h=homeById(id);return h?h.family:'a home no longer in the game'};
+const fam=id=>{const h=homeById(id);return h?h.family:'a house no longer in the game'};
 const famB=id=>`<b>${esc(fam(id))}</b>`;
 const hno=h=>h?`No. ${esc(h.number)}`:'';
 const sortHomes=a=>[...a].sort((x,y)=>(parseInt(x.number)||9999)-(parseInt(y.number)||9999)||String(x.family).localeCompare(y.family));
@@ -883,7 +883,7 @@ function rGallery(C){
 }
 const DRAFT=`The basics (more to come):
 
-1. Each participating family tries to “steal” the inflatable Rudolph from another participating home, as many times as possible.
+1. Each participating family tries to “steal” the inflatable Rudolph from another participating house, as many times as possible.
 
 2. While Rudolph is at your house, he must be visible from the street.
 
@@ -1149,7 +1149,7 @@ document.addEventListener('click',async e=>{
     openSheet(`${shTop(mh?esc(mh.family):'Your account','Reindeer Games')}
       <p>Signed in as <b>${esc(S.email||S.phone||'')}</b>${isOrg()?' · Organizer':''}</p>
       ${mh?`<p class="small muted">${esc(mh.number)} Emerald Bay. To change your family name, house number or pin, ask the organizer.</p>`:''}
-      <div class="row">${mh?`<a class="btn" href="#homes" data-close>See participating homes</a>`:''}<button class="btn danger" data-signout data-close>Sign out</button></div>`);return}
+      <div class="row">${mh?`<a class="btn" href="#homes" data-close>See participating houses</a>`:''}<button class="btn danger" data-signout data-close>Sign out</button></div>`);return}
   if(t.closest('[data-seasons]')){const vs=viewSeason();
     openSheet(`${shTop('Game year','Reindeer Games')}<ul class="homes">${allSeasons().map(y=>{const n=S.live.events.filter(e=>e.kind==='steal'&&evSeason(e)===y).length;
       return `<li class="${y===vs?'on':''}"><span class="hno">${esc(y)}</span><div><b>December ${esc(y)}</b><div class="case-meta">${y===curSeason()?'Current game · ':''}${n} ${n===1?'steal':'steals'}</div></div><button class="btn sm${y===vs?' primary':''}" data-season="${esc(y)}">${y===vs?'Viewing':'View'}</button></li>`}).join('')}</ul>`);return}

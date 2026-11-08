@@ -751,10 +751,10 @@ function rGate(){
   else if(!S.me&&S.sentTo){key='sent:'+S.sentTo;step=1;h=`<div class="label">Check your email</div><h2>Tap the link we emailed you</h2><p>We sent a sign-in link to <b>${esc(S.sentTo)}</b>. Open it on this phone. It can take a minute to arrive, so check spam too.</p>
     <button class="linkbtn" data-signin-reset>Back to sign-in options</button>`}
   else if(!S.me){key='signin:'+(S.otherSignin?1:0);step=1;h=`<div class="label">Emerald Bay families</div><h2>Sign in to play</h2><p>Enter your mobile number and we’ll text you a code. New here? You’ll pick your house next.</p>
-    <form id="signinForm" class="stack" novalidate><label class="field"><span>Mobile number</span><input type="tel" id="signinId" autocomplete="tel" inputmode="tel" placeholder="(949) 555-0123"></label><button class="btn red" type="submit" id="signinBtn">Text me a code</button></form>
+    <form id="signinForm" class="stack" novalidate><label class="field"><span>Mobile number</span><input type="tel" id="signinId" name="phone" autocomplete="tel" inputmode="tel" placeholder="(949) 555-0123"></label><button class="btn red" type="submit" id="signinBtn">Text me a code</button></form>
     ${S.otherSignin?`<div class="or" style="margin-top:14px">OTHER WAYS TO SIGN IN</div>
     <button class="btn outline-c block" data-google style="margin-top:12px">Continue with Google</button>
-    <form id="emailForm" class="stack" novalidate><label class="field"><span>Or get a sign-in link by email</span><input type="email" id="emailId" autocomplete="email" placeholder="you@example.com"></label><button class="btn outline-c" type="submit" id="emailBtn">Email me a link</button></form>`
+    <form id="emailForm" class="stack" novalidate><label class="field"><span>Or get a sign-in link by email</span><input type="email" id="emailId" name="email" autocomplete="email" placeholder="you@example.com"></label><button class="btn outline-c" type="submit" id="emailBtn">Email me a link</button></form>`
     :`<button class="linkbtn" data-other-signin style="display:block;margin:14px auto 0">Other ways to sign in</button>`}
     <button class="linkbtn" data-demo style="display:block;margin:8px auto 0">See an example game</button>`}
   else if(!S.ready||j===undefined){key='load2';h=`<div class="label">Loading</div><h2>Checking your invite…</h2>`}

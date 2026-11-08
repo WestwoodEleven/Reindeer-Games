@@ -112,6 +112,18 @@ service cloud.firestore {
       allow delete: if isOrg() || (isMember() && resource.data.by == request.auth.uid);
     }
 
+    // Reports: any participant can file one; only organizers can read or act on them.
+    match /reports/{id} {
+      allow create: if isMember() && request.resource.data.by == request.auth.uid
+        && request.resource.data.status == 'open';
+      allow read, update, delete: if isOrg();
+    }
+
+    // Each person's private block list.
+    match /blocks/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
     match /media/{id} {
       allow read: if isMember();
       allow create: if isMember() && request.resource.data.by == request.auth.uid;

@@ -468,6 +468,10 @@ textarea{min-height:120px;resize:vertical}
     <h2>Organizer</h2>
     <div id="adminGate"></div>
     <div class="stack" id="adminBody">
+      <div class="card stack" id="reportsCard">
+        <div class="row" style="justify-content:space-between"><h3>Reports</h3><span class="label" id="reportCount"></span></div>
+        <ul class="homes" id="reportList"></ul>
+      </div>
       <div class="card stack" id="pendingCard">
         <div class="row" style="justify-content:space-between"><h3>Join requests</h3><span class="label" id="pendingCount"></span></div>
         <ul class="homes" id="pendingList"></ul>
@@ -490,6 +494,7 @@ textarea{min-height:120px;resize:vertical}
           <label class="field" style="flex:1;min-width:9rem"><span>Ends</span><input type="date" id="setEnd"></label>
         </div>
         <label class="field"><span>Rules</span><textarea id="setRules" placeholder="Write the rules here. Each line becomes its own line on the Rules page."></textarea><small>Leave empty to show the draft rules.</small></label>
+        <label class="field"><span>Organizer contact</span><input type="text" id="setContact" maxlength="80" placeholder="Email or phone players can reach you at"><small>Shown on the Rules page for questions and concerns.</small></label>
         <button class="btn primary" type="submit">Save settings</button>
       </form>
       <div class="card stack">
@@ -532,13 +537,14 @@ const H72=72*3600e3, H12=12*3600e3;
 
 /* ---------- state ---------- */
 const S={live:{config:{},homes:[],events:[],media:[]},ready:false,demo:null,demoOrg:false,
-  me:null,isOwner:false,myJoin:undefined,joins:[],members:[],memberHome:null,canWrite:null,db:null,assets:null,offline:false,readOnly:false};
+  me:null,isOwner:false,myJoin:undefined,joins:[],blocks:[],reports:[],members:[],memberHome:null,canWrite:null,db:null,assets:null,offline:false,readOnly:false};
 const D=()=>S.demo||S.live;
 const isOrg=()=>S.demo?S.demoOrg:S.isOwner;
 const myId=()=>S.demo?'demo-me':S.me;
 const homeById=id=>D().homes.find(h=>h.id===id);
 const myHome=()=>{if(S.demo)return D().homes.find(h=>h.ownerId==='demo-me')||null;return (S.memberHome&&homeById(S.memberHome))||(S.me?D().homes.find(h=>h.ownerId===S.me):null)||null};
 const numKey=n=>String(n??'').trim().replace(/^0+/,'')||'0';
+const blocked=uid=>!!uid&&S.blocks.includes(uid)&&uid!==S.me;
 const peopleOf=hid=>S.members.filter(m=>m.homeId===hid);
 const personLabel=m=>{const c=m.email||m.phone||'';return m.name&&c?`${m.name} (${c})`:(m.name||c||'Someone')};
 const isMember=()=>!!S.demo||isOrg()||!!myHome()||!!S.memberDoc;
@@ -725,7 +731,7 @@ document.addEventListener('click',e=>{
 function rWho(){
   $('#gameYear').textContent=viewSeason();$('#seasonLbl').textContent=viewSeason();$('#seasonBtn').hidden=S.demo||!isMember()||allSeasons().length<2;
   const w=$('#who');let h='';
-  if(isOrg()&&!S.demo){const n=S.joins.filter(j=>j.status==='pending').length;h+=`<a class="chip${n?' solid':''}" href="#admin">Organizer${n?` · ${n}`:''}</a>`}
+  if(isOrg()&&!S.demo){const n=S.joins.filter(j=>j.status==='pending'&&!S.members.some(m=>m.id===j.id)).length+S.reports.filter(r=>r.status==='open').length;h+=`<a class="chip${n?' solid':''}" href="#admin">Organizer${n?` · ${n}`:''}</a>`}
   const mh=myHome();
   if(mh&&S.demo)h+=`<span class="chip">${esc(mh.family)}</span>`;
   else if(S.me&&isMember())h+=`<button class="chip" data-account aria-label="Account and sign out">${esc(mh?mh.family:"Account")} ▾</button>`;
@@ -771,7 +777,7 @@ function caseLine(e){
   return `${famB(e.to)} took Rudolph from ${famB(e.from)}`;
 }
 const pad=n=>'#'+String(n).padStart(2,'0');
-function mediaFor(id){return D().media.filter(m=>m.stealId===id).sort((a,b)=>String(a.at).localeCompare(String(b.at)))}
+function mediaFor(id){return D().media.filter(m=>m.stealId===id&&!blocked(m.by)).sort((a,b)=>String(a.at).localeCompare(String(b.at)))}
 function thumbs(id){const ms=mediaFor(id);if(!ms.length)return'';
   return `<div class="thumbs">${ms.slice(0,4).map(m=>m.type==='image'?`<span style="background-image:url('${esc(murl(m))}')"></span>`:`<span>VIDEO</span>`).join('')}${ms.length>4?`<span>+${ms.length-4}</span>`:''}</div>`}
 function claimBtn(e){const mh=myHome();return (!e.to&&e.kind!=='start'&&mh&&mh.id!==e.from&&canWrite()&&!isPast())?`<button class="btn sm red" data-claim="${esc(e.id)}">It was us. Claim it</button>`:''}
@@ -781,7 +787,7 @@ function rTimeline(C){
   [...C.items].reverse().forEach(it=>{
     if(it.gap){h+=`<li class="case gap"><div class="case-n">?</div><div><p><b>Unlogged move.</b> Rudolph left ${famB(it.from)} and later turned up at ${famB(it.to)}.</p>${(canWrite()&&!isPast())||isOrg()?`<button class="btn sm" data-gap="${esc(it.from)}|${esc(it.to)}|${esc(it.after)}">Fill in the missing steal</button>`:''}</div></li>`;return}
     const e=it.ev,n=mediaFor(e.id).length;
-    h+=`<li class="case" data-ev="${esc(e.id)}"><div class="case-n">${pad(C.num.get(e.id))}</div><div><p>${caseLine(e)}</p><p class="case-meta">${esc(fmt(e.at))}${n?` · ${n} ${n>1?'files':'file'}`:''}</p>${e.note?`<p class="small">“${esc(e.note)}”</p>`:''}${thumbs(e.id)}${claimBtn(e)}</div></li>`;
+    h+=`<li class="case" data-ev="${esc(e.id)}"><div class="case-n">${pad(C.num.get(e.id))}</div><div><p>${caseLine(e)}</p><p class="case-meta">${esc(fmt(e.at))}${n?` · ${n} ${n>1?'files':'file'}`:''}</p>${e.note&&!blocked(e.by)?`<p class="small">“${esc(e.note)}”</p>`:''}${thumbs(e.id)}${claimBtn(e)}</div></li>`;
   });
   t.innerHTML=h||`<li class="empty"><h3>No steals yet</h3><p>Every capture shows up here as a numbered case.</p></li>`;
   $('#trailCount').textContent=C.evs.length?`${C.evs.length} ${C.evs.length>1?'entries':'entry'}`:'';
@@ -939,7 +945,7 @@ function rLog(){
 }
 function rGallery(C){
   const visIds=new Set(C.vis.map(e=>e.id));
-  const ms=D().media.filter(m=>m.stealId?visIds.has(m.stealId):(S.demo||String(m.season||yearOf(m.at))===viewSeason())).sort((a,b)=>String(b.at).localeCompare(String(a.at)));
+  const ms=D().media.filter(m=>!blocked(m.by)).filter(m=>m.stealId?visIds.has(m.stealId):(S.demo||String(m.season||yearOf(m.at))===viewSeason())).sort((a,b)=>String(b.at).localeCompare(String(a.at)));
   $('#galAdd').hidden=S.demo||!S.assets||!canWrite()||(isPast()&&!isOrg());
   $('#galCount').textContent=ms.length?`${ms.length} ${ms.length>1?'files':'file'}`:'';
   $('#gallery').innerHTML=ms.length?`<div class="gallery">${ms.map(m=>`<button data-media="${esc(m.id)}" aria-label="Open ${m.type}">${m.type==='image'?`<img src="${esc(murl(m))}" alt="" loading="lazy">`:`<video src="${esc(murl(m))}#t=0.1" preload="metadata" muted playsinline></video><span class="play">VIDEO</span>`}</button>`).join('')}</div>`
@@ -960,18 +966,26 @@ function rRules(){const c=seasonCfg();const t=(c.rules||'').trim();
   $('#draftTag').hidden=!!t;
   const dates=c.start?`<p class="label">Game window · ${esc(c.start)}${c.end?' → '+esc(c.end):''}</p>`:'';
   const acct=S.me&&!S.demo?`<p class="small muted">Signed in as ${esc(S.email||S.phone||'')} · <button class="btn sm ghost" data-signout>Sign out</button></p>`:'';
-  $('#rulesBody').innerHTML=`${acct}${dates}<div class="rules">${esc(t||DRAFT)}</div>${isOrg()&&!S.demo?`<a class="btn sm" href="#admin" style="align-self:start">Edit rules</a>`:''}`;
+  $('#rulesBody').innerHTML=`${acct}${dates}<div class="rules">${esc(t||DRAFT)}</div>${S.live.config.contact&&!S.demo?`<p class="small muted">Questions, concerns or something inappropriate? Contact the organizer: <b>${esc(S.live.config.contact)}</b>. You can also tap <b>Report</b> on any photo, video or note.</p>`:''}${isOrg()&&!S.demo?`<a class="btn sm" href="#admin" style="align-self:start">Edit rules</a>`:''}`;
 }
 function rAdmin(C){
   const ok=isOrg()&&!S.demo;$('#adminGate').innerHTML=ok?'':`<div class="empty"><h3>Organizer only</h3><p>This section is for the person running the game.</p></div>`;$('#adminBody').hidden=!ok;if(!ok)return;
   const c=seasonCfg(),vs=viewSeason(),cur=curSeason();
   const f=$('#setForm');if(f.dataset.season!==vs){f.dataset.season=vs;['#setStart','#setEnd','#setRules'].forEach(x=>delete $(x).dataset.dirty)}
   for(const [id,k] of [['#setStart','start'],['#setEnd','end'],['#setRules','rules']]){const el=$(id);if(!el.dataset.dirty&&document.activeElement!==el)el.value=c[k]||''}
+  {const el=$('#setContact');if(!el.dataset.dirty&&document.activeElement!==el)el.value=S.live.config.contact||''}
   $('#setTitle').textContent=`${vs} game settings`;
   $('#curSeasonLbl').textContent=`Current: ${cur}`;
   const next=String(Math.max(...allSeasons().map(Number))+1);
   $('#seasonNote').textContent=isPast()?`You’re viewing the ${vs} game. Changes you make here, including Rudolph’s record below, go into ${vs}.`:`Everyone lands on the ${cur} game. When it’s time for next December, start the ${next} game. ${cur} stays saved and anyone can look back at it from the year menu in the header. Families carry over.`;
   const nb=$('#newSeason');nb.hidden=isPast();nb.dataset.next=next;if(!nb.dataset.armed)nb.textContent=`Start the ${next} game`;
+  const open=S.reports.filter(r=>r.status==='open').sort((a,b)=>String(b.at).localeCompare(String(a.at)));
+  $('#reportCount').textContent=open.length?`${open.length} open`:'';
+  $('#reportList').innerHTML=open.length?open.map(r=>{const tgt=r.type==='media'?D().media.find(m=>m.id===r.targetId):D().events.find(e=>e.id===r.targetId);
+    const what=r.type==='media'?(tgt?.type==='video'?'Video':'Photo'):'Steal note';const owner=homeById(tgt?.byHome)||homeById(S.members.find(m=>m.id===tgt?.by)?.homeId);
+    return `<li><span class="hno">${esc(what)}</span><div><b>${esc(r.reason)}</b><div class="case-meta">${tgt?`Posted by ${esc(owner?.family||'someone')}`:'Already removed'} · reported by ${esc(homeById(r.byHome)?.family||'someone')} · ${esc(ago(r.at))}${r.note?` · “${esc(r.note)}”`:''}</div></div>
+      <div class="row">${tgt?`<button class="btn sm" data-rview="${esc(r.id)}">View</button><button class="btn sm danger" data-rremove="${esc(r.id)}">Remove</button>`:''}<button class="btn sm" data-rdismiss="${esc(r.id)}">Dismiss</button></div></li>`}).join('')
+    :`<li class="muted small">No reports. Players can report any photo, video or note.</li>`;
   const pi=$('#pwInput');if(!pi.dataset.dirty&&document.activeElement!==pi)pi.value=S.gamePw||'';
   $('#pwState').textContent=S.gamePw?'On':'Off';$('#pwOff').hidden=!S.gamePw;
   const pend=S.joins.filter(j=>j.status==='pending'&&!S.members.some(m=>m.id===j.id)).sort((a,b)=>String(a.at).localeCompare(String(b.at)));
@@ -1079,12 +1093,13 @@ function openEvent(id){
   const byHome=homeById(e.byHome)||homeById(S.members.find(m=>m.id===e.by)?.homeId)||D().homes.find(h=>h.ownerId&&h.ownerId===e.by);
   const sh=openSheet(`${shTop('Case '+pad(C.num.get(id)),esc(fmt(e.at)))}
     <p>${caseLine(e)}.</p>
-    ${e.note?`<p class="small">“${esc(e.note)}”</p>`:''}
+    ${e.note&&!blocked(e.by)?`<p class="small">“${esc(e.note)}”</p>`:''}
     <p class="case-meta">Logged by ${byHome?esc(byHome.family):'the organizer'}</p>
     ${claimBtn(e)}
     ${ms.length?`<div class="gallery">${ms.map(m=>`<button data-media="${esc(m.id)}" aria-label="Open ${m.type}">${m.type==='image'?`<img src="${esc(murl(m))}" alt="">`:`<video src="${esc(murl(m))}#t=0.1" preload="metadata" muted playsinline></video><span class="play">VIDEO</span>`}</button>`).join('')}</div>`:'<p class="muted small">No photos or videos yet.</p>'}
     ${involved&&S.assets&&canWrite()&&(!isPast()||isOrg())?`<label class="drop"><input type="file" id="evFiles" accept="image/*,video/*" multiple><b>Add your photos or videos</b><br><small>Both the stealer and the family who lost him can add footage.</small></label><ul class="files" id="evFileList"></ul>`:''}
-    ${(isOrg()||e.by===myId())&&canWrite()?`<button class="btn" id="evEdit">Edit entry</button>`:''}`);
+    ${(isOrg()||e.by===myId())&&canWrite()?`<button class="btn" id="evEdit">Edit entry</button>`:''}
+    ${e.note&&e.by&&e.by!==myId()&&!S.demo&&canWrite()?modLinks('steal',e.id,e.by,byHome?byHome.family:''):''}`);
   const f=sh.querySelector('#evFiles');if(f)f.addEventListener('change',async()=>{await uploadAll([...f.files],id,$('#evFileList'));f.value=''});
   const ed=sh.querySelector('#evEdit');if(ed)ed.addEventListener('click',()=>openEventForm(e));
 }
@@ -1116,13 +1131,28 @@ function openEventForm(e,preset={}){
   const del=sh.querySelector('#efDel');if(del)del.addEventListener('click',async()=>{if(!del.dataset.armed){del.dataset.armed=1;del.textContent='Tap again to delete';return}
     const ok=await W(async()=>{for(const m of mediaFor(e.id))await delMedia(m);await col('steals').doc(e.id).delete()},'Entry deleted');if(ok)closeSheet()});
 }
+function modLinks(type,id,uid,fam){return `<div class="row" style="justify-content:center;gap:16px"><button class="linkbtn" data-report="${type}|${esc(id)}">Report</button>${uid===S.me||isOrg()?'':`<button class="linkbtn" data-block="${esc(uid)}|${esc(fam)}">Block this person</button>`}</div>`}
+function openReport(type,id){
+  const what=type==='media'?'photo or video':'note';
+  const sh=openSheet(`${shTop('Report this '+what,'Goes to the organizer')}
+    <div class="stack" role="radiogroup" aria-label="Reason">
+      ${['Inappropriate or offensive','Shows someone’s private property or people without permission','Spam or off-topic','Something else'].map((r,i)=>`<label class="row" style="gap:10px;align-items:center"><input type="radio" name="rr" value="${esc(r)}"${i===0?' checked':''}> ${esc(r)}</label>`).join('')}
+    </div>
+    <label class="field"><span>Details <span class="muted">(optional)</span></span><input type="text" id="rrNote" maxlength="200"></label>
+    <button class="btn red block" id="rrSend">Send report</button>
+    <p class="small muted">The organizer sees who sent the report. It stays hidden from everyone else.</p>`);
+  sh.querySelector('#rrSend').addEventListener('click',async()=>{const reason=sh.querySelector('input[name=rr]:checked')?.value||'';
+    if(await W(()=>col('reports').add({type,targetId:id,reason,note:$('#rrNote').value.trim(),by:S.me,byHome:myHome()?.id||null,status:'open',at:new Date().toISOString()}),'Report sent. Thanks for flagging it.'))closeSheet()});
+}
+async function setBlocks(list){S.blocks=list;render();await W(()=>S.db.doc('blocks/'+S.me).set({ids:list}))}
 function openMedia(id){
   const m=D().media.find(x=>x.id===id);if(!m)return;const e=D().events.find(x=>x.id===m.stealId);const C=compute();
   const byH=homeById(m.byHome);
   const sh=openSheet(`${shTop(e?'Case '+pad(C.num.get(e.id)):(byH?esc(byH.family):'Gallery'),esc(fmt(m.at)))}
     ${m.type==='image'?`<img class="media-full" src="${esc(murl(m))}" alt="Capture photo">`:`<video class="media-full" src="${esc(murl(m))}" controls playsinline></video>`}
     ${e?`<p>${caseLine(e)}.</p>`:''}${m.caption?`<p>${esc(m.caption)}</p>`:''}<p class="case-meta">Shared by ${byH?esc(byH.family):'the organizer'}</p>
-    ${(isOrg()||m.by===myId())&&canWrite()?`<button class="btn danger" id="mDel">Remove this ${m.type==='image'?'photo':'video'}</button>`:''}`);
+    ${(isOrg()||m.by===myId())&&canWrite()?`<button class="btn danger" id="mDel">Remove this ${m.type==='image'?'photo':'video'}</button>`:''}
+    ${m.by&&m.by!==myId()&&!S.demo&&canWrite()?modLinks('media',m.id,m.by,byH?byH.family:''):''}`);
   const d=sh.querySelector('#mDel');if(d)d.addEventListener('click',async()=>{if(!d.dataset.armed){d.dataset.armed=1;d.textContent='Tap again to remove';return}if(await W(()=>delMedia(m),'Removed'))closeSheet()});
 }
 
@@ -1213,10 +1243,22 @@ document.addEventListener('click',async e=>{
       const cap=$('#galCap').value.trim();const n=await uploadAll(fs,null,$('#galList'),cap?{caption:cap}:{});
       ev.target.value='';if(n){toast(n>1?`Added ${n} files`:'Added to the gallery');setTimeout(closeSheet,700)}});
     return}
+  if(el=t.closest('[data-rview]')){const r=S.reports.find(x=>x.id===el.dataset.rview);if(r){r.type==='media'?openMedia(r.targetId):openEvent(r.targetId)}return}
+  if(el=t.closest('[data-rdismiss]')){await W(()=>col('reports').doc(el.dataset.rdismiss).update({status:'dismissed'}),'Dismissed');return}
+  if(el=t.closest('[data-rremove]')){if(!el.dataset.armed){el.dataset.armed=1;el.textContent='Tap to confirm';return}
+    const r=S.reports.find(x=>x.id===el.dataset.rremove);if(!r)return;
+    await W(async()=>{if(r.type==='media'){const m=D().media.find(x=>x.id===r.targetId);if(m)await delMedia(m)}else await col('steals').doc(r.targetId).update({note:''});
+      await col('reports').doc(r.id).update({status:'removed'})},'Removed');return}
+  if(el=t.closest('[data-report]')){const [type,id]=el.dataset.report.split('|');openReport(type,id);return}
+  if(el=t.closest('[data-block]')){const [uid,fam]=el.dataset.block.split('|');
+    if(!el.dataset.armed){el.dataset.armed=1;el.textContent='Tap again to block';return}
+    await setBlocks([...new Set([...S.blocks,uid])]);closeSheet();toast(`Blocked. You won’t see their photos, videos or notes${fam?` (shared as ${fam})`:''}.`);return}
+  if(el=t.closest('[data-unblock]')){await setBlocks(S.blocks.filter(x=>x!==el.dataset.unblock));el.closest('li')?.remove();toast('Unblocked');return}
   if(t.closest('[data-account]')){const mh=myHome();
     openSheet(`${shTop(mh?esc(mh.family):'Your account','Reindeer Games')}
       <p>Signed in as <b>${esc(S.email||S.phone||'')}</b>${isOrg()?' · Organizer':''}</p>
       ${mh?`<p class="small muted">${esc(mh.number)} Emerald Bay. To change your family name, house number or pin, ask the organizer.</p>`:''}
+      ${S.blocks.length?`<div class="field"><span>Blocked people</span><ul class="homes">${S.blocks.map((u,i)=>`<li><div style="grid-column:1/3"><b>Blocked person ${i+1}</b><div class="case-meta">Their photos, videos and notes are hidden for you</div></div><button class="btn sm" data-unblock="${esc(u)}">Unblock</button></li>`).join('')}</ul></div>`:''}
       <div class="row">${mh?`<a class="btn" href="#homes" data-close>See participating houses</a>`:''}${isInstalled()?'':'<button class="btn" data-a2hs data-close>Add to phone</button>'}<button class="btn danger" data-signout data-close>Sign out</button></div>`);return}
   if(t.closest('[data-seasons]')){const vs=viewSeason();
     openSheet(`${shTop('Game year','Reindeer Games')}<ul class="homes">${allSeasons().map(y=>{const n=S.live.events.filter(e=>e.kind==='steal'&&evSeason(e)===y).length;
@@ -1267,11 +1309,11 @@ $('#newSeason').addEventListener('click',async()=>{const b=$('#newSeason'),next=
   if(await W(()=>S.db.doc('config/game').set(body),`The ${next} game is ready. Set Rudolph’s starting house when it begins.`)){S.season=null;renderNow()}});
 $('#setStartHome').addEventListener('click',()=>{if(!D().homes.length){toast('Add a family first.');return}openEventForm(null,{kind:'start'})});
 $('#addMove').addEventListener('click',()=>{if(D().homes.length<2){toast('Add at least two families first.');return}openEventForm(null,{kind:'steal'})});
-['#setStart','#setEnd','#setRules'].forEach(s=>$(s).addEventListener('input',()=>$(s).dataset.dirty=1));
+['#setStart','#setEnd','#setRules','#setContact'].forEach(s=>$(s).addEventListener('input',()=>$(s).dataset.dirty=1));
 $('#setForm').addEventListener('submit',async e=>{e.preventDefault();
   const cfg=S.live.config,vs=viewSeason();
-  const body={...cfg,current:cfg.current||curSeason(),seasons:{...(cfg.seasons||{}),[vs]:{start:$('#setStart').value||null,end:$('#setEnd').value||null,rules:$('#setRules').value}}};
-  if(await W(()=>S.db.doc('config/game').set(body),'Settings saved'))['#setStart','#setEnd','#setRules'].forEach(s=>delete $(s).dataset.dirty)});
+  const body={...cfg,contact:$('#setContact').value.trim(),current:cfg.current||curSeason(),seasons:{...(cfg.seasons||{}),[vs]:{start:$('#setStart').value||null,end:$('#setEnd').value||null,rules:$('#setRules').value}}};
+  if(await W(()=>S.db.doc('config/game').set(body),'Settings saved'))['#setStart','#setEnd','#setRules','#setContact'].forEach(s=>delete $(s).dataset.dirty)});
 
 /* ---------- example game (in memory only) ---------- */
 function makeDemo(){
@@ -1324,11 +1366,13 @@ function startMain(){
   subs.push(db.collection('steals').onSnapshot(q=>{S.live.events=q.docs.map(d=>({...d.data(),id:d.id}));done()},err));
   subs.push(db.collection('media').onSnapshot(q=>{S.live.media=q.docs.map(d=>({...d.data(),id:d.id}));loadUrls();done()},err));
   if(S.isOwner)subs.push(db.collection('houseIndex').onSnapshot(q=>{S.houseIdx=Object.fromEntries(q.docs.map(d=>[d.id,d.data()]));syncIndex()},err));
+  if(S.isOwner)subs.push(db.collection('reports').onSnapshot(q=>{S.reports=q.docs.map(d=>({...d.data(),id:d.id}));render()},err));
+  subs.push(db.doc('blocks/'+S.me).onSnapshot(d=>{S.blocks=d.exists?(d.data().ids||[]):[];render()},()=>{}));
   if(S.isOwner)subs.push(db.doc('secrets/game').onSnapshot(d=>{S.gamePw=d.exists?(d.data().password||''):'';render()},err));
   if(S.isOwner)subs.push(db.collection('members').onSnapshot(q=>{S.members=q.docs.map(d=>({...d.data(),id:d.id}));render()},err));
   if(S.isOwner)subs.push(db.collection('joins').onSnapshot(q=>{S.joins=q.docs.map(d=>({...d.data(),id:d.id}));render()},err));
 }
-function signedOut(){unsubAll();S.me=null;S.email='';S.isOwner=false;S.memberDoc=false;S.memberHome=null;S.members=[];S.ready=false;S.myJoin=undefined;S.joins=[];S.live={config:{},homes:[],events:[],media:[]};S.urls={}}
+function signedOut(){unsubAll();S.me=null;S.email='';S.isOwner=false;S.memberDoc=false;S.memberHome=null;S.members=[];S.blocks=[];S.reports=[];S.ready=false;S.myJoin=undefined;S.joins=[];S.live={config:{},homes:[],events:[],media:[]};S.urls={}}
 function watchUser(user){
   const db=S.db;let seen={org:false,mem:false,join:false};
   const check=()=>{if(!(seen.org&&seen.mem&&seen.join))return;

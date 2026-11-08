@@ -7,10 +7,15 @@ service cloud.firestore {
     function signedIn() { return request.auth != null; }
     // Phone sign-ins have no email, so read it safely.
     function email() { return request.auth.token.get('email', '').lower(); }
+    // Phone sign-ins carry a verified number like +19495551234.
+    function phone() { return request.auth.token.get('phone_number', ''); }
     function isOrg() {
-      return signedIn() && email() != ''
-        && request.auth.token.get('email_verified', false) == true
-        && exists(/databases/$(database)/documents/organizers/$(email()));
+      return signedIn() && (
+        (email() != ''
+          && request.auth.token.get('email_verified', false) == true
+          && exists(/databases/$(database)/documents/organizers/$(email())))
+        || (phone() != ''
+          && exists(/databases/$(database)/documents/organizers/$(phone()))));
     }
     function isMember() {
       return isOrg() || (signedIn() && exists(/databases/$(database)/documents/members/$(request.auth.uid)));
@@ -33,7 +38,7 @@ service cloud.firestore {
     }
 
     match /organizers/{e} {
-      allow read: if signedIn() && email() == e;
+      allow read: if signedIn() && (email() == e || phone() == e);
       allow write: if false;            // add organizers in the Firebase console
     }
 

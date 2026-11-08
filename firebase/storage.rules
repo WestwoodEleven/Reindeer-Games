@@ -7,7 +7,10 @@ service firebase.storage {
       return request.auth != null
         && request.auth.token.get('email', '') != ''
         && request.auth.token.get('email_verified', false) == true
-        && firestore.exists(/databases/(default)/documents/organizers/$(request.auth.token.get('email', '').lower()));
+        && firestore.exists(/databases/(default)/documents/organizers/$(request.auth.token.get('email', '').lower()))
+        || request.auth != null
+        && request.auth.token.get('phone_number', '') != ''
+        && firestore.exists(/databases/(default)/documents/organizers/$(request.auth.token.get('phone_number', '')));
     }
     function isMember() {
       return isOrg() || (request.auth != null

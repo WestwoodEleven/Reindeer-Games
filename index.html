@@ -1557,7 +1557,7 @@ function watchUser(user){
   const db=S.db;let seen={org:false,mem:false,join:false};
   const check=()=>{if(!(seen.org&&seen.mem&&seen.join))return;
     if(isOrg()||S.memberDoc)startMain();else{S.ready=true;render()}};
-  const em=(user.email||'').toLowerCase();
+  const em=(user.email||'').toLowerCase()||user.phoneNumber||'';
   if(!em){S.isOwner=false;seen.org=true}else
   subs.push(db.doc('organizers/'+em).onSnapshot(d=>{const was=S.isOwner;S.isOwner=d.exists;seen.org=true;if(was!==S.isOwner&&mainOn){unsubAll();watchUser(user);return}check();render()},()=>{seen.org=true;check()}));
   subs.push(db.doc('members/'+user.uid).onSnapshot(d=>{S.memberDoc=d.exists;S.memberHome=d.exists?d.data().homeId||null:null;seen.mem=true;check();render()},()=>{seen.mem=true;check()}));

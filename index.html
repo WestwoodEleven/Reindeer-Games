@@ -143,7 +143,11 @@ main{padding-block:16px calc(96px + env(safe-area-inset-bottom,0px))}
 .fthumbs button{position:relative;aspect-ratio:1;max-width:100%;border:0;padding:0;border-radius:8px;overflow:hidden;background:var(--line);cursor:pointer}
 .fthumbs img,.fthumbs video{width:100%;height:100%;object-fit:cover;display:block}
 .fthumbs .play{position:absolute;left:4px;bottom:4px;font:600 .6rem var(--f-mono);background:var(--nose);color:#fff;border-radius:5px;padding:1px 5px}
-.freacts{display:flex;gap:6px}
+.freacts{display:flex;gap:6px;flex-wrap:wrap}
+.freacts .fadd{font-weight:700;color:var(--muted)}
+.epick{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:4px}
+.epick button{aspect-ratio:1;border:0;background:var(--bg);border-radius:10px;font-size:1.5rem;cursor:pointer}
+.epick button:active{background:var(--line)}
 .freacts button{border:1.5px solid var(--line);background:var(--bg);border-radius:999px;padding:3px 10px;font:600 .85rem var(--f-body);cursor:pointer;color:var(--ink)}
 .freacts button.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,var(--surface))}
 .famrow{display:flex;align-items:center;gap:12px;background:var(--surface);color:var(--ink);border-radius:12px;padding:12px}
@@ -987,7 +991,23 @@ function rGallery(C){
   $('#gallery').innerHTML=ms.length?`<div class="gallery">${ms.map(m=>`<button data-media="${esc(m.id)}" aria-label="Open ${m.type}">${m.type==='image'?`<img src="${esc(murl(m))}" alt="" loading="lazy">`:`<video src="${esc(murl(m))}#t=0.1" preload="metadata" muted playsinline></video><span class="play">VIDEO</span>`}</button>`).join('')}</div>`
     :`<div class="empty"><h3>No captures on film yet</h3><p>Add your own holiday photos and videos, or attach them when you log a steal. Media from the newest steal appears once it unseals.</p></div>`;
 }
-const REACTS=[['laugh','😂'],['tree','🎄'],['wow','😮']];
+const DEFAULT_REACTS=['😂','🎄','😮'];
+const LEGACY_REACT={laugh:'😂',tree:'🎄',wow:'😮'};
+const PICKER=['😂','🎄','😮','🦌','🎅','⛄','❄️','🎁','🔥','👀','🕵️','😱','😈','😇','🙌','👏','❤️','💚','🤣','😭','🤔','🫣','🥶','🏆','🚨','🪜','🔦','🍪','🥛','🔔','✨','⭐'];
+function reactTally(p){const t={};for(const [k,who] of Object.entries(p.reactions||{})){const em=LEGACY_REACT[k]||k;if(!Array.isArray(who)||!who.length)continue;t[em]=t[em]||{n:0,mine:false};t[em].n+=who.length;if(who.includes(S.me))t[em].mine=true}return t}
+const firstEmoji=v=>{const str=String(v||'').trim();if(!str)return'';const seg=typeof Intl!=='undefined'&&Intl.Segmenter?[...new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(str)][0]?.segment:[...str][0];return /\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(seg||'')?seg:''};
+async function toggleReact(id,em){if(S.demo){toast('The example game doesn’t save changes.');return}if(!canWrite())return;
+  const p=(D().posts||[]).find(x=>x.id===id);if(!p)return;const FV=firebase.firestore.FieldValue,FP=firebase.firestore.FieldPath;
+  const legacy=Object.keys(LEGACY_REACT).find(k=>LEGACY_REACT[k]===em&&((p.reactions||{})[k]||[]).includes(S.me));
+  const key=legacy||em;const on=((p.reactions||{})[key]||[]).includes(S.me);
+  await W(()=>S.db.doc('posts/'+id).update(new FP('reactions',key),on?FV.arrayRemove(S.me):FV.arrayUnion(S.me)))}
+function openReactPicker(id){
+  const sh=openSheet(`${shTop('Add a reaction','Pick one or use any emoji')}
+    <div class="epick">${PICKER.map(e=>`<button type="button" data-pick="${esc(e)}" aria-label="React ${esc(e)}">${e}</button>`).join('')}</div>
+    <form id="ecForm" class="row" novalidate style="gap:8px;flex-wrap:nowrap"><label class="sr" for="ecIn">Any emoji</label><input type="text" id="ecIn" placeholder="Or type any emoji" maxlength="16" style="flex:1"><button class="btn primary" type="submit">Add</button></form>`);
+  sh.querySelector('.epick').addEventListener('click',async e=>{const b=e.target.closest('[data-pick]');if(!b)return;closeSheet();await toggleReact(id,b.dataset.pick)});
+  sh.querySelector('#ecForm').addEventListener('submit',async e=>{e.preventDefault();const em=firstEmoji($('#ecIn').value);if(!em){toast('That doesn’t look like an emoji. Use the emoji keyboard.');return}closeSheet();await toggleReact(id,em)});
+}
 const postGone=id=>!(D().posts||[]).some(p=>p.id===id);
 function rFeed(C){
   const photos=S.feedMode==='photos';
@@ -1010,7 +1030,8 @@ function rFeed(C){
     if(it.k==='photo'){const m=it.m,h=homeById(m.byHome);return `<div class="fpost"><div class="fwho"><b>${fam(h)}</b><span>${esc(ago(m.at))}</span></div>${m.caption?`<p>${esc(m.caption)}</p>`:''}${thumbs([m])}</div>`}
     const p=it.p,h=homeById(p.byHome),ms=D().media.filter(m=>m.postId===p.id&&!blocked(m.by));const mine=p.by===S.me;
     return `<div class="fpost"><div class="fwho"><b>${fam(h)}${mine?' <span class="you">You</span>':''}</b><span>${esc(ago(p.at))}<button class="fmore" data-postmenu="${esc(p.id)}" aria-label="More options">⋯</button></span></div>${p.text?`<p class="ftext">${esc(p.text)}</p>`:''}${thumbs(ms)}
-      <div class="freacts">${REACTS.map(([k,em])=>{const who=(p.reactions||{})[k]||[];return `<button class="${who.includes(S.me)?'on':''}" data-react="${esc(p.id)}|${k}" aria-label="React ${em}">${em}${who.length?` ${who.length}`:''}</button>`}).join('')}</div></div>`}).join('')
+      <div class="freacts">${(()=>{const tl=reactTally(p);const ems=[...new Set([...Object.keys(tl).sort((a,b)=>tl[b].n-tl[a].n),...DEFAULT_REACTS])].slice(0,10);
+        return ems.map(em=>{const x=tl[em]||{n:0,mine:false};return `<button class="${x.mine?'on':''}" data-react="${esc(p.id)}|${esc(em)}" aria-label="React ${esc(em)}">${em}${x.n?` ${x.n}`:''}</button>`}).join('')+`<button class="fadd" data-reactpick="${esc(p.id)}" aria-label="Add a different reaction">＋</button>`})()}</div></div>`}).join('')
     :`<div class="empty"><h3>Nothing here yet</h3><p>Steals show up here automatically. Post a message or photo to get things going.</p></div>`;
 }
 const DRAFT=`The basics (more to come):
@@ -1307,8 +1328,8 @@ document.addEventListener('click',async e=>{
     return}
   if(el=t.closest('[data-feedmode]')){S.feedMode=el.dataset.feedmode;renderNow();return}
   if(el=t.closest('[data-react]')){if(S.demo){toast('The example game doesn’t save changes.');return}if(!canWrite())return;
-    const [id,k]=el.dataset.react.split('|');const p=(D().posts||[]).find(x=>x.id===id);if(!p)return;const on=((p.reactions||{})[k]||[]).includes(S.me);
-    const FV=firebase.firestore.FieldValue;await W(()=>S.db.doc('posts/'+id).update({['reactions.'+k]:on?FV.arrayRemove(S.me):FV.arrayUnion(S.me)}));return}
+    const i=el.dataset.react.indexOf('|');await toggleReact(el.dataset.react.slice(0,i),el.dataset.react.slice(i+1));return}
+  if(el=t.closest('[data-reactpick]')){if(S.demo){toast('The example game doesn’t save changes.');return}if(!canWrite())return;openReactPicker(el.dataset.reactpick);return}
   if(el=t.closest('[data-postmenu]')){const p=(D().posts||[]).find(x=>x.id===el.dataset.postmenu);if(!p)return;const h=homeById(p.byHome),mine=p.by===S.me;
     const sh=openSheet(`${shTop(h?esc(h.family):'Post',esc(fmt(p.at)))}${p.text?`<p class="ftext">${esc(p.text)}</p>`:''}
       ${(mine||isOrg())&&!S.demo?`<button class="btn danger" id="pDel">Delete post</button>`:''}${!mine&&!S.demo&&canWrite()?modLinks('post',p.id,p.by,h?h.family:''):''}`);

@@ -637,7 +637,7 @@ const shTop=(t,sub='')=>`<div class="sheet-top"><div>${sub?`<div class="label">$
 function errMsg(e){
   const c=e&&e.code;
   const m=String(e&&e.message||'');
-  if(c==='permission-denied'||c==='storage/unauthorized'||/permission/i.test(m))return'You don’t have permission to do that. Check with the organizer.';
+  if(c==='permission-denied'||c==='storage/unauthorized'||/permission/i.test(m))return`Firebase refused that (${c||'permission'}). If you just changed the rules, wait a minute and reload.`;
   if(/not a participant|join the game first/i.test(m))return'Join the game first.';
   if(/only log steals involving your family/i.test(m))return'You can only log steals involving your family.';
   if(c==='too_large')return'That file is over 500 MB. Trim the video and try again.';
@@ -646,7 +646,7 @@ function errMsg(e){
   if(c==='unsupported_type')return'That file type isn’t supported. Use a photo, MP4 or MOV video.';
   if(c==='quota_or_state'||c==='quota_exceeded')return'Storage is full. Ask the organizer to clear old uploads.';
   if(c==='rate_limited'||c==='resource_exhausted')return'Too many uploads at once. Wait a moment and try again.';
-  return'Something went wrong saving that. Check your connection and try again.';
+  return`Something went wrong saving that (${c||m||'unknown error'}). Check your connection and try again.`;
 }
 
 /* ---------- map ---------- */

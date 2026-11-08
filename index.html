@@ -122,6 +122,7 @@ main{padding-block:16px calc(96px + env(safe-area-inset-bottom,0px))}
 .btn.outline-c{background:transparent;color:inherit;border:1.5px solid currentColor}
 .linkbtn{background:none;border:0;padding:6px 0;font-weight:700;color:inherit;text-decoration:underline;cursor:pointer;align-self:center;font-size:.92rem}
 .code-inp{font:600 1.5rem var(--f-mono)!important;letter-spacing:.45em;text-align:center}
+.pwbox{display:flex;flex-direction:column;gap:12px}
 .famrow{display:flex;align-items:center;gap:12px;background:var(--surface);color:var(--ink);border-radius:12px;padding:12px}
 .famrow .hno{color:var(--ink)}
 .status .stack{gap:12px}
@@ -449,6 +450,12 @@ textarea{min-height:120px;resize:vertical}
         <p class="small muted" id="seasonNote"></p>
         <button class="btn sm" id="newSeason" type="button" style="align-self:start"></button>
       </div>
+      <form class="card stack" id="pwForm" novalidate>
+        <div class="row" style="justify-content:space-between"><h3>Join password</h3><span class="label" id="pwState"></span></div>
+        <p class="small muted">Families who enter this after signing in join right away. Anyone without it can still request to join, and you approve them.</p>
+        <label class="field"><span>Password</span><input type="text" id="pwInput" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="At least 4 characters, e.g. rudolph26"></label>
+        <div class="row"><button class="btn primary" type="submit">Save password</button><button class="btn ghost" type="button" id="pwOff">Turn off</button></div>
+      </form>
       <form class="card stack" id="setForm">
         <h3 id="setTitle">Game settings</h3>
         <div class="row" style="align-items:start">
@@ -787,13 +794,31 @@ function mountJoinStep(root){
     $('#jhForm').hidden=true;const s2=$('#jhStep2');s2.hidden=false;
     if(found){$('#jhTitle').textContent=`${found.family} play from ${number}`;
       s2.innerHTML=`<p>Join them and you’ll play as one family.</p><div class="famrow"><span class="hno">${esc(number)}</span><b>${esc(found.family)}</b></div>
-        <button class="btn red" id="jhSend">Request to join ${esc(found.family)}</button><button class="linkbtn" id="jhBack">Not your family? Change house number</button>`}
+        <div class="pwbox"${S.pwJoin?'':' hidden'}><label class="field"><span>Game password</span><input type="text" id="jhPw" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="From the organizer"></label><button class="btn red" id="jhPwBtn">Join now</button><div class="or">OR</div></div>
+        <button class="btn ${S.pwJoin?'outline-c':'red'}" id="jhSend">${S.pwJoin?'No password? Ask the organizer to approve you':`Request to join ${esc(found.family)}`}</button><button class="linkbtn" id="jhBack">Not your family? Change house number</button>`}
     else{$('#jhTitle').textContent=`You’re the first from ${number}`;
       s2.innerHTML=`<p>Name your family. Everyone in your household will join under this name.</p>
         <label class="field"><span>Family name</span><input type="text" id="jhFam" maxlength="40" placeholder="The Garcias" value="${esc(req&&!found?req.family:'')}"></label>
-        <button class="btn red" id="jhSend">Send request</button><button class="linkbtn" id="jhBack">Change house number</button>`;
+        <div class="pwbox"${S.pwJoin?'':' hidden'}><label class="field"><span>Game password</span><input type="text" id="jhPw" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="From the organizer"></label><button class="btn red" id="jhPwBtn">Join now</button><div class="or">OR</div></div>
+        <button class="btn ${S.pwJoin?'outline-c':'red'}" id="jhSend">${S.pwJoin?'No password? Ask the organizer to approve you':'Send request'}</button><button class="linkbtn" id="jhBack">Change house number</button>`;
       setTimeout(()=>$('#jhFam')?.focus(),30)}
     $('#jhBack').addEventListener('click',showForm);
+    $('#jhPwBtn')?.addEventListener('click',async()=>{
+      const code=($('#jhPw').value||'').trim().toLowerCase();
+      if(!code){toast('Enter the game password.');return}
+      const family=found?found.family:($('#jhFam')?.value||'').trim();
+      if(!family){toast('Give your family a name.');return}
+      const b=$('#jhPwBtn');b.disabled=true;b.textContent='Joining…';
+      try{const db=S.db,batch=db.batch(),who={email:S.email||'',phone:S.phone||'',name:S.name||'',code,via:'password',at:new Date().toISOString()};
+        if(found&&found.homeId){batch.set(db.doc('members/'+S.me),{homeId:found.homeId,...who})}
+        else{const h=db.collection('homes').doc();
+          batch.set(h,{family,number,x:pos.manual?pos.x:null,y:pos.manual?pos.y:null,ownerId:S.me,createdAt:Date.now()});
+          batch.set(db.doc('members/'+S.me),{homeId:h.id,...who});
+          batch.set(db.doc('houseIndex/'+numKey(number)),{family,homeId:h.id})}
+        await batch.commit();toast(`Welcome to Reindeer Games, ${family}!`);S.editJoin=false;sheetMap=null}
+      catch(err){console.error(err);b.disabled=false;b.textContent='Join now';
+        toast(err&&err.code==='permission-denied'?'That password didn’t work. Check with the organizer, or ask to be approved.':errMsg(err))}
+    });
     $('#jhSend').addEventListener('click',async()=>{
       const family=found?found.family:($('#jhFam')?.value||'').trim();
       if(!family){toast('Give your family a name.');return}
@@ -868,7 +893,9 @@ function rAdmin(C){
   const next=String(Math.max(...allSeasons().map(Number))+1);
   $('#seasonNote').textContent=isPast()?`You’re viewing the ${vs} game. Changes you make here, including Rudolph’s record below, go into ${vs}.`:`Everyone lands on the ${cur} game. When it’s time for next December, start the ${next} game. ${cur} stays saved and anyone can look back at it from the year menu in the header. Families carry over.`;
   const nb=$('#newSeason');nb.hidden=isPast();nb.dataset.next=next;if(!nb.dataset.armed)nb.textContent=`Start the ${next} game`;
-  const pend=S.joins.filter(j=>j.status==='pending').sort((a,b)=>String(a.at).localeCompare(String(b.at)));
+  const pi=$('#pwInput');if(!pi.dataset.dirty&&document.activeElement!==pi)pi.value=S.gamePw||'';
+  $('#pwState').textContent=S.gamePw?'On':'Off';$('#pwOff').hidden=!S.gamePw;
+  const pend=S.joins.filter(j=>j.status==='pending'&&!S.members.some(m=>m.id===j.id)).sort((a,b)=>String(a.at).localeCompare(String(b.at)));
   $('#pendingCount').textContent=pend.length?`${pend.length} waiting`:'';
   $('#pendingList').innerHTML=pend.length?pend.map(j=>{const match=D().homes.find(h=>numKey(h.number)===numKey(j.number));const who=personLabel(j);
     return `<li><span class="hno">${esc(j.number)}</span><div><b>${esc(j.family)}</b><div class="case-meta">${esc(who)} · requested ${esc(ago(j.at))}${match?` · ${esc(match.family)} already plays from ${esc(match.number)}`:(o=>o?` · ${esc(personLabel(o))} also asked to join from this house`:'')(pend.find(o=>o!==j&&numKey(o.number)===numKey(j.number)))}</div></div><div class="row"><button class="btn sm danger" data-decline="${esc(j.id)}">Decline</button><button class="btn sm primary" data-approve="${esc(j.id)}">${match?`Add to ${esc(match.family)}`:'Approve'}</button></div></li>`}).join('')
@@ -923,7 +950,7 @@ function openHomeForm(mode,id){
       <div class="field"><span>Your house on the map</span>
         <div class="map-card card" style="padding:0;overflow:hidden"><div class="map-box"><svg id="hfMap"></svg></div><div class="map-bar"><button type="button" data-zoom="sheet:out" aria-label="Zoom out">−</button><button type="button" data-zoom="sheet:in" aria-label="Zoom in">+</button><button type="button" class="wide" data-zoom="sheet:reset" aria-label="Show the whole map">Fit</button><span class="sp"></span></div></div>
         <small id="hfPinMsg">Enter your house number and we’ll pin it for you.</small></div>
-      ${h&&id&&isOrg()&&!S.demo?`<div class="field"><span>People in this family</span>${peopleOf(id).length?`<ul class="homes">${peopleOf(id).map(m=>`<li><div style="grid-column:1/3"><b>${esc(m.name||m.email||m.phone||'Someone')}</b>${m.name&&(m.email||m.phone)?`<div class="case-meta">${esc(m.email||m.phone)}</div>`:''}</div><button type="button" class="btn sm danger" data-unlink-member="${esc(m.id)}">Remove</button></li>`).join('')}</ul>`:'<small>No one linked yet. When someone requests to join with this house number, you can add them here.</small>'}</div>`:''}
+      ${h&&id&&isOrg()&&!S.demo?`<div class="field"><span>People in this family</span>${peopleOf(id).length?`<ul class="homes">${peopleOf(id).map(m=>`<li><div style="grid-column:1/3"><b>${esc(m.name||m.email||m.phone||'Someone')}</b><div class="case-meta">${esc([m.name?(m.email||m.phone):'',m.via==='password'?'joined with password':'approved by you'].filter(Boolean).join(' · '))}</div></div><button type="button" class="btn sm danger" data-unlink-member="${esc(m.id)}">Remove</button></li>`).join('')}</ul>`:'<small>No one linked yet. When someone requests to join with this house number, you can add them here.</small>'}</div>`:''}
       ${asker?`<div class="card stack" id="hfStep2" hidden></div><p class="small muted">The organizer approves each person before they can see the game.</p>`:''}
       <button class="btn red block" type="submit" id="hfSubmit">${asker?'Next':mode==='join'?'Join the game':'Save'}</button>
       ${h&&id&&isOrg()?`<button type="button" class="btn danger block" id="hfDel">Remove family</button>`:''}
@@ -1143,6 +1170,12 @@ document.addEventListener('click',async e=>{
   if(el=t.closest('#homeList [data-home]')){selHome=el.dataset.home;renderNow();return}
 });
 $('#addFam').addEventListener('click',()=>openHomeForm('admin'));
+$('#pwInput').addEventListener('input',()=>{$('#pwInput').dataset.dirty=1});
+$('#pwForm').addEventListener('submit',async e=>{e.preventDefault();const v=$('#pwInput').value.trim().toLowerCase();
+  if(v.length<4){toast('Use at least 4 characters.');return}
+  if(await W(async()=>{await S.db.doc('secrets/game').set({password:v});await S.db.doc('public/join').set({enabled:true})},'Join password saved'))delete $('#pwInput').dataset.dirty});
+$('#pwOff').addEventListener('click',async()=>{const b=$('#pwOff');if(!b.dataset.armed){b.dataset.armed=1;b.textContent='Tap again to turn off';return}delete b.dataset.armed;b.textContent='Turn off';
+  if(await W(async()=>{await S.db.doc('public/join').set({enabled:false});await S.db.doc('secrets/game').delete()},'Join password turned off')){$('#pwInput').value='';delete $('#pwInput').dataset.dirty}});
 $('#newSeason').addEventListener('click',async()=>{const b=$('#newSeason'),next=b.dataset.next;
   if(!b.dataset.armed){b.dataset.armed=1;b.textContent=`Tap again to start ${next}`;b.classList.add('red');return}
   delete b.dataset.armed;b.classList.remove('red');
@@ -1206,6 +1239,7 @@ function startMain(){
   subs.push(db.collection('steals').onSnapshot(q=>{S.live.events=q.docs.map(d=>({...d.data(),id:d.id}));done()},err));
   subs.push(db.collection('media').onSnapshot(q=>{S.live.media=q.docs.map(d=>({...d.data(),id:d.id}));loadUrls();done()},err));
   if(S.isOwner)subs.push(db.collection('houseIndex').onSnapshot(q=>{S.houseIdx=Object.fromEntries(q.docs.map(d=>[d.id,d.data()]));syncIndex()},err));
+  if(S.isOwner)subs.push(db.doc('secrets/game').onSnapshot(d=>{S.gamePw=d.exists?(d.data().password||''):'';render()},err));
   if(S.isOwner)subs.push(db.collection('members').onSnapshot(q=>{S.members=q.docs.map(d=>({...d.data(),id:d.id}));render()},err));
   if(S.isOwner)subs.push(db.collection('joins').onSnapshot(q=>{S.joins=q.docs.map(d=>({...d.data(),id:d.id}));render()},err));
 }
@@ -1218,6 +1252,7 @@ function watchUser(user){
   if(!em){S.isOwner=false;seen.org=true}else
   subs.push(db.doc('organizers/'+em).onSnapshot(d=>{const was=S.isOwner;S.isOwner=d.exists;seen.org=true;if(was!==S.isOwner&&mainOn){unsubAll();watchUser(user);return}check();render()},()=>{seen.org=true;check()}));
   subs.push(db.doc('members/'+user.uid).onSnapshot(d=>{S.memberDoc=d.exists;S.memberHome=d.exists?d.data().homeId||null:null;seen.mem=true;check();render()},()=>{seen.mem=true;check()}));
+  subs.push(db.doc('public/join').onSnapshot(d=>{S.pwJoin=!!(d.exists&&d.data().enabled);render()},()=>{S.pwJoin=false}));
   subs.push(db.doc('joins/'+user.uid).onSnapshot(d=>{S.myJoin=d.exists?{...d.data(),id:d.id}:null;seen.join=true;check();render()},()=>{S.myJoin=null;seen.join=true;check()}));
 }
 const linkUrl=()=>location.origin+location.pathname;

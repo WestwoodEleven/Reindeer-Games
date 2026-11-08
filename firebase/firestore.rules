@@ -20,23 +20,54 @@ service cloud.firestore {
     }
     function shortText(v, n) { return v is string && v.size() > 0 && v.size() <= n; }
 
-    // Organizers: one document per organizer, named with their email in lower case.
+    // The join password lives here. Only organizers can read it; the rules compare against it.
+    function gamePassword() {
+      return get(/databases/$(database)/documents/secrets/game).data.password;
+    }
+    function rightPassword(code) {
+      return code is string && code.size() >= 4 && code == gamePassword();
+    }
+    // The member record this same request is writing (used by self-join batches).
+    function newMember() {
+      return getAfter(/databases/$(database)/documents/members/$(request.auth.uid)).data;
+    }
+
     match /organizers/{e} {
       allow read: if signedIn() && email() == e;
       allow write: if false;            // add organizers in the Firebase console
     }
 
-    // members/{uid} = { homeId }. Written by the organizer when approving a family.
+    match /secrets/{doc} {
+      allow read, write: if isOrg();
+    }
+
+    // public/join = { enabled } tells the site whether to offer the password option.
+    match /public/{doc} {
+      allow read: if signedIn();
+      allow write: if isOrg();
+    }
+
+    // members/{uid} = { homeId, ... }. The organizer writes these when approving,
+    // or a person creates their own by entering the join password.
     match /members/{uid} {
       allow read: if signedIn() && (request.auth.uid == uid || isOrg());
-      allow write: if isOrg();
+      allow create: if isOrg() || (
+        signedIn() && request.auth.uid == uid
+        && rightPassword(request.resource.data.code)
+        && request.resource.data.homeId is string
+        && (exists(/databases/$(database)/documents/homes/$(request.resource.data.homeId))
+            || existsAfter(/databases/$(database)/documents/homes/$(request.resource.data.homeId))));
+      allow update, delete: if isOrg();
     }
 
     // houseIndex/{houseNumber} = { family, homeId }. Lets someone signed in check
     // whether their house is already playing (one number at a time, no listing).
     match /houseIndex/{n} {
       allow get: if signedIn();
-      allow list, write: if isOrg();
+      allow list, update, delete: if isOrg();
+      allow create: if isOrg() || (
+        signedIn() && rightPassword(newMember().code)
+        && request.resource.data.homeId == newMember().homeId);
     }
 
     match /config/{doc} {
@@ -46,7 +77,13 @@ service cloud.firestore {
 
     match /homes/{id} {
       allow read: if isMember();
-      allow write: if isOrg();
+      allow create: if isOrg() || (
+        signedIn() && request.resource.data.ownerId == request.auth.uid
+        && shortText(request.resource.data.family, 60)
+        && shortText(request.resource.data.number, 10)
+        && rightPassword(newMember().code)
+        && newMember().homeId == id);
+      allow update, delete: if isOrg();
     }
 
     // Join requests: each person can create or edit only their own pending request.

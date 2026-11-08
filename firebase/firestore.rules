@@ -57,7 +57,9 @@ service cloud.firestore {
         && request.resource.data.homeId is string
         && (exists(/databases/$(database)/documents/homes/$(request.resource.data.homeId))
             || existsAfter(/databases/$(database)/documents/homes/$(request.resource.data.homeId))));
-      allow update, delete: if isOrg();
+      allow update: if isOrg();
+      // anyone can remove their own membership (Delete my account)
+      allow delete: if isOrg() || (signedIn() && request.auth.uid == uid);
     }
 
     // houseIndex/{houseNumber} = { family, homeId }. Lets someone signed in check
@@ -95,7 +97,7 @@ service cloud.firestore {
         && shortText(request.resource.data.family, 60)
         && shortText(request.resource.data.number, 10)
         && (resource == null || resource.data.status != 'approved'));
-      allow delete: if isOrg();
+      allow delete: if isOrg() || (signedIn() && request.auth.uid == uid);
     }
 
     match /steals/{id} {

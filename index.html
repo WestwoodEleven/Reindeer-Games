@@ -131,6 +131,9 @@ main{padding-block:16px calc(96px + env(safe-area-inset-bottom,0px))}
 .mappv img{width:100%;height:100%;object-fit:cover;object-position:50% 45%;display:block}
 .mappv .pv-d{display:var(--map-d)}.mappv .pv-l{display:var(--map-l)}
 .mappv span{position:absolute;right:10px;bottom:10px;background:var(--surface);color:var(--ink);border:2px solid var(--edge);border-radius:999px;padding:4px 12px;font-weight:700;font-size:.9rem}
+.privacy h3{margin-top:8px;color:var(--accent)}
+.privacy ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+.privacy p,.privacy li{max-width:65ch}
 .feedlist{display:flex;flex-direction:column;gap:12px}
 .falert{display:flex;gap:10px;align-items:flex-start;text-align:left;width:100%;font:inherit;background:var(--status);color:#fff;border:2px solid var(--edge);border-radius:14px;padding:12px;box-shadow:3px 3px 0 var(--edge)}
 .falert.done{background:var(--surface);color:var(--ink);cursor:pointer}
@@ -508,6 +511,48 @@ textarea{min-height:120px;resize:vertical}
     <p class="small muted" id="gateAcct" style="text-align:center"></p>
   </section>
 
+  <!-- PRIVACY -->
+  <section class="view" id="v-privacy" data-view="privacy" hidden>
+    <a class="linkbtn" href="#feed" id="privBack" style="align-self:flex-start;padding:0">← Back</a>
+    <div class="card stack privacy">
+      <h2>Privacy policy</h2>
+      <p class="small muted">Effective November 7, 2026</p>
+      <p>Reindeer Games is a private, volunteer-run holiday game for participating families in the Emerald Bay neighborhood of Laguna Beach. This page explains what the site collects, who can see it, and the choices you have.</p>
+      <h3>What we collect</h3>
+      <ul>
+        <li><b>Sign-in details:</b> your mobile number, or your email address if you sign in by email or Google. Google sign-in also shares your name.</li>
+        <li><b>Your family and house:</b> your family name, house number and the map pin for your house.</li>
+        <li><b>Game activity:</b> steals you log or claim, notes on them, and the times they happened.</li>
+        <li><b>What you post:</b> feed messages, reactions, captions, and the photos and videos you upload.</li>
+        <li><b>Safety tools:</b> reports you send and people you choose to block.</li>
+      </ul>
+      <p>We don’t collect your location from your phone, and we don’t use ads, analytics or tracking tools.</p>
+      <h3>Who can see it</h3>
+      <ul>
+        <li><b>Approved families</b> can see family names, house numbers and pins, the game record, the feed, and photos and videos. The newest steal stays hidden from everyone except the two families involved and the organizer until Rudolph is stolen again.</li>
+        <li><b>The organizer</b> can also see each person’s phone number or email (to approve people and keep the game safe), join requests, and reports.</li>
+        <li><b>People who aren’t approved</b> see only the sign-in screen. Anyone signed in can check whether a single house number is already playing and see that family’s name.</li>
+        <li>Photo and video links can be opened by anyone who has the exact link, so please don’t forward them outside the game.</li>
+      </ul>
+      <p>We never sell or share your information with anyone outside the game.</p>
+      <h3>Where it’s stored</h3>
+      <p>The site runs on Google Firebase (sign-in, database and photo storage), hosted in the United States. Google processes this data on our behalf under its own security and privacy terms. The website itself is hosted on GitHub Pages.</p>
+      <h3>How long we keep it</h3>
+      <p>Each December’s game is kept as a keepsake so families can look back at past years. The organizer can delete any family, post, photo or record at any time.</p>
+      <h3>Your choices</h3>
+      <ul>
+        <li>Delete your own posts, photos and videos at any time from the <b>⋯</b> menu or the photo view.</li>
+        <li>Block someone to hide their posts, photos and notes for you.</li>
+        <li>Report anything inappropriate to the organizer.</li>
+        <li><b>Delete your account</b> from the account menu (tap your family name at the top). This removes your sign-in, your membership, your posts, and your photos and videos. Steals you logged stay in the game record, without your contact details, so the trail and leaderboard stay accurate.</li>
+      </ul>
+      <h3>Kids</h3>
+      <p>Reindeer Games is for families. Accounts are meant for adults, or teens with a parent’s permission. Children under 13 shouldn’t create their own accounts.</p>
+      <h3>Changes and contact</h3>
+      <p>If this policy changes, we’ll update the date above. Questions or requests: <span id="privContact">contact the organizer.</span></p>
+    </div>
+  </section>
+
   <!-- ADMIN -->
   <section class="view" id="v-admin" data-view="admin" hidden>
     <h2>Organizer</h2>
@@ -869,7 +914,8 @@ function rGate(){
     <button class="btn outline-c block" data-google style="margin-top:12px">Continue with Google</button>
     <form id="emailForm" class="stack" novalidate><label class="field"><span>Or get a sign-in link by email</span><input type="email" id="emailId" name="email" autocomplete="email" placeholder="you@example.com"></label><button class="btn outline-c" type="submit" id="emailBtn">Email me a link</button></form>`
     :`<button class="linkbtn" data-other-signin style="display:block;margin:14px auto 0">Other ways to sign in</button>`}
-    <button class="linkbtn" data-demo style="display:block;margin:8px auto 0">See an example game</button>`}
+    <button class="linkbtn" data-demo style="display:block;margin:8px auto 0">See an example game</button>
+    <a class="linkbtn" href="#privacy" style="display:block;margin:4px auto 0;text-align:center;font-weight:500">Privacy policy</a>`}
   else if(!S.ready||j===undefined){key='load2';h=`<div class="label">Loading</div><h2>Checking your invite…</h2>`}
   else if(j&&j.status==='pending'&&!S.editJoin){key='pending:'+j.family+'|'+j.number;step=3;h=`<div class="label">Request sent</div><h2>Waiting for the organizer</h2>
     <div class="famrow"><span class="hno">${esc(j.number)}</span><div><b>${esc(j.family)}</b><div class="case-meta">Requested ${esc(ago(j.at))}</div></div></div>
@@ -1054,7 +1100,7 @@ function rRules(){const c=seasonCfg();const t=(c.rules||'').trim();
   $('#draftTag').hidden=!!t;
   const dates=c.start?`<p class="label">Game window · ${esc(c.start)}${c.end?' → '+esc(c.end):''}</p>`:'';
   const acct=S.me&&!S.demo?`<p class="small muted">Signed in as ${esc(S.email||S.phone||'')} · <button class="btn sm ghost" data-signout>Sign out</button></p>`:'';
-  $('#rulesBody').innerHTML=`${acct}${dates}<div class="rules">${esc(t||DRAFT)}</div>${S.live.config.contact&&!S.demo?`<p class="small muted">Questions, concerns or something inappropriate? Contact the organizer: <b>${esc(S.live.config.contact)}</b>. You can also tap <b>Report</b> on any photo, video or note.</p>`:''}${isOrg()&&!S.demo?`<a class="btn sm" href="#admin" style="align-self:start">Edit rules</a>`:''}`;
+  $('#rulesBody').innerHTML=`${acct}${dates}<div class="rules">${esc(t||DRAFT)}</div>${S.live.config.contact&&!S.demo?`<p class="small muted">Questions, concerns or something inappropriate? Contact the organizer: <b>${esc(S.live.config.contact)}</b>. You can also tap <b>Report</b> on any photo, video or note.</p>`:''}${isOrg()&&!S.demo?`<a class="btn sm" href="#admin" style="align-self:start">Edit rules</a>`:''}<a class="linkbtn" href="#privacy" style="align-self:start;padding:0">Privacy policy</a>`;
 }
 function rAdmin(C){
   const ok=isOrg()&&!S.demo;$('#adminGate').innerHTML=ok?'':`<div class="empty"><h3>Organizer only</h3><p>This section is for the person running the game.</p></div>`;$('#adminBody').hidden=!ok;if(!ok)return;
@@ -1087,12 +1133,13 @@ function rAdmin(C){
 }
 
 /* ---------- routing / render ---------- */
-const VIEWS=['homes','leaders','log','feed','rules','admin'];
+const VIEWS=['homes','leaders','log','feed','rules','admin','privacy'];
 function route(){let v=location.hash.slice(1);if(v==='gallery'){v='feed';S.feedMode='photos'}if(v==='join'){v='homes';setTimeout(()=>openHomeForm('join'),0)}if(!VIEWS.includes(v))v='feed';return v}
 let raf=0;function render(){if(raf)return;raf=requestAnimationFrame(()=>{raf=0;renderNow()})}
 function renderNow(){
   let v=route();const C=compute();
-  const gated=!isMember();if(gated)v='gate';$('#tabs').hidden=gated;
+  const gated=!isMember();if(gated&&v!=='privacy')v='gate';$('#tabs').hidden=gated;
+  if(v==='privacy'){$('#privContact').innerHTML=S.live.config.contact&&!S.demo?`contact the organizer at <b>${esc(S.live.config.contact)}</b>.`:'contact the organizer (their contact info is on the Rules page once you’ve joined).';$('#privBack').setAttribute('href',gated?'#':'#rules')}
   document.querySelectorAll('[data-view]').forEach(s=>s.hidden=s.dataset.view!==v);
   document.querySelectorAll('[data-tab]').forEach(a=>{if(a.dataset.tab===v)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
   rWho();rBanner();
@@ -1232,6 +1279,29 @@ function openReport(type,id){
   sh.querySelector('#rrSend').addEventListener('click',async()=>{const reason=sh.querySelector('input[name=rr]:checked')?.value||'';
     if(await W(()=>col('reports').add({type,targetId:id,reason,note:$('#rrNote').value.trim(),by:S.me,byHome:myHome()?.id||null,status:'open',at:new Date().toISOString()}),'Report sent. Thanks for flagging it.'))closeSheet()});
 }
+function openDeleteAccount(){
+  const sh=openSheet(`${shTop('Delete my account','This can’t be undone')}
+    <p>Deleting your account removes:</p>
+    <ul style="margin:0;padding-left:20px"><li>your sign-in and your membership in the game</li><li>your feed posts, and photos and videos you uploaded</li><li>your join request and block list</li></ul>
+    <p class="small muted">Steals you logged stay in the game record so the trail and leaderboard stay accurate. Your family and house stay in the game if others in your household play. The organizer can remove those too.</p>
+    <label class="field"><span>Type DELETE to confirm</span><input type="text" id="daConfirm" autocapitalize="characters" autocomplete="off"></label>
+    <button class="btn red block" id="daGo">Delete my account</button>`);
+  sh.querySelector('#daGo').addEventListener('click',async()=>{
+    if($('#daConfirm').value.trim().toUpperCase()!=='DELETE'){toast('Type DELETE to confirm.');return}
+    const b=$('#daGo');b.disabled=true;b.textContent='Deleting…';const db=S.db,me=S.me;
+    try{
+      const posts=await db.collection('posts').where('by','==',me).get();
+      for(const d of posts.docs){for(const m of D().media.filter(x=>x.postId===d.id))await delMedia(m);await d.ref.delete()}
+      for(const m of D().media.filter(x=>x.by===me))await delMedia(m);
+      await db.doc('blocks/'+me).delete().catch(()=>{});
+      await db.doc('joins/'+me).delete().catch(()=>{});
+      await db.doc('members/'+me).delete().catch(()=>{});
+      await fbAuth.currentUser.delete();
+      closeSheet();toast('Your account was deleted.');
+    }catch(err){console.error(err);b.disabled=false;b.textContent='Delete my account';
+      toast(err&&err.code==='auth/requires-recent-login'?'For security, sign out, sign back in, and try again right away.':errMsg(err))}
+  });
+}
 async function setBlocks(list){S.blocks=list;render();await W(()=>S.db.doc('blocks/'+S.me).set({ids:list}))}
 function openMedia(id){
   const m=D().media.find(x=>x.id===id);if(!m)return;const e=D().events.find(x=>x.id===m.stealId);const C=compute();
@@ -1357,7 +1427,9 @@ document.addEventListener('click',async e=>{
       <p>Signed in as <b>${esc(S.email||S.phone||'')}</b>${isOrg()?' · Organizer':''}</p>
       ${mh?`<p class="small muted">${esc(mh.number)} Emerald Bay. To change your family name, house number or pin, ask the organizer.</p>`:''}
       ${S.blocks.length?`<div class="field"><span>Blocked people</span><ul class="homes">${S.blocks.map((u,i)=>`<li><div style="grid-column:1/3"><b>Blocked person ${i+1}</b><div class="case-meta">Their photos, videos and notes are hidden for you</div></div><button class="btn sm" data-unblock="${esc(u)}">Unblock</button></li>`).join('')}</ul></div>`:''}
-      <div class="row">${mh?`<a class="btn" href="#homes" data-close>See participating houses</a>`:''}${isInstalled()?'':'<button class="btn" data-a2hs data-close>Add to phone</button>'}<button class="btn danger" data-signout data-close>Sign out</button></div>`);return}
+      <div class="row">${mh?`<a class="btn" href="#homes" data-close>See participating houses</a>`:''}${isInstalled()?'':'<button class="btn" data-a2hs data-close>Add to phone</button>'}<button class="btn danger" data-signout data-close>Sign out</button></div>
+      <div class="row" style="justify-content:space-between;margin-top:4px"><a class="linkbtn" href="#privacy" data-close>Privacy policy</a>${S.demo?'':'<button class="linkbtn" data-delacct style="color:var(--nose)">Delete my account</button>'}</div>`);return}
+  if(t.closest('[data-delacct]')){openDeleteAccount();return}
   if(t.closest('[data-seasons]')){const vs=viewSeason();
     openSheet(`${shTop('Game year','Reindeer Games')}<ul class="homes">${allSeasons().map(y=>{const n=S.live.events.filter(e=>e.kind==='steal'&&evSeason(e)===y).length;
       return `<li class="${y===vs?'on':''}"><span class="hno">${esc(y)}</span><div><b>December ${esc(y)}</b><div class="case-meta">${y===curSeason()?'Current game · ':''}${n} ${n===1?'steal':'steals'}</div></div><button class="btn sm${y===vs?' primary':''}" data-season="${esc(y)}">${y===vs?'Viewing':'View'}</button></li>`}).join('')}</ul>`);return}

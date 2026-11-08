@@ -112,6 +112,16 @@ service cloud.firestore {
       allow delete: if isOrg() || (isMember() && resource.data.by == request.auth.uid);
     }
 
+    // Feed posts: participants post and react; authors and organizers delete.
+    match /posts/{id} {
+      allow read: if isMember();
+      allow create: if isMember() && request.resource.data.by == request.auth.uid
+        && request.resource.data.text is string && request.resource.data.text.size() <= 1000;
+      allow update: if isOrg() || (isMember()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions']));
+      allow delete: if isOrg() || (isMember() && resource.data.by == request.auth.uid);
+    }
+
     // Reports: any participant can file one; only organizers can read or act on them.
     match /reports/{id} {
       allow create: if isMember() && request.resource.data.by == request.auth.uid

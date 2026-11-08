@@ -123,6 +123,29 @@ main{padding-block:16px calc(96px + env(safe-area-inset-bottom,0px))}
 .linkbtn{background:none;border:0;padding:6px 0;font-weight:700;color:inherit;text-decoration:underline;cursor:pointer;align-self:center;font-size:.92rem}
 .code-inp{font:600 1.5rem var(--f-mono)!important;letter-spacing:.45em;text-align:center}
 .pwbox{display:flex;flex-direction:column;gap:12px}
+.feedseg{display:inline-grid;grid-template-columns:auto auto;gap:3px;padding:3px}
+.feedseg button{min-height:34px;padding:6px 10px;font-size:.85rem}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+#composer textarea{min-height:64px}
+.feedlist{display:flex;flex-direction:column;gap:12px}
+.falert{display:flex;gap:10px;align-items:flex-start;text-align:left;width:100%;font:inherit;background:var(--status);color:#fff;border:2px solid var(--edge);border-radius:14px;padding:12px;box-shadow:3px 3px 0 var(--edge)}
+.falert.done{background:var(--surface);color:var(--ink);cursor:pointer}
+.falert b{display:block;font-weight:700}
+.falert small{display:block;font-size:.8rem;opacity:.85;margin-top:2px}
+.fic{width:30px;height:30px;flex:none;border-radius:50%;background:var(--nose);color:#fff;border:2px solid var(--edge);display:grid;place-items:center;font-weight:700}
+.falert.done .fic{background:var(--accent)}
+.fpost{background:var(--surface);border:2px solid var(--edge);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.fwho{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:.8rem;color:var(--muted)}
+.fwho b{color:var(--ink);font-size:.95rem}
+.fmore{background:none;border:0;color:var(--muted);font-size:1.2rem;line-height:1;padding:2px 6px;margin-left:4px;cursor:pointer}
+.ftext{white-space:pre-wrap;overflow-wrap:anywhere}
+.fthumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:4px;margin-top:6px}
+.fthumbs button{position:relative;aspect-ratio:1;max-width:100%;border:0;padding:0;border-radius:8px;overflow:hidden;background:var(--line);cursor:pointer}
+.fthumbs img,.fthumbs video{width:100%;height:100%;object-fit:cover;display:block}
+.fthumbs .play{position:absolute;left:4px;bottom:4px;font:600 .6rem var(--f-mono);background:var(--nose);color:#fff;border-radius:5px;padding:1px 5px}
+.freacts{display:flex;gap:6px}
+.freacts button{border:1.5px solid var(--line);background:var(--bg);border-radius:999px;padding:3px 10px;font:600 .85rem var(--f-body);cursor:pointer;color:var(--ink)}
+.freacts button.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,var(--surface))}
 .famrow{display:flex;align-items:center;gap:12px;background:var(--surface);color:var(--ink);border-radius:12px;padding:12px}
 .famrow .hno{color:var(--ink)}
 .status .stack{gap:12px}
@@ -443,10 +466,23 @@ textarea{min-height:120px;resize:vertical}
   </section>
 
   <!-- GALLERY -->
-  <section class="view" id="v-gallery" data-view="gallery" hidden>
-    <div class="row" style="justify-content:space-between"><h2>Capture gallery</h2><span class="label" id="galCount"></span></div>
-    <button class="btn primary block" id="galAdd" data-gal-add hidden>Add photos or videos</button>
-    <div id="gallery"></div>
+  <section class="view" id="v-feed" data-view="feed" hidden>
+    <div class="row" style="justify-content:space-between"><h2>Feed</h2>
+      <div class="seg feedseg" role="group" aria-label="Show"><button type="button" data-feedmode="all" id="fmAll">Everything</button><button type="button" data-feedmode="photos" id="fmPhotos">Photos</button></div></div>
+    <div id="feedAll">
+      <form class="card stack" id="composer" novalidate>
+        <label class="sr" for="cpText">Message</label>
+        <textarea id="cpText" maxlength="1000" placeholder="Say something to the neighborhood…" rows="2"></textarea>
+        <ul class="files" id="cpFiles"></ul>
+        <div class="row" style="justify-content:space-between"><label class="btn sm" id="cpPhotoLbl"><input type="file" id="cpPhoto" accept="image/*,video/*" multiple hidden>Add photo or video</label><button class="btn red sm" type="submit" id="cpSend">Post</button></div>
+      </form>
+      <div id="feedList" class="feedlist"></div>
+    </div>
+    <div id="feedPhotos" hidden>
+      <div class="row" style="justify-content:space-between"><span class="small muted">Every photo and video from this year’s game.</span><span class="label" id="galCount"></span></div>
+      <button class="btn primary block" id="galAdd" data-gal-add hidden>Add photos or videos</button>
+      <div id="gallery"></div>
+    </div>
   </section>
 
   <!-- RULES -->
@@ -516,7 +552,7 @@ textarea{min-height:120px;resize:vertical}
     <a href="#homes" data-tab="homes"><svg viewBox="0 0 24 24"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg>Houses</a>
     <a href="#leaders" data-tab="leaders"><svg viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4"/><path d="M12 13v4M9 20h6"/></svg>Leaders</a>
     <a href="#log" data-tab="log" class="log"><span class="b"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>Log a steal</a>
-    <a href="#gallery" data-tab="gallery"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 8"/></svg>Gallery</a>
+    <a href="#feed" data-tab="feed"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg>Feed</a>
     <a href="#rules" data-tab="rules"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M9 11h7M9 15h7M9 7h3"/></svg>Rules</a>
   </div>
 </nav>
@@ -536,7 +572,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const H72=72*3600e3, H12=12*3600e3;
 
 /* ---------- state ---------- */
-const S={live:{config:{},homes:[],events:[],media:[]},ready:false,demo:null,demoOrg:false,
+const S={feedMode:'all',live:{config:{},homes:[],events:[],media:[],posts:[]},ready:false,demo:null,demoOrg:false,
   me:null,isOwner:false,myJoin:undefined,joins:[],blocks:[],reports:[],members:[],memberHome:null,canWrite:null,db:null,assets:null,offline:false,readOnly:false};
 const D=()=>S.demo||S.live;
 const isOrg=()=>S.demo?S.demoOrg:S.isOwner;
@@ -945,11 +981,37 @@ function rLog(){
 }
 function rGallery(C){
   const visIds=new Set(C.vis.map(e=>e.id));
-  const ms=D().media.filter(m=>!blocked(m.by)).filter(m=>m.stealId?visIds.has(m.stealId):(S.demo||String(m.season||yearOf(m.at))===viewSeason())).sort((a,b)=>String(b.at).localeCompare(String(a.at)));
+  const ms=D().media.filter(m=>!blocked(m.by)&&!(m.postId&&postGone(m.postId))).filter(m=>m.stealId?visIds.has(m.stealId):(S.demo||String(m.season||yearOf(m.at))===viewSeason())).sort((a,b)=>String(b.at).localeCompare(String(a.at)));
   $('#galAdd').hidden=S.demo||!S.assets||!canWrite()||(isPast()&&!isOrg());
   $('#galCount').textContent=ms.length?`${ms.length} ${ms.length>1?'files':'file'}`:'';
   $('#gallery').innerHTML=ms.length?`<div class="gallery">${ms.map(m=>`<button data-media="${esc(m.id)}" aria-label="Open ${m.type}">${m.type==='image'?`<img src="${esc(murl(m))}" alt="" loading="lazy">`:`<video src="${esc(murl(m))}#t=0.1" preload="metadata" muted playsinline></video><span class="play">VIDEO</span>`}</button>`).join('')}</div>`
     :`<div class="empty"><h3>No captures on film yet</h3><p>Add your own holiday photos and videos, or attach them when you log a steal. Media from the newest steal appears once it unseals.</p></div>`;
+}
+const REACTS=[['laugh','😂'],['tree','🎄'],['wow','😮']];
+const postGone=id=>!(D().posts||[]).some(p=>p.id===id);
+function rFeed(C){
+  const photos=S.feedMode==='photos';
+  $('#fmAll').setAttribute('aria-pressed',!photos);$('#fmPhotos').setAttribute('aria-pressed',photos);
+  $('#feedAll').hidden=photos;$('#feedPhotos').hidden=!photos;
+  if(photos){rGallery(C);return}
+  const vs=viewSeason(),canPost=!S.demo&&canWrite()&&(!isPast()||isOrg());
+  $('#composer').hidden=!canPost;$('#cpPhotoLbl').hidden=!S.assets;
+  const items=[];
+  for(const p of D().posts||[])if((S.demo||String(p.season)===vs)&&!blocked(p.by))items.push({t:p.at,k:'post',p});
+  for(const e of C.vis)items.push({t:e.at,k:'steal',e});
+  if(C.hidden)items.push({t:C.hidden.at,k:'sealed',e:C.hidden});
+  for(const m of D().media)if(!m.stealId&&!m.postId&&(S.demo||String(m.season||yearOf(m.at))===vs)&&!blocked(m.by))items.push({t:m.at,k:'photo',m});
+  items.sort((a,b)=>String(b.t).localeCompare(String(a.t)));
+  const thumbs=ms=>ms.length?`<div class="fthumbs">${ms.slice(0,4).map(m=>`<button data-media="${esc(m.id)}" aria-label="Open ${m.type}">${m.type==='image'?`<img src="${esc(murl(m))}" alt="" loading="lazy">`:`<video src="${esc(murl(m))}#t=0.1" preload="metadata" muted playsinline></video><span class="play">VIDEO</span>`}</button>`).join('')}</div>`:'';
+  const fam=h=>h?esc(h.family):'The organizer';
+  $('#feedList').innerHTML=items.length?items.slice(0,150).map(it=>{
+    if(it.k==='sealed'){const e=it.e;return `<div class="falert"><span class="fic">!</span><div><b>${e.from?`Rudolph was taken from ${esc(fam(homeById(e.from)))}`:'Rudolph was stolen'}</b><small>${esc(ago(e.at))} · Who has him now? Go look.</small></div></div>`}
+    if(it.k==='steal'){const e=it.e;return `<button class="falert done" data-ev="${esc(e.id)}"><span class="fic">${e.kind==='start'?'★':'#'}</span><div><b>${e.kind==='start'?`The game is on! Rudolph started at ${esc(fam(homeById(e.to)))}`:caseLine(e)}</b><small>${esc(fmt(e.at))}${e.note&&!blocked(e.by)?` · “${esc(e.note)}”`:''}</small>${thumbs(mediaFor(e.id))}</div></button>`}
+    if(it.k==='photo'){const m=it.m,h=homeById(m.byHome);return `<div class="fpost"><div class="fwho"><b>${fam(h)}</b><span>${esc(ago(m.at))}</span></div>${m.caption?`<p>${esc(m.caption)}</p>`:''}${thumbs([m])}</div>`}
+    const p=it.p,h=homeById(p.byHome),ms=D().media.filter(m=>m.postId===p.id&&!blocked(m.by));const mine=p.by===S.me;
+    return `<div class="fpost"><div class="fwho"><b>${fam(h)}${mine?' <span class="you">You</span>':''}</b><span>${esc(ago(p.at))}<button class="fmore" data-postmenu="${esc(p.id)}" aria-label="More options">⋯</button></span></div>${p.text?`<p class="ftext">${esc(p.text)}</p>`:''}${thumbs(ms)}
+      <div class="freacts">${REACTS.map(([k,em])=>{const who=(p.reactions||{})[k]||[];return `<button class="${who.includes(S.me)?'on':''}" data-react="${esc(p.id)}|${k}" aria-label="React ${em}">${em}${who.length?` ${who.length}`:''}</button>`}).join('')}</div></div>`}).join('')
+    :`<div class="empty"><h3>Nothing here yet</h3><p>Steals show up here automatically. Post a message or photo to get things going.</p></div>`;
 }
 const DRAFT=`The basics (more to come):
 
@@ -981,8 +1043,8 @@ function rAdmin(C){
   const nb=$('#newSeason');nb.hidden=isPast();nb.dataset.next=next;if(!nb.dataset.armed)nb.textContent=`Start the ${next} game`;
   const open=S.reports.filter(r=>r.status==='open').sort((a,b)=>String(b.at).localeCompare(String(a.at)));
   $('#reportCount').textContent=open.length?`${open.length} open`:'';
-  $('#reportList').innerHTML=open.length?open.map(r=>{const tgt=r.type==='media'?D().media.find(m=>m.id===r.targetId):D().events.find(e=>e.id===r.targetId);
-    const what=r.type==='media'?(tgt?.type==='video'?'Video':'Photo'):'Steal note';const owner=homeById(tgt?.byHome)||homeById(S.members.find(m=>m.id===tgt?.by)?.homeId);
+  $('#reportList').innerHTML=open.length?open.map(r=>{const tgt=r.type==='media'?D().media.find(m=>m.id===r.targetId):r.type==='post'?(D().posts||[]).find(p=>p.id===r.targetId):D().events.find(e=>e.id===r.targetId);
+    const what=r.type==='media'?(tgt?.type==='video'?'Video':'Photo'):r.type==='post'?'Post':'Steal note';const owner=homeById(tgt?.byHome)||homeById(S.members.find(m=>m.id===tgt?.by)?.homeId);
     return `<li><span class="hno">${esc(what)}</span><div><b>${esc(r.reason)}</b><div class="case-meta">${tgt?`Posted by ${esc(owner?.family||'someone')}`:'Already removed'} · reported by ${esc(homeById(r.byHome)?.family||'someone')} · ${esc(ago(r.at))}${r.note?` · “${esc(r.note)}”`:''}</div></div>
       <div class="row">${tgt?`<button class="btn sm" data-rview="${esc(r.id)}">View</button><button class="btn sm danger" data-rremove="${esc(r.id)}">Remove</button>`:''}<button class="btn sm" data-rdismiss="${esc(r.id)}">Dismiss</button></div></li>`}).join('')
     :`<li class="muted small">No reports. Players can report any photo, video or note.</li>`;
@@ -999,8 +1061,8 @@ function rAdmin(C){
 }
 
 /* ---------- routing / render ---------- */
-const VIEWS=['homes','leaders','log','gallery','rules','admin'];
-function route(){let v=location.hash.slice(1);if(v==='join'){v='homes';setTimeout(()=>openHomeForm('join'),0)}if(!VIEWS.includes(v))v='homes';return v}
+const VIEWS=['homes','leaders','log','feed','rules','admin'];
+function route(){let v=location.hash.slice(1);if(v==='gallery'){v='feed';S.feedMode='photos'}if(v==='join'){v='homes';setTimeout(()=>openHomeForm('join'),0)}if(!VIEWS.includes(v))v='homes';return v}
 let raf=0;function render(){if(raf)return;raf=requestAnimationFrame(()=>{raf=0;renderNow()})}
 function renderNow(){
   let v=route();const C=compute();
@@ -1011,7 +1073,7 @@ function renderNow(){
   if(v==='homes'){rStatus(C);rTimeline(C);rHomes();drawTrail()}
   if(v==='leaders')rBoard(C);
   if(v==='log')rLog();
-  if(v==='gallery')rGallery(C);
+  if(v==='feed')rFeed(C);
   if(v==='rules')rRules();
   if(v==='admin')rAdmin(C);
   if(v==='gate')rGate();
@@ -1133,7 +1195,7 @@ function openEventForm(e,preset={}){
 }
 function modLinks(type,id,uid,fam){return `<div class="row" style="justify-content:center;gap:16px"><button class="linkbtn" data-report="${type}|${esc(id)}">Report</button>${uid===S.me||isOrg()?'':`<button class="linkbtn" data-block="${esc(uid)}|${esc(fam)}">Block this person</button>`}</div>`}
 function openReport(type,id){
-  const what=type==='media'?'photo or video':'note';
+  const what=type==='media'?'photo or video':type==='post'?'post':'note';
   const sh=openSheet(`${shTop('Report this '+what,'Goes to the organizer')}
     <div class="stack" role="radiogroup" aria-label="Reason">
       ${['Inappropriate or offensive','Shows someone’s private property or people without permission','Spam or off-topic','Something else'].map((r,i)=>`<label class="row" style="gap:10px;align-items:center"><input type="radio" name="rr" value="${esc(r)}"${i===0?' checked':''}> ${esc(r)}</label>`).join('')}
@@ -1243,11 +1305,21 @@ document.addEventListener('click',async e=>{
       const cap=$('#galCap').value.trim();const n=await uploadAll(fs,null,$('#galList'),cap?{caption:cap}:{});
       ev.target.value='';if(n){toast(n>1?`Added ${n} files`:'Added to the gallery');setTimeout(closeSheet,700)}});
     return}
-  if(el=t.closest('[data-rview]')){const r=S.reports.find(x=>x.id===el.dataset.rview);if(r){r.type==='media'?openMedia(r.targetId):openEvent(r.targetId)}return}
+  if(el=t.closest('[data-feedmode]')){S.feedMode=el.dataset.feedmode;renderNow();return}
+  if(el=t.closest('[data-react]')){if(S.demo){toast('The example game doesn’t save changes.');return}if(!canWrite())return;
+    const [id,k]=el.dataset.react.split('|');const p=(D().posts||[]).find(x=>x.id===id);if(!p)return;const on=((p.reactions||{})[k]||[]).includes(S.me);
+    const FV=firebase.firestore.FieldValue;await W(()=>S.db.doc('posts/'+id).update({['reactions.'+k]:on?FV.arrayRemove(S.me):FV.arrayUnion(S.me)}));return}
+  if(el=t.closest('[data-postmenu]')){const p=(D().posts||[]).find(x=>x.id===el.dataset.postmenu);if(!p)return;const h=homeById(p.byHome),mine=p.by===S.me;
+    const sh=openSheet(`${shTop(h?esc(h.family):'Post',esc(fmt(p.at)))}${p.text?`<p class="ftext">${esc(p.text)}</p>`:''}
+      ${(mine||isOrg())&&!S.demo?`<button class="btn danger" id="pDel">Delete post</button>`:''}${!mine&&!S.demo&&canWrite()?modLinks('post',p.id,p.by,h?h.family:''):''}`);
+    const d=sh.querySelector('#pDel');if(d)d.addEventListener('click',async()=>{if(!d.dataset.armed){d.dataset.armed=1;d.textContent='Tap again to delete';return}
+      if(await W(async()=>{for(const m of D().media.filter(x=>x.postId===p.id))await delMedia(m);await col('posts').doc(p.id).delete()},'Post deleted'))closeSheet()});
+    return}
+  if(el=t.closest('[data-rview]')){const r=S.reports.find(x=>x.id===el.dataset.rview);if(r){if(r.type==='media')openMedia(r.targetId);else if(r.type==='post'){const p=(D().posts||[]).find(x=>x.id===r.targetId);if(p)openSheet(`${shTop('Reported post',esc(fmt(p.at)))}<p class="ftext">${esc(p.text||'(photo only)')}</p>`)}else openEvent(r.targetId)}return}
   if(el=t.closest('[data-rdismiss]')){await W(()=>col('reports').doc(el.dataset.rdismiss).update({status:'dismissed'}),'Dismissed');return}
   if(el=t.closest('[data-rremove]')){if(!el.dataset.armed){el.dataset.armed=1;el.textContent='Tap to confirm';return}
     const r=S.reports.find(x=>x.id===el.dataset.rremove);if(!r)return;
-    await W(async()=>{if(r.type==='media'){const m=D().media.find(x=>x.id===r.targetId);if(m)await delMedia(m)}else await col('steals').doc(r.targetId).update({note:''});
+    await W(async()=>{if(r.type==='media'){const m=D().media.find(x=>x.id===r.targetId);if(m)await delMedia(m)}else if(r.type==='post'){for(const m of D().media.filter(x=>x.postId===r.targetId))await delMedia(m);await col('posts').doc(r.targetId).delete()}else await col('steals').doc(r.targetId).update({note:''});
       await col('reports').doc(r.id).update({status:'removed'})},'Removed');return}
   if(el=t.closest('[data-report]')){const [type,id]=el.dataset.report.split('|');openReport(type,id);return}
   if(el=t.closest('[data-block]')){const [uid,fam]=el.dataset.block.split('|');
@@ -1291,10 +1363,17 @@ document.addEventListener('click',async e=>{
     if(isOrg()&&!S.demo){openEventForm(null,{kind:'steal',from,to,at});return}
     logMode='took';location.hash='#log';setTimeout(()=>{rLog();$('#other').value=from;$('#when').value=localInput(new Date(at))},30);return}
   if(el=t.closest('[data-media]')){openMedia(el.dataset.media);return}
-  if(el=t.closest('[data-ev]')){if(t.closest('button'))return;openEvent(el.dataset.ev);return}
+  if(el=t.closest('[data-ev]')){const bt=t.closest('button');if(bt&&bt!==el)return;openEvent(el.dataset.ev);return}
   if(el=t.closest('#homeList [data-home]')){if(t.closest('button'))return;selHome=selHome===el.dataset.home?null:el.dataset.home;renderNow();if(selHome){const h=homeById(selHome),q=hpos(h);if(q)trailMap.focus(q.x,q.y,trailMap.W/2.5);$('#trailMap').scrollIntoView({behavior:'smooth',block:'center'})}return}
 });
 $('#addFam').addEventListener('click',()=>openHomeForm('admin'));
+$('#cpPhoto').addEventListener('change',()=>{const fs=[...$('#cpPhoto').files];$('#cpFiles').innerHTML=fs.map(f=>`<li><span>${esc(f.name)}</span><span class="mono">${(f.size/1048576).toFixed(1)} MB</span></li>`).join('')});
+$('#composer').addEventListener('submit',async e=>{e.preventDefault();const text=$('#cpText').value.trim(),files=[...$('#cpPhoto').files];
+  if(!text&&!files.length){toast('Write something or add a photo.');return}
+  const b=$('#cpSend');b.disabled=true;let postId=null;
+  const ok=await W(async()=>{const r=await col('posts').add({season:viewSeason(),by:S.me,byHome:myHome()?.id||null,text,at:new Date().toISOString(),createdAt:Date.now(),reactions:{}});postId=r.id});
+  if(ok&&files.length)await uploadAll(files,null,$('#cpFiles'),{postId});
+  b.disabled=false;if(ok){$('#composer').reset();setTimeout(()=>{$('#cpFiles').innerHTML=''},900)}});
 $('#pwInput').addEventListener('input',()=>{$('#pwInput').dataset.dirty=1});
 $('#pwForm').addEventListener('submit',async e=>{e.preventDefault();const v=$('#pwInput').value.trim().toLowerCase();
   if(v.length<4){toast('Use at least 4 characters.');return}
@@ -1325,7 +1404,9 @@ function makeDemo(){
   const events=[E('1','start',null,'a',day(9,9),'Game on.'),E('2','steal','a','f',day(8,21),'Ladder was involved.'),E('3','steal','f','b',day(7,19)),
     E('4','steal','c','g',day(5,22),'Grabbed during the HOA holiday party.'),E('5','steal','g','e',day(4,20)),E('6','steal','e',null,day(2,18)),
     E('7','steal','h','d',day(1,21),'Wrapped him in lights for disguise.'),E('8','steal','d','a',day(0,7))];
-  return{config:{start:null,end:null,rules:''},homes,events,media:[]};
+  const P=(id,by,text,h,r={})=>({id,by:'x-'+by,byHome:by,text,at:day(0,h),season:String(new Date().getFullYear()),reactions:r});
+  const posts=[P('p1','b','Wasn’t us this time. Our ladder is suspiciously missing though.',8,{laugh:['a','c','e'],tree:['f']}),P('p2','a','Our lights are up. Bring him here, we dare you.',6,{tree:['b','c','d','e']}),P('p3','e','Anyone else hear sleigh bells on Coast Highway last night?',5)];
+  return{config:{start:null,end:null,rules:''},homes,events,media:[],posts};
 }
 
 /* ---------- boot ---------- */
@@ -1360,6 +1441,7 @@ let idxT=0;function syncIndex(){clearTimeout(idxT);idxT=setTimeout(async()=>{
 const unsubAll=()=>{subs.forEach(u=>{try{u()}catch{}});subs=[];mainOn=false};
 function startMain(){
   if(mainOn)return;mainOn=true;const db=S.db;let got=0;const done=()=>{if(++got>=4)S.ready=true;render()};
+  subs.push(db.collection('posts').onSnapshot(q=>{S.live.posts=q.docs.map(d=>({...d.data(),id:d.id}));render()},err));
   const err=e=>{console.error(e);if(e&&e.code==='permission-denied'){mainOn=false}S.netErr=e&&e.code==='unavailable';render()};
   subs.push(db.doc('config/game').onSnapshot(d=>{S.live.config=d.exists?{...d.data()}:{};done()},err));
   subs.push(db.collection('homes').onSnapshot(q=>{S.live.homes=q.docs.map(d=>({...d.data(),id:d.id}));done();syncIndex()},err));
@@ -1372,7 +1454,7 @@ function startMain(){
   if(S.isOwner)subs.push(db.collection('members').onSnapshot(q=>{S.members=q.docs.map(d=>({...d.data(),id:d.id}));render()},err));
   if(S.isOwner)subs.push(db.collection('joins').onSnapshot(q=>{S.joins=q.docs.map(d=>({...d.data(),id:d.id}));render()},err));
 }
-function signedOut(){unsubAll();S.me=null;S.email='';S.isOwner=false;S.memberDoc=false;S.memberHome=null;S.members=[];S.blocks=[];S.reports=[];S.ready=false;S.myJoin=undefined;S.joins=[];S.live={config:{},homes:[],events:[],media:[]};S.urls={}}
+function signedOut(){unsubAll();S.me=null;S.email='';S.isOwner=false;S.memberDoc=false;S.memberHome=null;S.members=[];S.blocks=[];S.reports=[];S.ready=false;S.myJoin=undefined;S.joins=[];S.live={config:{},homes:[],events:[],media:[],posts:[]};S.urls={}}
 function watchUser(user){
   const db=S.db;let seen={org:false,mem:false,join:false};
   const check=()=>{if(!(seen.org&&seen.mem&&seen.join))return;

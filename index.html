@@ -749,12 +749,14 @@ function rGate(){
     <form id="smsCodeForm" class="stack" novalidate><input type="text" id="smsCode" class="code-inp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••" aria-label="6-digit code"><button class="btn red" type="submit" id="smsCodeBtn">Sign in</button></form>
     <button class="linkbtn" data-phone-reset>Use a different number</button>`}
   else if(!S.me&&S.sentTo){key='sent:'+S.sentTo;step=1;h=`<div class="label">Check your email</div><h2>Tap the link we emailed you</h2><p>We sent a sign-in link to <b>${esc(S.sentTo)}</b>. Open it on this phone. It can take a minute to arrive, so check spam too.</p>
-    <button class="linkbtn" data-signin-reset>Use a different email or phone</button>`}
-  else if(!S.me){key='signin';step=1;h=`<div class="label">Emerald Bay families</div><h2>Sign in to play</h2><p>New here? You’ll pick your house next.</p>
-    <form id="signinForm" class="stack" novalidate><label class="field"><span>Phone number or email</span><input type="text" id="signinId" autocomplete="username" inputmode="email" placeholder="(949) 555-0123 or you@example.com"></label><button class="btn red" type="submit" id="signinBtn">Continue</button></form>
-    <div class="or" style="margin-top:12px">OR</div>
+    <button class="linkbtn" data-signin-reset>Back to sign-in options</button>`}
+  else if(!S.me){key='signin:'+(S.otherSignin?1:0);step=1;h=`<div class="label">Emerald Bay families</div><h2>Sign in to play</h2><p>Enter your mobile number and we’ll text you a code. New here? You’ll pick your house next.</p>
+    <form id="signinForm" class="stack" novalidate><label class="field"><span>Mobile number</span><input type="tel" id="signinId" autocomplete="tel" inputmode="tel" placeholder="(949) 555-0123"></label><button class="btn red" type="submit" id="signinBtn">Text me a code</button></form>
+    ${S.otherSignin?`<div class="or" style="margin-top:14px">OTHER WAYS TO SIGN IN</div>
     <button class="btn outline-c block" data-google style="margin-top:12px">Continue with Google</button>
-    <button class="linkbtn" data-demo style="display:block;margin:12px auto 0">See an example game</button>`}
+    <form id="emailForm" class="stack" novalidate><label class="field"><span>Or get a sign-in link by email</span><input type="email" id="emailId" autocomplete="email" placeholder="you@example.com"></label><button class="btn outline-c" type="submit" id="emailBtn">Email me a link</button></form>`
+    :`<button class="linkbtn" data-other-signin style="display:block;margin:14px auto 0">Other ways to sign in</button>`}
+    <button class="linkbtn" data-demo style="display:block;margin:8px auto 0">See an example game</button>`}
   else if(!S.ready||j===undefined){key='load2';h=`<div class="label">Loading</div><h2>Checking your invite…</h2>`}
   else if(j&&j.status==='pending'&&!S.editJoin){key='pending:'+j.family+'|'+j.number;step=3;h=`<div class="label">Request sent</div><h2>Waiting for the organizer</h2>
     <div class="famrow"><span class="hno">${esc(j.number)}</span><div><b>${esc(j.family)}</b><div class="case-meta">Requested ${esc(ago(j.at))}</div></div></div>
@@ -1299,18 +1301,17 @@ async function finishLink(email){
 }
 document.addEventListener('submit',async e=>{
   if(e.target.id==='signinForm'){e.preventDefault();const v=$('#signinId').value.trim(),btn=$('#signinBtn');
-    if(!v){toast('Enter your phone number or email.');return}
-    if(v.includes('@')){
-      if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)){toast('That email doesn’t look right.');return}
-      btn.disabled=true;btn.textContent='Sending…';
-      try{await fbAuth.sendSignInLinkToEmail(v,{url:linkUrl(),handleCodeInApp:true});try{localStorage.setItem('rg-email',v)}catch{};S.sentTo=v;renderNow()}
-      catch(err){console.error(err);btn.disabled=false;btn.textContent='Continue';toast(/too-many/.test(err.code)?'Too many tries. Wait a few minutes, then try again.':'Couldn’t send the email. Check the address and try again.')}
-    }else{
-      const num=toE164(v);if(!num){toast('Enter a 10-digit phone number with area code, or an email.');return}
-      btn.disabled=true;btn.textContent='Sending…';
-      try{smsConfirm=await fbAuth.signInWithPhoneNumber(num,getRecaptcha());S.phoneTo=prettyPhone(num);renderNow();setTimeout(()=>$('#smsCode')?.focus(),50)}
-      catch(err){console.error(err);resetRecaptcha();btn.disabled=false;btn.textContent='Continue';toast(phoneErr(err))}
-    }}
+    if(!v){toast('Enter your mobile number.');return}
+    if(v.includes('@')){S.otherSignin=true;renderNow();setTimeout(()=>{const i=$('#emailId');if(i){i.value=v;i.focus()}},30);toast('For email, use “Email me a link” below.');return}
+    const num=toE164(v);if(!num){toast('Enter a 10-digit mobile number, including area code.');return}
+    btn.disabled=true;btn.textContent='Sending…';
+    try{smsConfirm=await fbAuth.signInWithPhoneNumber(num,getRecaptcha());S.phoneTo=prettyPhone(num);renderNow();setTimeout(()=>$('#smsCode')?.focus(),50)}
+    catch(err){console.error(err);resetRecaptcha();btn.disabled=false;btn.textContent='Text me a code';toast(phoneErr(err))}}
+  if(e.target.id==='emailForm'){e.preventDefault();const v=$('#emailId').value.trim(),btn=$('#emailBtn');
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)){toast('That email doesn’t look right.');return}
+    btn.disabled=true;btn.textContent='Sending…';
+    try{await fbAuth.sendSignInLinkToEmail(v,{url:linkUrl(),handleCodeInApp:true});try{localStorage.setItem('rg-email',v)}catch{};S.sentTo=v;renderNow()}
+    catch(err){console.error(err);btn.disabled=false;btn.textContent='Email me a link';toast(/too-many/.test(err.code)?'Too many tries. Wait a few minutes, then try again.':'Couldn’t send the email. Check the address and try again.')}}
   if(e.target.id==='smsCodeForm'){e.preventDefault();const code=$('#smsCode').value.replace(/\D/g,'');
     if(code.length<6){toast('Enter the 6-digit code.');return}
     if(!smsConfirm){toast('That code expired. Send a new one.');S.phoneTo='';renderNow();return}
@@ -1323,6 +1324,7 @@ document.addEventListener('click',async e=>{
   if(e.target.closest('[data-google]')&&fbAuth){try{await fbAuth.signInWithPopup(new firebase.auth.GoogleAuthProvider())}
     catch(err){if(!/popup-closed|cancelled-popup/.test(err.code||''))toast(/popup-blocked/.test(err.code||'')?'Your browser blocked the sign-in window. Allow pop-ups and try again.':'Google sign-in didn’t finish. Try again, or use the email link.')}return}
   if(e.target.closest('[data-signin-reset]')){S.sentTo='';renderNow();return}
+  if(e.target.closest('[data-other-signin]')){S.otherSignin=true;renderNow();return}
   if(e.target.closest('[data-join-edit]')){S.editJoin=true;renderNow();return}
   if(e.target.closest('[data-signin-start]')){S.needEmail=false;S.sentTo='';S.phoneTo='';history.replaceState(null,'',linkUrl());renderNow();return}
   if(e.target.closest('[data-phone-reset]')){S.phoneTo='';smsConfirm=null;resetRecaptcha();renderNow();return}

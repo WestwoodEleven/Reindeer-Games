@@ -1441,8 +1441,8 @@ let idxT=0;function syncIndex(){clearTimeout(idxT);idxT=setTimeout(async()=>{
 const unsubAll=()=>{subs.forEach(u=>{try{u()}catch{}});subs=[];mainOn=false};
 function startMain(){
   if(mainOn)return;mainOn=true;const db=S.db;let got=0;const done=()=>{if(++got>=4)S.ready=true;render()};
-  subs.push(db.collection('posts').onSnapshot(q=>{S.live.posts=q.docs.map(d=>({...d.data(),id:d.id}));render()},err));
   const err=e=>{console.error(e);if(e&&e.code==='permission-denied'){mainOn=false}S.netErr=e&&e.code==='unavailable';render()};
+  subs.push(db.collection('posts').onSnapshot(q=>{S.live.posts=q.docs.map(d=>({...d.data(),id:d.id}));render()},err));
   subs.push(db.doc('config/game').onSnapshot(d=>{S.live.config=d.exists?{...d.data()}:{};done()},err));
   subs.push(db.collection('homes').onSnapshot(q=>{S.live.homes=q.docs.map(d=>({...d.data(),id:d.id}));done();syncIndex()},err));
   subs.push(db.collection('steals').onSnapshot(q=>{S.live.events=q.docs.map(d=>({...d.data(),id:d.id}));done()},err));

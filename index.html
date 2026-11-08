@@ -392,7 +392,7 @@ textarea{min-height:120px;resize:vertical}
     <div class="stack"><div class="row" style="justify-content:space-between"><h2>Participating houses</h2><span class="label" id="homeCount"></span></div>
     <ul class="homes" id="homeList"></ul></div>
     <div class="stack"><div class="row" style="justify-content:space-between"><h2>Case file</h2><span class="label">Newest first</span></div><ol class="cases" id="timeline"></ol></div>
-    <div class="card row" id="a2hsCard" hidden style="justify-content:space-between"><p style="flex:1;min-width:12rem"><b>Keep the hunt one tap away.</b> Add Reindeer Games to your phone’s home screen.</p><div class="row"><button class="btn sm ghost" data-a2hs-hide>Not now</button><button class="btn sm primary" data-a2hs>Add to home screen</button></div></div>
+    <div class="card row" id="a2hsCard" style="justify-content:space-between"><p style="flex:1;min-width:12rem"><b>Keep the hunt one tap away.</b> Add Reindeer Games to your phone’s home screen.</p><div class="row"><button class="btn sm ghost" data-a2hs-hide>Not now</button><button class="btn sm primary" data-a2hs>Add to phone</button></div></div>
   </section>
 
   <!-- LEADERS -->
@@ -436,7 +436,7 @@ textarea{min-height:120px;resize:vertical}
   <section class="view" id="v-rules" data-view="rules" hidden>
     <div class="row" style="justify-content:space-between"><h2>Rules</h2><span class="draft" id="draftTag">DRAFT · TBD</span></div>
     <div class="card stack" id="rulesBody"></div>
-    <button class="btn" data-a2hs hidden style="align-self:start">Add to home screen</button>
+    <button class="btn" data-a2hs id="a2hsRules" style="align-self:start">Add to phone</button>
   </section>
 
   <!-- GATE (not yet an approved participant) -->
@@ -1062,21 +1062,25 @@ function openMedia(id){
   const d=sh.querySelector('#mDel');if(d)d.addEventListener('click',async()=>{if(!d.dataset.armed){d.dataset.armed=1;d.textContent='Tap again to remove';return}if(await W(()=>delMedia(m),'Removed'))closeSheet()});
 }
 
-/* ---------- add to home screen ---------- */
-const SITE_URL=location.origin+location.pathname;
-try{if(localStorage.getItem('rg-a2hs-hide'))$('#a2hsCard').hidden=true}catch{}
-function openA2HS(){
+/* ---------- add to phone (home screen) ---------- */
+let installPrompt=null;
+const isInstalled=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e});
+addEventListener('appinstalled',()=>{installPrompt=null;toast('Added to your phone');syncA2HS()});
+function syncA2HS(){const inst=isInstalled();let hide=false;try{hide=!!localStorage.getItem('rg-a2hs-hide')}catch{}
+  $('#a2hsCard').hidden=inst||hide;$('#a2hsRules').hidden=inst}
+syncA2HS();
+async function openA2HS(){
+  if(installPrompt){try{installPrompt.prompt();const r=await installPrompt.userChoice;if(r&&r.outcome==='accepted'){installPrompt=null;$('#a2hsCard').hidden=true}}catch{}return}
   const ua=navigator.userAgent||'',ios=/iPhone|iPad|iPod/i.test(ua)||(/Macintosh/.test(ua)&&'ontouchend' in document),android=/Android/i.test(ua);
-  const iosSteps=`<ol class="stack" style="padding-left:20px;margin:0"><li>Open the link below in <b>Safari</b>.</li><li>Tap the <b>Share</b> button (the square with an arrow pointing up).</li><li>Scroll down and tap <b>Add to Home Screen</b>, then <b>Add</b>.</li></ol>`;
-  const andSteps=`<ol class="stack" style="padding-left:20px;margin:0"><li>Open the link below in <b>Chrome</b>.</li><li>Tap the <b>⋮</b> menu in the top corner.</li><li>Tap <b>Add to Home screen</b>, then <b>Add</b>.</li></ol>`;
-  const sh=openSheet(`${shTop('Add to home screen','Reindeer Games')}
-    <p class="small muted">Phones only allow this from the browser, so open the site there first.</p>
-    ${ios?`<h3>iPhone</h3>${iosSteps}`:android?`<h3>Android</h3>${andSteps}`:`<h3>iPhone</h3>${iosSteps}<h3>Android</h3>${andSteps}`}
-    <div class="field"><span>Site link</span><input type="text" id="a2hsUrl" readonly value="${SITE_URL}"></div>
-    <div class="row"><button class="btn primary" id="a2hsCopy">Copy link</button><a class="btn" href="${SITE_URL}" target="_blank" rel="noopener">Open in browser</a></div>
-    <p class="small muted">Sign in once in that browser and the shortcut stays signed in.</p>`);
-  sh.querySelector('#a2hsCopy').addEventListener('click',async()=>{const i=$('#a2hsUrl');
-    try{await navigator.clipboard.writeText(SITE_URL);toast('Link copied')}catch{i.focus();i.select();toast('Link selected. Copy it from the menu.')}});
+  const inApp=/FBAN|FBAV|Instagram|Line\/|GSA\/|; wv\)/i.test(ua);
+  const share='<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" style="vertical-align:-3px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>';
+  const iosSteps=`<ol class="stack" style="padding-left:20px;margin:0"><li>Tap the <b>Share</b> button ${share} at the bottom of Safari (or the top in Chrome).</li><li>Scroll down and tap <b>Add to Home Screen</b>.</li><li>Tap <b>Add</b>. Reindeer Games appears on your home screen with the palm-tree icon.</li></ol>`;
+  const andSteps=`<ol class="stack" style="padding-left:20px;margin:0"><li>Tap the <b>⋮</b> menu in the top corner of Chrome.</li><li>Tap <b>Add to Home screen</b> (or <b>Install app</b>).</li><li>Tap <b>Add</b>.</li></ol>`;
+  openSheet(`${shTop('Add to your phone','Reindeer Games')}
+    ${inApp?'<p><b>First, open this page in Safari or Chrome.</b> Your app’s built-in browser can’t add it. Use its menu and choose <b>Open in browser</b>.</p>':''}
+    ${ios?iosSteps:android?andSteps:`<h3>iPhone</h3>${iosSteps}<h3>Android</h3>${andSteps}`}
+    <p class="small muted">You stay signed in from the home-screen icon.</p>`);
 }
 /* ---------- uploads ---------- */
 async function prep(f){
@@ -1149,12 +1153,12 @@ document.addEventListener('click',async e=>{
     openSheet(`${shTop(mh?esc(mh.family):'Your account','Reindeer Games')}
       <p>Signed in as <b>${esc(S.email||S.phone||'')}</b>${isOrg()?' · Organizer':''}</p>
       ${mh?`<p class="small muted">${esc(mh.number)} Emerald Bay. To change your family name, house number or pin, ask the organizer.</p>`:''}
-      <div class="row">${mh?`<a class="btn" href="#homes" data-close>See participating houses</a>`:''}<button class="btn danger" data-signout data-close>Sign out</button></div>`);return}
+      <div class="row">${mh?`<a class="btn" href="#homes" data-close>See participating houses</a>`:''}${isInstalled()?'':'<button class="btn" data-a2hs data-close>Add to phone</button>'}<button class="btn danger" data-signout data-close>Sign out</button></div>`);return}
   if(t.closest('[data-seasons]')){const vs=viewSeason();
     openSheet(`${shTop('Game year','Reindeer Games')}<ul class="homes">${allSeasons().map(y=>{const n=S.live.events.filter(e=>e.kind==='steal'&&evSeason(e)===y).length;
       return `<li class="${y===vs?'on':''}"><span class="hno">${esc(y)}</span><div><b>December ${esc(y)}</b><div class="case-meta">${y===curSeason()?'Current game · ':''}${n} ${n===1?'steal':'steals'}</div></div><button class="btn sm${y===vs?' primary':''}" data-season="${esc(y)}">${y===vs?'Viewing':'View'}</button></li>`}).join('')}</ul>`);return}
   if(t.closest('[data-a2hs]')){openA2HS();return}
-  if(t.closest('[data-a2hs-hide]')){$('#a2hsCard').hidden=true;try{localStorage.setItem('rg-a2hs-hide','1')}catch{};return}
+  if(t.closest('[data-a2hs-hide]')){try{localStorage.setItem('rg-a2hs-hide','1')}catch{};syncA2HS();return}
   if(t.closest('[data-join]')){openHomeForm('join');return}
   if(t.closest('[data-demo]')){S.demo=makeDemo();S.demoOrg=false;renderNow();scrollTo(0,0);return}
   if(t.closest('[data-demo-exit]')){S.demo=null;renderNow();return}

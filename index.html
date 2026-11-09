@@ -1365,7 +1365,7 @@ function openEvent(id){
   if(e===C.hidden){
     if(e.from&&e.from===myHome()?.id&&S.assets&&canWrite()&&!isPast()){
       const sh=openSheet(`${shTop('Rudolph was taken from you',esc(fmt(e.at)))}
-        <p>Where he went stays secret until he’s stolen again. You can still add your photos or videos of the empty spot.</p>
+        <p>Where he went stays secret until he’s stolen again. You can still add your photos or videos of the theft.</p>
         <label class="drop"><input type="file" id="evFiles" accept="image/*,video/*" multiple><b>Add your photos or videos</b><br><small>They appear in the feed once he moves again.</small></label><ul class="files" id="evFileList"></ul>`);
       const f=sh.querySelector('#evFiles');f.addEventListener('change',async()=>{await uploadAll([...f.files],id,$('#evFileList'));f.value=''});return}
     toast('This one is sealed until the next steal.');return}

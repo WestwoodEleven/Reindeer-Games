@@ -56,12 +56,52 @@ exports.stealAlert = onDocumentCreated('steals/{id}', async (event) => {
 exports.postAlert = onDocumentCreated('posts/{id}', async (event) => {
   const p = event.data && event.data.data();
   if (!p) return;
-  const fam = (await familyOf(p.byHome)) || 'A neighbor';
   const text = (p.text || '').trim();
+  // A photo-only post is announced by mediaAlert once the photo arrives.
+  if (!text) return;
+  const fam = (await familyOf(p.byHome)) || 'A neighbor';
   await sendAll({
     title: fam,
-    body: text ? (text.length > 140 ? text.slice(0, 137) + '…' : text) : 'Shared something new in the feed.',
+    body: text.length > 140 ? text.slice(0, 137) + '…' : text,
     exceptUid: p.by,
+    link: '#feed',
+  });
+});
+
+exports.mediaAlert = onDocumentCreated('media/{id}', async (event) => {
+  const m = event.data && event.data.data();
+  if (!m) return;
+  const id = event.params.id;
+  // One alert per batch: skip if this person uploaded something in the last 3 minutes.
+  const now = Date.parse(m.at || '') || Date.now();
+  const recent = await db.collection('media').where('by', '==', m.by).get();
+  const earlier = recent.docs.some(d => {
+    if (d.id === id) return false;
+    const t = Date.parse(d.data().at || '');
+    return t && t <= now && now - t < 3 * 60 * 1000;
+  });
+  if (earlier) return;
+  // A post with words already sent its own alert.
+  if (m.postId) {
+    const post = await db.doc('posts/' + m.postId).get();
+    if (post.exists && (post.data().text || '').trim()) return;
+  }
+  const what = m.type === 'video' ? 'video' : 'photo';
+  if (m.stealId) {
+    // Capture media: no family name, so it can't give away who has the reindeer.
+    await sendAll({
+      title: what === 'video' ? '🎥 New capture video' : '📸 New capture photo',
+      body: 'Open the feed to see it.',
+      exceptUid: m.by,
+      link: '#feed',
+    });
+    return;
+  }
+  const fam = (await familyOf(m.byHome)) || 'A neighbor';
+  await sendAll({
+    title: fam,
+    body: what === 'video' ? 'Shared a video.' : 'Shared a photo.',
+    exceptUid: m.by,
     link: '#feed',
   });
 });

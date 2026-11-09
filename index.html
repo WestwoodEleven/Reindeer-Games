@@ -158,6 +158,7 @@ main{padding-block:16px calc(96px + env(safe-area-inset-bottom,0px))}
 .falert small{display:block;font-size:.8rem;opacity:.85;margin-top:2px}
 .fic{width:30px;height:30px;flex:none;border-radius:50%;background:var(--nose);color:#fff;border:2px solid var(--edge);display:grid;place-items:center;font-weight:700}
 .falert.done .fic{background:var(--accent)}
+.fic.num{font:400 .8rem var(--f-display)}
 .fpost{background:var(--surface);border:2px solid var(--edge);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px}
 .fwho{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:.8rem;color:var(--muted)}
 .fwho b{color:var(--ink);font-size:.95rem}
@@ -1184,13 +1185,14 @@ function rFeed(C){
   for(const m of D().media)if(!m.stealId&&!m.postId&&(S.demo||String(m.season||yearOf(m.at))===vs)&&!blocked(m.by))items.push({t:m.at,k:'photo',m});
   items.sort((a,b)=>String(b.t).localeCompare(String(a.t)));
   // Alternate red/green by age (oldest first), so a new post takes the next color and older ones never change.
+  const sn=new Map(C.evs.filter(e=>e.kind==='steal').map((e,i)=>[e.id,i+1]));
   const tints=new Map();items.filter(it=>it.k==='post'||it.k==='photo').reverse().forEach((it,i)=>{const c=i%2?'tr':'tg';tints.set(it,c);if(it.p)S.postTint[it.p.id]=c});
   const thumbs=ms=>ms.length?`<div class="fthumbs">${ms.slice(0,4).map(m=>`<button data-media="${esc(m.id)}" aria-label="Open ${m.type}">${m.type==='image'?`<img src="${esc(murl(m))}" alt="" loading="lazy">`:`<video src="${esc(murl(m))}#t=0.1" preload="metadata" muted playsinline></video><span class="play">VIDEO</span>`}</button>`).join('')}</div>`:'';
   const fam=h=>h?esc(h.family):'The organizer';
   $('#feedList').innerHTML=items.length?items.slice(0,150).map(it=>{
     if(it.k==='sealed'&&it.e.kind==='start'){const e=it.e;return `<div class="falert knit"><span class="fic">★</span><div><b>Let the games begin! Rudolph is on the loose!</b><small>${esc(ago(e.at))} · Find him and steal him.</small></div></div>`}
     if(it.k==='sealed'){const e=it.e;return `<div class="falert knit"><span class="fic">!</span><div><b>${e.from?`Rudolph was taken from ${esc(fam(homeById(e.from)))}`:'Rudolph was stolen'}</b><small>${esc(ago(e.at))} · Who has him now? Go look.</small></div></div>`}
-    if(it.k==='steal'){const e=it.e;return `<button class="falert done knit" data-ev="${esc(e.id)}"><span class="fic">${e.kind==='start'?'★':'#'}</span><div><b>${e.kind==='start'?'Let the games begin! Rudolph is on the loose!':caseLine(e)}</b><small>${e.kind==='start'&&e.to?`Started at ${esc(fam(homeById(e.to)))} · `:''}${esc(fmt(e.at))}${e.note&&!blocked(e.by)?` · “${esc(e.note)}”`:''}</small>${thumbs(mediaFor(e.id))}</div></button>`}
+    if(it.k==='steal'){const e=it.e;return `<button class="falert done knit" data-ev="${esc(e.id)}"><span class="fic${e.kind==='start'?'':' num'}" ${e.kind==='start'?'':`title="Steal number ${sn.get(e.id)}"`}>${e.kind==='start'?'★':sn.get(e.id)||'🦌'}</span><div><b>${e.kind==='start'?'Let the games begin! Rudolph is on the loose!':caseLine(e)}</b><small>${e.kind==='start'&&e.to?`Started at ${esc(fam(homeById(e.to)))} · `:''}${esc(fmt(e.at))}${e.note&&!blocked(e.by)?` · “${esc(e.note)}”`:''}</small>${thumbs(mediaFor(e.id))}</div></button>`}
     if(it.k==='photo'){const m=it.m,h=homeById(m.byHome);return `<div class="fpost knit ${tints.get(it)}"><div class="fwho"><b>${fam(h)}</b><span>${esc(ago(m.at))}</span></div>${m.caption?`<p>${esc(m.caption)}</p>`:''}${thumbs([m])}</div>`}
     const p=it.p,h=homeById(p.byHome),ms=D().media.filter(m=>m.postId===p.id&&!blocked(m.by));const mine=p.by===S.me;
     return `<div class="fpost knit ${tints.get(it)}"><div class="fwho"><b>${fam(h)}${mine?' <span class="you">You</span>':''}</b><span>${esc(ago(p.at))}<button class="fmore" data-postmenu="${esc(p.id)}" aria-label="More options">⋯</button></span></div>${p.text?`<p class="ftext">${esc(p.text)}</p>`:''}${thumbs(ms)}

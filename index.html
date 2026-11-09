@@ -300,6 +300,20 @@ main{padding-block:16px calc(96px + env(safe-area-inset-bottom,0px))}
 .thumbs span{width:44px;height:44px;border-radius:8px;background:var(--line) center/cover no-repeat;flex:none;display:grid;place-items:center;font:600 .7rem var(--f-mono);color:var(--muted)}
 
 /* leaderboard */
+.totals{display:grid;grid-template-columns:repeat(4,1fr);background:var(--status);border:2px solid var(--edge);border-radius:14px;box-shadow:3px 3px 0 var(--edge);color:#F7F0E1;overflow:hidden}
+.totals div{padding:10px 4px;text-align:center;border-left:1px solid rgba(247,240,225,.15)}.totals div:first-child{border-left:0}
+.totals b{display:block;font:400 1.15rem var(--f-display);color:#fff}
+.totals i{font:600 .62rem var(--f-mono);font-style:normal;letter-spacing:.06em;text-transform:uppercase;color:#CFE3D6}
+.supgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.supc{border:2px solid var(--edge);border-radius:14px;box-shadow:2px 2px 0 var(--edge);padding:20px 11px 11px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.supc.tr{background:var(--post-r)}.supc.tg{background:var(--post-g)}.supc.tg::before{background-color:var(--stripe-g)}
+.supc.me{box-shadow:2px 2px 0 var(--edge),inset 0 0 0 3px #F2C14E}
+.supt{font:600 .64rem/1.35 var(--f-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.supem{font-size:.95rem;letter-spacing:0;vertical-align:-1px}
+.supc b{font-size:.98rem;line-height:1.2;overflow-wrap:anywhere}
+.supv{font:400 1.05rem var(--f-display);color:var(--stripe-r)}.supc.tg .supv{color:var(--stripe-g)}
+.supc small{font-size:.76rem;color:var(--muted);line-height:1.3}
+.supc .you{background:#F2C14E;color:#2B1A12;margin-left:5px}
 .sb{background:var(--status);border:2px solid var(--edge);border-radius:16px;box-shadow:3px 3px 0 var(--edge);color:#F7F0E1;overflow:hidden}
 .sb-top{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;background:var(--nose);border-bottom:2px solid var(--edge);font:600 .7rem var(--f-mono);letter-spacing:.12em;text-transform:uppercase}
 .sb-top b{font:400 1rem var(--f-display);letter-spacing:0;text-transform:none}
@@ -521,8 +535,10 @@ textarea{min-height:120px;resize:vertical}
   <!-- LEADERS -->
   <section class="view" id="v-leaders" data-view="leaders" hidden>
     <div class="row" style="justify-content:space-between"><h2>Leaderboard</h2><span class="label" id="boardLabel">Steals</span></div>
+    <div class="seg" role="group" aria-label="Leaderboard view"><button type="button" data-lbtab="standings" id="lbStand">Standings</button><button type="button" data-lbtab="sup" id="lbSup">Superlatives</button></div>
     <div class="sb" id="scoreboard"></div>
-    <p class="small muted" style="text-align:center">The newest steal counts once it unseals, so the board never gives away who has Rudolph.</p>
+    <div id="superlatives" class="stack" hidden></div>
+    <p class="small muted" style="text-align:center" id="lbNote">The newest steal counts once it unseals, so the board never gives away who has Rudolph.</p>
   </section>
 
   <!-- LOG -->
@@ -953,6 +969,9 @@ function rTimeline(C){
   t.innerHTML=h||`<li class="empty"><h3>No steals yet</h3><p>Every capture shows up here as a numbered case.</p></li>`;
   $('#trailCount').textContent=C.evs.length?`${C.evs.length} ${C.evs.length>1?'entries':'entry'}`:'';
 }
+S.lbTab=S.lbTab||'standings';
+function rLeaders(C){const sup=S.lbTab==='sup';$('#lbStand').setAttribute('aria-pressed',!sup);$('#lbSup').setAttribute('aria-pressed',sup);
+  $('#scoreboard').hidden=sup;$('#lbNote').hidden=sup;$('#superlatives').hidden=!sup;if(sup)rSuper(C);else rBoard(C)}
 function rBoard(C){
   const took={},lost={};C.vis.forEach(e=>{if(e.kind==='steal'){if(e.to)took[e.to]=(took[e.to]||0)+1;if(e.from)lost[e.from]=(lost[e.from]||0)+1}});
   const mine=myHome()?.id;$('#boardLabel').textContent=`${viewSeason()} · Steals`;
@@ -985,6 +1004,69 @@ function rBoard(C){
   $('#scoreboard').innerHTML=`<div class="sb-top"><span>Steals</span><b>${meta||(isPast()?'Final':'Ready to go')}</b></div><div class="sb-lead">${lead}</div>
     ${hs.length?`<ol>${hs.map((x,k)=>{const you=x.h.id===mine;const rc=!x.t?'n':x.r===1?'g':x.r===2?'s':x.r===3?'b':'';
       return `<li class="${k%2?'r':'gr'}${you?' me':''}"><span class="rk ${rc}">${x.t?x.r:'–'}</span><div class="nm"><b>${esc(x.h.family)}</b>${you?'<span class="you">You</span>':''}<small>${esc(x.h.number)}${x.l?` · stolen from ${x.l}×`:''}</small></div><span class="ct">${x.t}</span></li>`}).join('')}</ol>`:''}`;
+}
+/* ---------- superlatives ---------- */
+const MAP_MI=0.95; // rough height of the Emerald Bay map in miles
+function milesBetween(a,b){const p=hpos(homeById(a)),q=hpos(homeById(b));if(!p||!q)return null;
+  const dx=(p.x-q.x)*EB.w,dy=(p.y-q.y)*EB.h;return Math.hypot(dx,dy)/EB.h*MAP_MI}
+const dayKey=iso=>{const d=new Date(iso);return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`};
+const durTxt=ms=>{const m=Math.round(ms/6e4);if(m<60)return `${m} min`;const h=Math.floor(m/60);if(h<24)return `${h}h ${m%60?`${m%60}m`:''}`.trim();const d=Math.floor(h/24);return `${d}d ${h%24}h`};
+const tod=iso=>new Date(iso).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+function rSuper(C){
+  const el=$('#superlatives'),mine=myHome()?.id;
+  const all=C.evs.filter(e=>e.kind==='steal'||e.kind==='start').sort((a,b)=>String(a.at).localeCompare(String(b.at)));
+  const vis=new Set(C.vis.map(e=>e.id));
+  const steals=all.filter(e=>e.kind==='steal'&&vis.has(e.id));
+  if(steals.length<2){el.innerHTML=`<div class="card emptyc"><h3>Superlatives are coming</h3><p>Once a few steals are logged, the neighborhood’s yearbook awards show up here.</p></div>`;return}
+  // Finished stays: a visible arrival, ended by the next event.
+  const stays=[];all.forEach((e,i)=>{const nx=all[i+1];if(e.to&&vis.has(e.id)&&nx)stays.push({h:e.to,ms:+new Date(nx.at)-+new Date(e.at)})});
+  const famOf=id=>homeById(id)?.family||'Unknown';
+  const best=(map,min=1)=>{let top=-Infinity,ids=[];for(const [k,v] of map){if(v>top){top=v;ids=[k]}else if(v===top)ids.push(k)}return top>=min?{ids,v:top}:null};
+  const names=ids=>ids.length===1?famOf(ids[0]):ids.length===2?`${famOf(ids[0])} & ${famOf(ids[1])}`:`${famOf(ids[0])} +${ids.length-1} more`;
+  const out=[];const add=(title,em,ids,val,sub)=>out.push({title,em,ids,val,sub});
+  // Strike again: longest run of consecutive days with a steal.
+  {const days=new Map();steals.forEach(e=>{if(!e.to)return;if(!days.has(e.to))days.set(e.to,new Set());days.get(e.to).add(dayKey(e.at))});
+    const run=new Map();for(const [h,set] of days){const ds=[...set].map(k=>{const [y,m,d]=k.split('-').map(Number);return +new Date(y,m-1,d)}).sort((a,b)=>a-b);
+      let b=1,c=1;for(let i=1;i<ds.length;i++){c=Math.round((ds[i]-ds[i-1])/864e5)===1?c+1:1;b=Math.max(b,c)}run.set(h,b)}
+    const r=best(run,2);if(r)add('Most likely to strike again','🔥',r.ids,`${r.v} days`,`Stole Rudolph ${r.v} days in a row`)}
+  // Spree: most steals in one day.
+  {const per=new Map(),when={};steals.forEach(e=>{if(!e.to)return;const k=e.to+'|'+dayKey(e.at);per.set(k,(per.get(k)||0)+1);when[k]=e.at});
+    const fam=new Map(),day={};for(const [k,v] of per){const h=k.split('|')[0];if(v>(fam.get(h)||0)){fam.set(h,v);day[h]=when[k]}}
+    const r=best(fam,2);if(r)add('Most likely to go on a spree','⚡',r.ids,`${r.v} steals`,`All on ${new Date(day[r.ids[0]]).toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'})}`)}
+  // Go the distance: longest single steal.
+  {let b=null;steals.forEach(e=>{if(!e.from||!e.to)return;const d=milesBetween(e.from,e.to);if(d!=null&&(!b||d>b.d))b={d,e}});
+    if(b)add('Most likely to go the distance','🗺️',[b.e.to],`${b.d<0.1?Math.round(b.d*5280)+' ft':b.d.toFixed(1)+' mi'}`,`From ${esc(homeById(b.e.from)?.number||'?')} to ${esc(homeById(b.e.to)?.number||'?')}`)}
+  // Never let go / lose him by dinner: longest and shortest finished stays.
+  if(stays.length){const lo=[...stays].sort((a,b)=>b.ms-a.ms)[0],sh=[...stays].sort((a,b)=>a.ms-b.ms)[0];
+    add('Most likely to never let go','🏰',[lo.h],durTxt(lo.ms),'Longest anyone kept him');
+    if(stays.length>1)add('Most likely to lose him by dinner','🥔',[sh.h],durTxt(sh.ms),'Shortest stay of the game')}
+  // Robbed: stolen from the most.
+  {const m=new Map();steals.forEach(e=>{if(e.from)m.set(e.from,(m.get(e.from)||0)+1)});const r=best(m,2);if(r)add('Most likely to be robbed','🎯',r.ids,`Robbed ${r.v}×`,`Sorry, ${names(r.ids)}`)}
+  // Feud: the pair with the most steals between them.
+  {const m=new Map();steals.forEach(e=>{if(!e.from||!e.to)return;const k=[e.from,e.to].sort().join('|');m.set(k,(m.get(k)||0)+1)});const r=best(m,2);
+    if(r){const [a,b]=r.ids[0].split('|');out.push({title:'Most likely to feud forever',em:'⚔️',ids:[a,b],label:`${famOf(a).replace(/^The /,'')} vs. ${famOf(b).replace(/^The /,'')}`,val:`${r.v} swaps`,sub:'Back and forth all season'})}}
+  // Get even: took him straight back from the family that just took him.
+  {const m=new Map();const st=all.filter(e=>e.kind==='steal');st.forEach((e,i)=>{const pv=st[i-1];if(vis.has(e.id)&&pv&&e.from&&e.to&&pv.from===e.to&&pv.to===e.from)m.set(e.to,(m.get(e.to)||0)+1)});
+    const r=best(m,1);if(r)add('Most likely to get even','😤',r.ids,r.v===1?'Once':`${r.v} times`,'Took him right back')}
+  // Night owl / early bird.
+  {const mins=e=>{const d=new Date(e.at);return d.getHours()*60+d.getMinutes()};
+    const owl=steals.filter(e=>e.to).map(e=>({e,k:(mins(e)-720+1440)%1440})).filter(x=>x.k<960).sort((a,b)=>b.k-a.k)[0];
+    if(owl&&owl.k>=540)add('Most likely to be up at 2 AM','🦉',[owl.e.to],tod(owl.e.at),'Latest steal of the game');
+    const bird=steals.filter(e=>e.to).map(e=>({e,k:(mins(e)-240+1440)%1440})).filter(x=>x.k<480).sort((a,b)=>a.k-b.k)[0];
+    if(bird)add('Most likely to beat the sunrise','🐓',[bird.e.to],tod(bird.e.at),'Earliest steal of the game')}
+  // Go viral: most photos and videos shared.
+  {const hid=C.hidden?.id;const m=new Map();(D().media||[]).filter(x=>(!x.stealId||x.stealId!==hid)&&x.byHome&&(x.season?String(x.season)===viewSeason():true)).forEach(x=>m.set(x.byHome,(m.get(x.byHome)||0)+1));
+    const r=best(m,3);if(r)add('Most likely to go viral','📸',r.ids,`${r.v} shots`,'Most photos & videos')}
+  // Know every neighbor: stole from the most different houses.
+  {const m=new Map();steals.forEach(e=>{if(!e.from||!e.to)return;if(!m.has(e.to))m.set(e.to,new Set());m.get(e.to).add(e.from)});
+    const r=best(new Map([...m].map(([k,v])=>[k,v.size])),3);if(r)add('Most likely to know every neighbor','🌍',r.ids,`${r.v} houses`,'Stole from the most homes')}
+  // Totals.
+  const houses=new Set(all.filter(e=>vis.has(e.id)&&e.to).map(e=>e.to)).size;
+  const miles=steals.reduce((t,e)=>t+(e.from&&e.to?(milesBetween(e.from,e.to)||0):0),0);
+  const avg=stays.length?stays.reduce((t,x)=>t+x.ms,0)/stays.length:0;
+  el.innerHTML=`<div class="totals"><div><b>${steals.length}</b><i>steals</i></div><div><b>${houses}</b><i>houses</i></div><div><b>${miles.toFixed(1)}</b><i>miles</i></div><div><b>${avg?durTxt(avg).split(' ')[0]:'–'}</b><i>avg stay</i></div></div>
+    <div class="supgrid">${out.map((a,i)=>{const me=a.ids.includes(mine);return `<div class="supc knit ${i%2?'tg':'tr'}${me?' me':''}"><span class="supt">${esc(a.title)} <span class="supem">${a.em}</span></span><b>${esc(a.label||names(a.ids))}${me?'<span class="you">You</span>':''}</b><span class="supv">${esc(a.val)}</span><small>${a.sub}</small></div>`}).join('')}</div>
+    <p class="small muted" style="text-align:center;margin:0">The newest steal joins the stats once he moves again. Distances are approximate.</p>`;
 }
 function rGate(){
   const g=$('#gateBody'),j=S.myJoin,glow='<div class="glow" aria-hidden="true"></div>';
@@ -1283,7 +1365,7 @@ function renderNow(){
   document.querySelectorAll('[data-tab]').forEach(a=>{if(a.dataset.tab===v)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
   rWho();rBanner();syncPush();if(S.thread)renderThread();
   if(v==='homes'){rTimeline(C);rHomes();drawTrail()}
-  if(v==='leaders')rBoard(C);
+  if(v==='leaders')rLeaders(C);
   if(v==='log')rLog();
   if(v==='feed'){rStatus(C);rFeed(C)}
   if(v==='rules')rRules();
@@ -1628,6 +1710,7 @@ document.addEventListener('click',async e=>{
   if(el=t.closest('[data-thread]')){const id=el.dataset.thread;S.repOpen.add(id);renderNow();return}
   if(el=t.closest('[data-repmore]')){const id=el.dataset.repmore;S.repOpen.has(id)?S.repOpen.delete(id):S.repOpen.add(id);renderNow();return}
   if(el=t.closest('[data-repbox]')){const id=el.dataset.repbox;S.repBox=id;renderNow();const ta=document.getElementById('irep-'+id);if(ta){ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length)}return}
+  if(el=t.closest('[data-lbtab]')){S.lbTab=el.dataset.lbtab;renderNow();return}
   if(el=t.closest('[data-repmenu]')){openReplyMenu(el.dataset.repmenu);return}
   if(el=t.closest('[data-rdel]')){if(!el.dataset.armed){el.dataset.armed=1;el.textContent='Tap again to delete';return}
     await W(()=>col('replies').doc(el.dataset.rdel).delete(),'Reply deleted');return}

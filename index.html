@@ -273,6 +273,13 @@ main{padding-block:16px calc(96px + env(safe-area-inset-bottom,0px))}
 .medal.m3{background:linear-gradient(145deg,#F0C08F,#B87333)}
 .board li.mine{background:color-mix(in srgb,var(--accent) 14%,var(--surface));border-radius:10px;margin-inline:-8px;padding-inline:8px;border-top-color:transparent}
 .board li.mine+li{border-top-color:transparent}
+.board li.empty{display:block;text-align:center}
+.board .n.zero{color:var(--muted);opacity:.6}
+.podium.ghost .pod{opacity:1}
+.podium.ghost .gq{width:36px;height:36px;border-radius:50%;border:2px dashed var(--muted);display:grid;place-items:center;font:600 1rem var(--f-mono);color:var(--muted);background:var(--surface)}
+.podium.ghost .block{background:repeating-linear-gradient(135deg,transparent 0 8px,color-mix(in srgb,var(--muted) 14%,transparent) 8px 16px);border-style:dashed;border-color:color-mix(in srgb,var(--muted) 70%,transparent);color:color-mix(in srgb,var(--muted) 70%,transparent)}
+#podium{display:flex;flex-direction:column;gap:12px}#podium:empty{display:none}
+.emptyc{text-align:center}.emptyc h3{margin:0 0 4px;color:var(--nose)}.emptyc p{margin:0}
 .you{font:600 .62rem var(--f-mono);letter-spacing:.06em;text-transform:uppercase;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:1px 7px;margin-left:6px;vertical-align:2px}
 
 /* homes list */
@@ -887,16 +894,29 @@ function rTimeline(C){
 }
 function rBoard(C){
   const took={},lost={};C.vis.forEach(e=>{if(e.kind==='steal'){if(e.to)took[e.to]=(took[e.to]||0)+1;if(e.from)lost[e.from]=(lost[e.from]||0)+1}});
-  const hs=D().homes.map(h=>({h,t:took[h.id]||0,l:lost[h.id]||0})).filter(x=>x.t||x.l).sort((a,b)=>b.t-a.t||a.l-b.l);
   const mine=myHome()?.id;$('#boardLabel').textContent=`${viewSeason()} · Steals`;
+  // Every playing house, best first; ties go to the house stolen from least, then A–Z.
+  const hs=sortHomes(D().homes).map(h=>({h,t:took[h.id]||0,l:lost[h.id]||0})).sort((a,b)=>b.t-a.t||a.l-b.l);
   const top=hs.slice(0,3).filter(x=>x.t>0);
   const podOrder=[1,0,2].filter(i=>top[i]);
-  $('#podium').innerHTML=top.length?`<div class="podium">${podOrder.map(i=>{const x=top[i];return `<div class="pod${x.h.id===mine?' mine':''}"><span class="medal m${i+1}" aria-label="${['Gold','Silver','Bronze'][i]}">${i+1}</span><div class="pname">${esc(x.h.family)}${x.h.id===mine?'<span class="you">You</span>':''}<small>${esc(x.h.number)}</small></div><div class="block p${i+1}">${x.t}</div></div>`}).join('')}</div><div class="podbase"></div>`:'';
-  const rest=hs.slice(top.length);
+  if(top.length){
+    $('#podium').innerHTML=`<div><div class="podium">${podOrder.map(i=>{const x=top[i];return `<div class="pod${x.h.id===mine?' mine':''}"><span class="medal m${i+1}" aria-label="${['Gold','Silver','Bronze'][i]}">${i+1}</span><div class="pname">${esc(x.h.family)}${x.h.id===mine?'<span class="you">You</span>':''}<small>${esc(x.h.number)}</small></div><div class="block p${i+1}">${x.t}</div></div>`}).join('')}</div><div class="podbase"></div></div>`;
+  }else{
+    const n=hs.length;
+    $('#podium').innerHTML=`<div><div class="podium ghost" aria-hidden="true">${[2,1,3].map(k=>`<div class="pod"><span class="medal m${k}">${k}</span><div class="gq">?</div><div class="block p${k}">${k}</div></div>`).join('')}</div><div class="podbase"></div></div>
+      <div class="card emptyc"><h3>Gold is up for grabs</h3><p>No steals yet. The first family to grab Rudolph takes the top spot.</p></div>
+      ${canWrite()&&!isPast()?'<a class="btn red block" href="#log">Log a steal</a>':''}
+      ${n?`<p class="small muted" style="text-align:center;margin:0">${n} ${n===1?'house is':'houses are'} playing this year.</p>`:''}`;
+  }
+  // Ranked list: houses below the podium (or everyone, before the first steal).
+  const rest=top.length?hs.slice(top.length):[...hs].sort((a,b)=>(b.h.id===mine)-(a.h.id===mine));
   $('#board').parentElement.hidden=!rest.length&&!!top.length;
-  $('#board').innerHTML=rest.length?rest.map((x,k)=>{const i=k+top.length,you=x.h.id===mine;
-    return `<li class="${you?'mine':''}"><span class="rank">${i+1}</span><div class="fam"><b>${esc(x.h.family)}</b>${you?'<span class="you">You</span>':''}<div class="case-meta">${esc(x.h.number)} · stolen from ${x.l}×</div></div><span class="n">${x.t}</span></li>`}).join('')
-    :`<li class="muted small">Steal counts appear after the first capture.</li>`;
+  let prev=null,rank=top.length;
+  $('#board').innerHTML=rest.length?rest.map((x,k)=>{const you=x.h.id===mine;
+    if(!prev||x.t!==prev.t||x.l!==prev.l)rank=top.length+k+1;prev=x;
+    const r=x.t?rank:'–';
+    return `<li class="${you?'mine':''}"><span class="rank">${r}</span><div class="fam"><b>${esc(x.h.family)}</b>${you?'<span class="you">You</span>':''}<div class="case-meta">${esc(x.h.number)}${x.l?` · stolen from ${x.l}×`:''}</div></div><span class="n${x.t?'':' zero'}">${x.t}</span></li>`}).join('')
+    :`<li class="empty muted small">Houses show up here once families join.</li>`;
 }
 function rGate(){
   const g=$('#gateBody'),j=S.myJoin,glow='<div class="glow" aria-hidden="true"></div>';

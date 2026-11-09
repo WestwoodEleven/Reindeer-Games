@@ -426,6 +426,9 @@ textarea{min-height:120px;resize:vertical}
 .toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:60;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:700;max-width:calc(100% - 32px);box-shadow:0 6px 24px rgb(0 0 0/.25)}
 @media (prefers-reduced-motion:reduce){.lights i,.status .glow,.logo-tile.on .t1,.logo-tile.on .t2{animation:none}}
 
+.rules-chip .rc-i{display:none}
+@media (max-width:359px){.rules-chip .rc-i{display:inline}.rules-chip .rc-t{display:none}}
+@media (min-width:360px){.brand small{white-space:nowrap}}
 /* Easier reading: darker gray text and slightly larger small print. */
 :root{--muted:#5A473C}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--muted:#D6C6B2}}
@@ -585,7 +588,7 @@ textarea{min-height:120px;resize:vertical}
     <div class="status" id="status"></div>
     <div class="card row" id="pushCard" hidden style="justify-content:space-between"><p style="flex:1;min-width:12rem"><b>Get steal alerts.</b> We’ll let you know the moment the reindeer is stolen, and when neighbors post.</p><div class="row"><button class="btn sm ghost" data-push-hide>Not now</button><button class="btn sm primary" data-push>Turn on alerts</button></div></div>
     <div class="row" style="justify-content:space-between"><h2>Feed</h2>
-      <div class="seg feedseg" role="group" aria-label="Show"><button type="button" data-feedmode="all" id="fmAll">Everything</button><button type="button" data-feedmode="photos" id="fmPhotos">Photos</button></div></div>
+</div>
     <div id="feedAll">
       <form class="card stack" id="composer" novalidate>
         <label class="sr" for="cpText">Message</label>
@@ -595,7 +598,12 @@ textarea{min-height:120px;resize:vertical}
       </form>
       <div id="feedList" class="feedlist"></div>
     </div>
-    <div id="feedPhotos" hidden>
+  </section>
+
+  <!-- GALLERY -->
+  <section class="view" id="v-gallery" data-view="gallery" hidden>
+    <h2>Gallery</h2>
+    <div id="feedPhotos">
       <div class="row" style="justify-content:space-between"><span class="small muted">Every photo and video from this year’s game.</span><span class="label" id="galCount"></span></div>
       <button class="btn primary block" id="galAdd" data-gal-add hidden>Add photos or videos</button>
       <div id="gallery"></div>
@@ -713,10 +721,10 @@ textarea{min-height:120px;resize:vertical}
 <nav class="tabs" id="tabs" aria-label="Sections">
   <div class="wrap">
     <a href="#feed" data-tab="feed"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg>Home</a>
-    <a href="#leaders" data-tab="leaders"><svg viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4"/><path d="M12 13v4M9 20h6"/></svg>Leaders</a>
-    <a href="#log" data-tab="log" class="log"><span class="b"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>Log a steal</a>
     <a href="#homes" data-tab="homes"><svg viewBox="0 0 24 24"><path d="M3 6.5 9 4l6 2.5 6-2.5v13.5L15 20l-6-2.5L3 20z"/><path d="M9 4v13.5M15 6.5V20"/></svg>Map</a>
-    <a href="#rules" data-tab="rules"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M9 11h7M9 15h7M9 7h3"/></svg>Rules</a>
+    <a href="#log" data-tab="log" class="log"><span class="b"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>Log a steal</a>
+    <a href="#leaders" data-tab="leaders"><svg viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4"/><path d="M12 13v4M9 20h6"/></svg>Leaders</a>
+    <a href="#gallery" data-tab="gallery"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="m4 18 5.5-5 4 3.5L16 14l4 3.5"/></svg>Gallery</a>
   </div>
 </nav>
 
@@ -942,6 +950,7 @@ function rWho(){
   const w=$('#who');let h='';
   if(isOrg()&&!S.demo){const n=S.joins.filter(j=>j.status==='pending'&&!S.members.some(m=>m.id===j.id)).length+S.reports.filter(r=>r.status==='open').length;h+=`<a class="chip${n?' solid':''}" href="#admin">Organizer${n?` · ${n}`:''}</a>`}
   const mh=myHome();
+  if(isMember()||S.demo)h+=`<a class="chip rules-chip" href="#rules" aria-label="Rules"><span class="rc-i" aria-hidden="true">📜</span><span class="rc-t">Rules</span></a>`;
   if(mh&&S.demo)h+=`<span class="chip">${esc(mh.family)}</span>`;
   else if(S.me&&isMember())h+=`<button class="chip" data-account aria-label="Account and sign out">${esc(mh?mh.family:"Account")} ▾</button>`;
   else if(!S.demo&&isOrg()&&!mh)h+=`<button class="chip solid" data-join>Join</button>`;
@@ -1299,10 +1308,6 @@ const postGone=id=>!(D().posts||[]).some(p=>p.id===id);
 function rFeed(C){
   const ae=document.activeElement;if(ae&&ae.closest&&ae.closest('.irep')&&$('#feedList').contains(ae)){S.feedStale=true;return}
   S.feedStale=false;
-  const photos=S.feedMode==='photos';
-  $('#fmAll').setAttribute('aria-pressed',!photos);$('#fmPhotos').setAttribute('aria-pressed',photos);
-  $('#feedAll').hidden=photos;$('#feedPhotos').hidden=!photos;
-  if(photos){rGallery(C);return}
   const vs=viewSeason(),canPost=!S.demo&&canWrite()&&(!isPast()||isOrg());
   $('#composer').hidden=!canPost;$('#cpPhotoLbl').hidden=!S.assets;
   const items=[];
@@ -1381,8 +1386,8 @@ function rAdmin(C){
 }
 
 /* ---------- routing / render ---------- */
-const VIEWS=['homes','leaders','log','feed','rules','admin','privacy'];
-function route(){let v=location.hash.slice(1);if(v==='gallery'){v='feed';S.feedMode='photos'}if(v==='join'){v='homes';setTimeout(()=>openHomeForm('join'),0)}if(!VIEWS.includes(v))v='feed';return v}
+const VIEWS=['homes','leaders','log','feed','gallery','rules','admin','privacy'];
+function route(){let v=location.hash.slice(1);if(v==='join'){v='homes';setTimeout(()=>openHomeForm('join'),0)}if(!VIEWS.includes(v))v='feed';return v}
 let raf=0;function render(){if(raf)return;raf=requestAnimationFrame(()=>{raf=0;renderNow()})}
 function renderNow(){
   let v=route();const C=compute();
@@ -1395,6 +1400,7 @@ function renderNow(){
   if(v==='leaders')rLeaders(C);
   if(v==='log')rLog();
   if(v==='feed'){rStatus(C);rFeed(C)}
+  if(v==='gallery')rGallery(C);
   if(v==='rules')rRules();
   if(v==='admin')rAdmin(C);
   if(v==='gate')rGate();
@@ -1741,7 +1747,6 @@ document.addEventListener('click',async e=>{
       const cap=$('#galCap').value.trim();const n=await uploadAll(fs,null,$('#galList'),cap?{caption:cap}:{});
       ev.target.value='';if(n){toast(n>1?`Added ${n} files`:'Added to the gallery');setTimeout(closeSheet,700)}});
     return}
-  if(el=t.closest('[data-feedmode]')){S.feedMode=el.dataset.feedmode;renderNow();return}
   if(el=t.closest('[data-react]')){if(S.demo){toast('The example game doesn’t save changes.');return}if(!canWrite())return;
     const i=el.dataset.react.indexOf('|');await toggleReact(el.dataset.react.slice(0,i),el.dataset.react.slice(i+1));return}
   if(el=t.closest('[data-thread]')){const id=el.dataset.thread;S.repOpen.add(id);renderNow();return}
@@ -1774,7 +1779,7 @@ document.addEventListener('click',async e=>{
       <p>Signed in as <b>${esc(S.email||S.phone||'')}</b>${isOrg()?' · Organizer':''}</p>
       ${mh?`<p class="small muted">${esc(mh.number)} Emerald Bay. To change your family name, house number or pin, ask the organizer.</p>`:''}
       ${S.blocks.length?`<div class="field"><span>Blocked people</span><ul class="homes">${S.blocks.map((u,i)=>`<li><div style="grid-column:1/3"><b>Blocked person ${i+1}</b><div class="case-meta">Their photos, videos and notes are hidden for you</div></div><button class="btn sm" data-unblock="${esc(u)}">Unblock</button></li>`).join('')}</ul></div>`:''}
-      <div class="row">${FMsg()&&!S.demo?'<button class="btn" data-alerts>Alert settings</button>':''}${mh?`<a class="btn" href="#homes" data-close>See who’s playing</a>`:''}${isInstalled()?'':'<button class="btn" data-a2hs data-close>Add to phone</button>'}<button class="btn danger" data-signout data-close>Sign out</button></div>
+      <div class="row"><a class="btn" href="#rules" data-close>📜 How to play</a>${FMsg()&&!S.demo?'<button class="btn" data-alerts>Alert settings</button>':''}${mh?`<a class="btn" href="#homes" data-close>See who’s playing</a>`:''}${isInstalled()?'':'<button class="btn" data-a2hs data-close>Add to phone</button>'}<button class="btn danger" data-signout data-close>Sign out</button></div>
       <div class="row" style="justify-content:space-between;margin-top:4px"><a class="linkbtn" href="#privacy" data-close>Privacy policy</a>${S.demo?'':'<button class="linkbtn" data-delacct style="color:var(--nose)">Delete my account</button>'}</div>`);return}
   if(t.closest('[data-delacct]')){openDeleteAccount();return}
   if(t.closest('[data-alerts]')){openAlertSettings();return}

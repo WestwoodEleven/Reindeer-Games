@@ -1142,7 +1142,6 @@ function renderThread(){const l=$('#thList');if(!S.thread||!l||$('#sheetWrap').h
   l.innerHTML=rs.length?rs.map(r=>replyLine(r,true)).join(''):'<p class="muted small" style="margin:0">No replies yet. Start the conversation.</p>';
   l.scrollTop=l.scrollHeight}
 async function delRepliesOf(postId){for(const r of (D().replies||[]).filter(x=>x.postId===postId))await col('replies').doc(r.id).delete().catch(()=>{})}
-const tint=id=>{let h=0;for(const c of String(id))h=(h*31+c.charCodeAt(0))|0;return (h&1)?'tr':'tg'};
 const postGone=id=>!(D().posts||[]).some(p=>p.id===id);
 function rFeed(C){
   const photos=S.feedMode==='photos';
@@ -1157,15 +1156,17 @@ function rFeed(C){
   if(C.hidden)items.push({t:C.hidden.at,k:'sealed',e:C.hidden});
   for(const m of D().media)if(!m.stealId&&!m.postId&&(S.demo||String(m.season||yearOf(m.at))===vs)&&!blocked(m.by))items.push({t:m.at,k:'photo',m});
   items.sort((a,b)=>String(b.t).localeCompare(String(a.t)));
+  // Alternate red/green by age (oldest first), so a new post takes the next color and older ones never change.
+  const tints=new Map();items.filter(it=>it.k==='post'||it.k==='photo').reverse().forEach((it,i)=>tints.set(it,i%2?'tr':'tg'));
   const thumbs=ms=>ms.length?`<div class="fthumbs">${ms.slice(0,4).map(m=>`<button data-media="${esc(m.id)}" aria-label="Open ${m.type}">${m.type==='image'?`<img src="${esc(murl(m))}" alt="" loading="lazy">`:`<video src="${esc(murl(m))}#t=0.1" preload="metadata" muted playsinline></video><span class="play">VIDEO</span>`}</button>`).join('')}</div>`:'';
   const fam=h=>h?esc(h.family):'The organizer';
   $('#feedList').innerHTML=items.length?items.slice(0,150).map(it=>{
     if(it.k==='sealed'&&it.e.kind==='start'){const e=it.e;return `<div class="falert knit"><span class="fic">★</span><div><b>Let the games begin! Rudolph is on the loose!</b><small>${esc(ago(e.at))} · Find him and steal him.</small></div></div>`}
     if(it.k==='sealed'){const e=it.e;return `<div class="falert knit"><span class="fic">!</span><div><b>${e.from?`Rudolph was taken from ${esc(fam(homeById(e.from)))}`:'Rudolph was stolen'}</b><small>${esc(ago(e.at))} · Who has him now? Go look.</small></div></div>`}
     if(it.k==='steal'){const e=it.e;return `<button class="falert done knit" data-ev="${esc(e.id)}"><span class="fic">${e.kind==='start'?'★':'#'}</span><div><b>${e.kind==='start'?'Let the games begin! Rudolph is on the loose!':caseLine(e)}</b><small>${e.kind==='start'&&e.to?`Started at ${esc(fam(homeById(e.to)))} · `:''}${esc(fmt(e.at))}${e.note&&!blocked(e.by)?` · “${esc(e.note)}”`:''}</small>${thumbs(mediaFor(e.id))}</div></button>`}
-    if(it.k==='photo'){const m=it.m,h=homeById(m.byHome);return `<div class="fpost knit ${tint(m.id)}"><div class="fwho"><b>${fam(h)}</b><span>${esc(ago(m.at))}</span></div>${m.caption?`<p>${esc(m.caption)}</p>`:''}${thumbs([m])}</div>`}
+    if(it.k==='photo'){const m=it.m,h=homeById(m.byHome);return `<div class="fpost knit ${tints.get(it)}"><div class="fwho"><b>${fam(h)}</b><span>${esc(ago(m.at))}</span></div>${m.caption?`<p>${esc(m.caption)}</p>`:''}${thumbs([m])}</div>`}
     const p=it.p,h=homeById(p.byHome),ms=D().media.filter(m=>m.postId===p.id&&!blocked(m.by));const mine=p.by===S.me;
-    return `<div class="fpost knit ${tint(p.id)}"><div class="fwho"><b>${fam(h)}${mine?' <span class="you">You</span>':''}</b><span>${esc(ago(p.at))}<button class="fmore" data-postmenu="${esc(p.id)}" aria-label="More options">⋯</button></span></div>${p.text?`<p class="ftext">${esc(p.text)}</p>`:''}${thumbs(ms)}
+    return `<div class="fpost knit ${tints.get(it)}"><div class="fwho"><b>${fam(h)}${mine?' <span class="you">You</span>':''}</b><span>${esc(ago(p.at))}<button class="fmore" data-postmenu="${esc(p.id)}" aria-label="More options">⋯</button></span></div>${p.text?`<p class="ftext">${esc(p.text)}</p>`:''}${thumbs(ms)}
       <div class="freacts">${(()=>{const tl=reactTally(p);const ems=[...new Set([...Object.keys(tl).sort((a,b)=>tl[b].n-tl[a].n),...DEFAULT_REACTS])].slice(0,10);
         return ems.map(em=>{const x=tl[em]||{n:0,mine:false};return `<button class="${x.mine?'on':''}" data-react="${esc(p.id)}|${esc(em)}" aria-label="React ${esc(em)}">${em}${x.n?` ${x.n}`:''}</button>`}).join('')+`<button class="fadd" data-reactpick="${esc(p.id)}" aria-label="Add a different reaction">＋</button>`})()}</div>${(()=>{const rs=repliesFor(p.id);if(!rs.length&&!canReply())return'';
         return `<div class="freplies">${rs.length>2?`<button class="linkbtn fmorer" data-thread="${esc(p.id)}">View all ${rs.length} replies</button>`:''}${rs.slice(-2).map(r=>replyLine(r,false)).join('')}${canReply()?`<button class="freplybtn" data-thread="${esc(p.id)}">${rs.length?'Reply…':'Be the first to reply…'}</button>`:''}</div>`})()}</div>`}).join('')

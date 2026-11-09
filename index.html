@@ -290,6 +290,22 @@ main{padding-block:16px calc(96px + env(safe-area-inset-bottom,0px))}
 .thumbs span{width:44px;height:44px;border-radius:8px;background:var(--line) center/cover no-repeat;flex:none;display:grid;place-items:center;font:600 .7rem var(--f-mono);color:var(--muted)}
 
 /* leaderboard */
+.sb{background:var(--status);border:2px solid var(--edge);border-radius:16px;box-shadow:3px 3px 0 var(--edge);color:#F7F0E1;overflow:hidden}
+.sb-top{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;background:var(--nose);border-bottom:2px solid var(--edge);font:600 .7rem var(--f-mono);letter-spacing:.12em;text-transform:uppercase}
+.sb-top b{font:400 1rem var(--f-display);letter-spacing:0;text-transform:none}
+.sb-lead{padding:11px 14px;font-size:.92rem;line-height:1.4;color:#E3F0E7;border-bottom:2px solid var(--edge)}
+.sb-lead b{color:#fff}
+.sb ol{list-style:none;margin:0;padding:0}
+.sb li{display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:center;padding:10px 14px;border-top:1px solid rgba(0,0,0,.25)}
+.sb li:first-child{border-top:0}
+.sb li.gr{background:#1D5C3A}.sb li.r{background:#8E1028}
+.sb li.me{box-shadow:inset 0 0 0 3px #F2C14E}
+.sb .rk{font:400 1.05rem var(--f-display);color:rgba(247,240,225,.75)}
+.sb .rk.g{color:#F2C14E}.sb .rk.s{color:#E3E6EA}.sb .rk.b{color:#E8A066}.sb .rk.n{color:rgba(247,240,225,.45)}
+.sb .nm{min-width:0;overflow-wrap:anywhere}.sb .nm b{color:#fff;font-size:1rem}
+.sb .nm small{display:block;font:500 .72rem var(--f-mono);color:rgba(247,240,225,.7);margin-top:1px}
+.sb .ct{font:400 1.5rem var(--f-display);color:#fff;min-width:2ch;text-align:right}
+.sb .you{background:#F2C14E;color:#2B1A12}
 .board{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
 .board li{display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
 .board li:first-child{border-top:0}
@@ -495,8 +511,7 @@ textarea{min-height:120px;resize:vertical}
   <!-- LEADERS -->
   <section class="view" id="v-leaders" data-view="leaders" hidden>
     <div class="row" style="justify-content:space-between"><h2>Leaderboard</h2><span class="label" id="boardLabel">Steals</span></div>
-    <div id="podium"></div>
-    <div class="card"><ol class="board" id="board"></ol></div>
+    <div class="sb" id="scoreboard"></div>
     <p class="small muted" style="text-align:center">The newest steal counts once it unseals, so the board never gives away who has Rudolph.</p>
   </section>
 
@@ -932,28 +947,35 @@ function rTimeline(C){
 function rBoard(C){
   const took={},lost={};C.vis.forEach(e=>{if(e.kind==='steal'){if(e.to)took[e.to]=(took[e.to]||0)+1;if(e.from)lost[e.from]=(lost[e.from]||0)+1}});
   const mine=myHome()?.id;$('#boardLabel').textContent=`${viewSeason()} · Steals`;
-  // Every playing house, best first; ties go to the house stolen from least, then A–Z.
+  // Every playing house, best first; ties go to the house stolen from least, then by house number.
   const hs=sortHomes(D().homes).map(h=>({h,t:took[h.id]||0,l:lost[h.id]||0})).sort((a,b)=>b.t-a.t||a.l-b.l);
-  const top=hs.slice(0,3).filter(x=>x.t>0);
-  const podOrder=[1,0,2].filter(i=>top[i]);
-  if(top.length){
-    $('#podium').innerHTML=`<div><div class="podium">${podOrder.map(i=>{const x=top[i];return `<div class="pod${x.h.id===mine?' mine':''}"><span class="medal m${i+1}" aria-label="${['Gold','Silver','Bronze'][i]}">${i+1}</span><div class="pname">${esc(x.h.family)}${x.h.id===mine?'<span class="you">You</span>':''}<small>${esc(x.h.number)}</small></div><div class="block p${i+1}">${x.t}</div></div>`}).join('')}</div><div class="podbase"></div></div>`;
-  }else{
-    const n=hs.length;
-    $('#podium').innerHTML=`<div><div class="podium ghost" aria-hidden="true">${[2,1,3].map(k=>`<div class="pod"><span class="medal m${k}">${k}</span><div class="gq">?</div><div class="block p${k}">${k}</div></div>`).join('')}</div><div class="podbase"></div></div>
-      <div class="card emptyc"><h3>Gold is up for grabs</h3><p>No steals yet. The first family to grab Rudolph takes the top spot.</p></div>
-      ${canWrite()&&!isPast()?'<a class="btn red block" href="#log">Log a steal</a>':''}
-      ${n?`<p class="small muted" style="text-align:center;margin:0">${n} ${n===1?'house is':'houses are'} playing this year.</p>`:''}`;
+  let prev=null;hs.forEach((x,k)=>{x.r=(prev&&x.t===prev.t&&x.l===prev.l)?prev.r:k+1;prev=x});
+  const total=C.vis.filter(e=>e.kind==='steal').length;
+  const start=C.evs.find(e=>e.kind==='start');
+  const day=start&&!isPast()?Math.floor((Date.now()-new Date(start.at))/864e5)+1:0;
+  const plural=(n,w)=>`${n} ${w}${n===1?'':'s'}`;
+  const ord=n=>n+(['th','st','nd','rd'][(n%100>10&&n%100<14)?0:n%10]||'th');
+  // The one-line summary: who leads, and where you stand.
+  let lead='';
+  if(!hs.length)lead='Families show up here once they join.';
+  else if(!total)lead='No steals yet. The first family to grab Rudolph takes the lead.';
+  else{
+    const top=hs.filter(x=>x.r===1);
+    const names=a=>a.length<3?a.join(' and '):`${a.slice(0,-1).join(', ')} and ${a[a.length-1]}`;
+    const next=hs.find(x=>x.r>1);
+    lead=top.length>1?(top.length>3?`🦌 <b>${top.length} families</b> are tied for the lead with ${hs[0].t}.`:`🦌 <b>${esc(names(top.map(x=>x.h.family)))}</b> are tied for the lead with ${hs[0].t}.`)
+      :`🦌 <b>${esc(hs[0].h.family)}</b> ${next&&next.t<hs[0].t?`lead by ${plural(hs[0].t-next.t,'steal')}.`:'lead.'}`;
+    const me=hs.find(x=>x.h.id===mine);
+    if(me&&!isPast()){
+      if(me.r===1)lead+=top.length>1?' You’re one of them!':' That’s you!';
+      else{const above=[...hs].reverse().find(x=>x.r<me.r);const gap=above.t-me.t;
+        lead+=gap?` You’re ${ord(me.r)}, ${plural(gap,'steal')} behind ${esc(above.h.family)}.`:` You’re ${ord(me.r)}: same steals as ${esc(above.h.family)}, but you’ve been stolen from more.`}
+    }
   }
-  // Ranked list: houses below the podium (or everyone, before the first steal).
-  const rest=top.length?hs.slice(top.length):[...hs].sort((a,b)=>(b.h.id===mine)-(a.h.id===mine));
-  $('#board').parentElement.hidden=!rest.length&&!!top.length;
-  let prev=null,rank=top.length;
-  $('#board').innerHTML=rest.length?rest.map((x,k)=>{const you=x.h.id===mine;
-    if(!prev||x.t!==prev.t||x.l!==prev.l)rank=top.length+k+1;prev=x;
-    const r=x.t?rank:'–';
-    return `<li class="${you?'mine':''}"><span class="rank">${r}</span><div class="fam"><b>${esc(x.h.family)}</b>${you?'<span class="you">You</span>':''}<div class="case-meta">${esc(x.h.number)}${x.l?` · stolen from ${x.l}×`:''}</div></div><span class="n${x.t?'':' zero'}">${x.t}</span></li>`}).join('')
-    :`<li class="empty muted small">Houses show up here once families join.</li>`;
+  const meta=[total?plural(total,'steal'):'',day?`day ${day}`:''].filter(Boolean).join(' · ');
+  $('#scoreboard').innerHTML=`<div class="sb-top"><span>Steals</span><b>${meta||(isPast()?'Final':'Ready to go')}</b></div><div class="sb-lead">${lead}</div>
+    ${hs.length?`<ol>${hs.map((x,k)=>{const you=x.h.id===mine;const rc=!x.t?'n':x.r===1?'g':x.r===2?'s':x.r===3?'b':'';
+      return `<li class="${k%2?'r':'gr'}${you?' me':''}"><span class="rk ${rc}">${x.t?x.r:'–'}</span><div class="nm"><b>${esc(x.h.family)}</b>${you?'<span class="you">You</span>':''}<small>${esc(x.h.number)}${x.l?` · stolen from ${x.l}×`:''}</small></div><span class="ct">${x.t}</span></li>`}).join('')}</ol>`:''}`;
 }
 function rGate(){
   const g=$('#gateBody'),j=S.myJoin,glow='<div class="glow" aria-hidden="true"></div>';

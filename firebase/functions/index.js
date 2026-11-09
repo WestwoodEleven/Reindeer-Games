@@ -27,7 +27,7 @@ async function sendAll({ title, body, exceptUid, link, onlyUids }) {
       tokens: batch,
       notification: { title, body },
       data: { link: link || '#feed' },
-      apns: { payload: { aps: { sound: 'default' } } },
+      // No sound: alerts show on the lock screen and as banners, silently.
     });
     // Forget phones that uninstalled the app or turned alerts off.
     await Promise.all(res.responses.map((r, j) => {

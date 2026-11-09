@@ -154,6 +154,12 @@ main{padding-block:16px calc(96px + env(safe-area-inset-bottom,0px))}
 .ctop{width:48px;height:48px;flex:none;border-radius:50%;background:var(--surface);border:2px solid var(--edge);box-shadow:3px 3px 0 var(--edge);font:800 1.2rem var(--f-body);color:var(--ink);cursor:pointer}
 #qpText{font-size:16px}
 #v-feed{padding-bottom:84px}
+.map-box{position:relative}
+.pbub{position:absolute;z-index:5;transform:translate(-50%,calc(-100% - 14px));background:var(--surface);color:var(--ink);border:2px solid var(--edge);border-radius:14px;box-shadow:3px 3px 0 var(--edge);padding:7px 10px 7px 7px;display:flex;align-items:center;gap:9px;white-space:nowrap;font:inherit;font-size:.92rem;text-align:left;cursor:pointer}
+.pbub[hidden]{display:none}
+.pbub::after{content:"";position:absolute;left:var(--ax,50%);bottom:-9px;width:14px;height:14px;background:var(--surface);border-right:2px solid var(--edge);border-bottom:2px solid var(--edge);transform:translateX(-50%) rotate(45deg)}
+.pbub.below{transform:translate(-50%,14px)}.pbub.below::after{bottom:auto;top:-9px;transform:translateX(-50%) rotate(225deg)}
+.pbub small{display:block;color:var(--stripe-g);font-weight:700;font-size:.82rem}.pbub .chev{font-size:1.2rem;color:var(--muted)}
 .sep{border:0;border-top:1px solid var(--line);margin:2px 0;width:100%}
 .switch{position:relative;display:inline-block;width:52px;height:30px;flex:none}
 .switch input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:1}
@@ -266,7 +272,8 @@ main{padding-block:16px calc(96px + env(safe-area-inset-bottom,0px))}
 .map-bar{display:flex;align-items:center;gap:6px;padding:8px 10px;border-top:1px solid var(--line);background:var(--surface)}
 .map-bar .sp{flex:1}
 .map-bar button{min-width:44px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--bg);font-weight:700;font-size:1.05rem;cursor:pointer;padding:0 12px}
-.map-bar button.wide{font-size:.88rem}
+.map-bar button.wide{font-size:.88rem;white-space:nowrap;padding:0 10px}
+.map-bar{flex-wrap:nowrap}.map-bar button{flex:none}
 .map-bar button.play{background:var(--nose);color:#fff;border-color:var(--edge)}
 .replay{display:flex;flex-direction:column;gap:8px;padding:10px 12px 12px;border-top:1px solid var(--line);background:var(--surface)}
 .rcap{font-size:.92rem;line-height:1.35;min-height:2.7em}
@@ -564,7 +571,7 @@ textarea{min-height:120px;resize:vertical}
     <div class="card map-card">
       <div class="map-head"><h3>Rudolph’s trail &amp; houses</h3><span class="label" id="trailCount"></span></div>
       <div class="map-box"><svg id="trailMap" role="img" aria-label="Map of participating houses and Rudolph’s moves around Emerald Bay"></svg></div>
-      <div class="map-bar"><button data-zoom="trail:out" aria-label="Zoom out">−</button><button data-zoom="trail:in" aria-label="Zoom in">+</button><button class="wide" data-zoom="trail:reset" aria-label="Show the whole map">Fit</button><button class="wide play" id="replayBtn" data-replay aria-label="Replay Rudolph’s trail">▶ Play</button><span class="sp"></span><button class="wide" data-expand="trail" aria-label="Full screen map">Full screen</button></div>
+      <div class="map-bar"><button data-zoom="trail:out" aria-label="Zoom out">−</button><button data-zoom="trail:in" aria-label="Zoom in">+</button><button class="wide" data-zoom="trail:reset" aria-label="Show the whole map">Fit</button><button class="wide play" id="replayBtn" data-replay aria-label="Replay Rudolph’s trail">▶ Play</button><span class="sp"></span><button class="wide" data-expand="trail" aria-label="Full screen map">⛶ Expand</button></div>
       <div class="replay" id="replay" hidden>
         <div class="rcap" id="replayCap" aria-live="polite"></div>
         <div class="rbar"><span id="replayProg"></span></div>
@@ -876,7 +883,7 @@ class MapView{
   size(){const {W,H}=mapSize();if(this.W!==W||this.H!==H){this.W=W;this.H=H;this.reset(false)}}
   reset(apply=true){this.vb={x:0,y:0,w:this.W,h:this.H};if(apply)this.apply()}
   focus(fx,fy,w){this.size();const v=this.vb;v.w=w||this.W/3;v.h=v.w*this.H/this.W;v.x=fx*this.W-v.w/2;v.y=fy*this.H-v.h/2;this.clamp();this.apply()}
-  apply(){const v=this.vb;this.svg.setAttribute('viewBox',`${v.x} ${v.y} ${v.w} ${v.h}`)}
+  apply(){const v=this.vb;this.svg.setAttribute('viewBox',`${v.x} ${v.y} ${v.w} ${v.h}`);if(this.onView)this.onView()}
   clamp(){const v=this.vb;v.w=Math.min(this.W,Math.max(this.W/6,v.w));v.h=v.w*this.H/this.W;v.x=Math.min(this.W-v.w,Math.max(0,v.x));v.y=Math.min(this.H-v.h,Math.max(0,v.y))}
   zoom(f,cx,cy){const v=this.vb;if(cx==null){cx=v.x+v.w/2;cy=v.y+v.h/2}const nw=v.w*f;const k=nw/v.w;v.x=cx-(cx-v.x)*k;v.y=cy-(cy-v.y)*k;v.w=nw;this.clamp();this.apply()}
   pt(ev){const p=this.svg.createSVGPoint();p.x=ev.clientX;p.y=ev.clientY;const m=this.svg.getScreenCTM();return m?p.matrixTransform(m.inverse()):{x:0,y:0}}
@@ -1481,7 +1488,7 @@ function renderNow(){
   if(v==='privacy'){$('#privContact').innerHTML=S.live.config.contact&&!S.demo?`contact the organizer at <b>${esc(S.live.config.contact)}</b>.`:'contact the organizer (their contact info is on the Rules page once you’ve joined).';$('#privBack').setAttribute('href',gated?'#':'#rules')}
   document.querySelectorAll('[data-view]').forEach(s=>s.hidden=s.dataset.view!==v);
   document.querySelectorAll('[data-tab]').forEach(a=>{if(a.dataset.tab===v)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
-  rWho();rBanner();syncPush();if(S.thread)renderThread();requestAnimationFrame(fitTitles);requestAnimationFrame(syncCbar);
+  rWho();rBanner();syncPush();if(S.thread)renderThread();requestAnimationFrame(fitTitles);requestAnimationFrame(syncCbar);requestAnimationFrame(placePinBubble);
   if(v==='homes'){rTimeline(C);rHomes();drawTrail()}
   if(v==='leaders')rLeaders(C);
   if(v==='log')rLog();
@@ -1492,7 +1499,7 @@ function renderNow(){
   if(v==='gate')rGate();
   if(sheetMap&&sheetMap.redraw)sheetMap.redraw();
 }
-addEventListener('hashchange',()=>{stopReplay();document.querySelectorAll('.map-card.full').forEach(c=>{c.classList.remove('full');const b=c.querySelector('[data-expand]');if(b)b.textContent='Full screen'});document.body.style.overflow='';renderNow();scrollTo(0,0)});
+addEventListener('hashchange',()=>{stopReplay();document.querySelectorAll('.map-card.full').forEach(c=>{c.classList.remove('full');const b=c.querySelector('[data-expand]');if(b)b.textContent='⛶ Expand'});document.body.style.overflow='';renderNow();scrollTo(0,0)});
 
 /* ---------- writes ---------- */
 async function W(fn,okMsg){
@@ -1827,7 +1834,7 @@ $('#logForm').addEventListener('submit',async ev=>{ev.preventDefault();
 document.addEventListener('click',async e=>{
   const t=e.target;let el;
   if(el=t.closest('[data-zoom]')){const [w,a]=el.dataset.zoom.split(':');const m={trail:trailMap,sheet:sheetMap}[w];if(m){a==='in'?m.zoom(.7):a==='out'?m.zoom(1.4):m.reset()}return}
-  if(el=t.closest('[data-expand]')){const card=el.closest('.map-card');const on=!card.classList.contains('full');card.classList.toggle('full',on);document.body.style.overflow=on?'hidden':'';el.textContent=on?'Close':'Full screen';el.setAttribute('aria-label',on?'Close full screen map':'Full screen map');return}
+  if(el=t.closest('[data-expand]')){const card=el.closest('.map-card');const on=!card.classList.contains('full');card.classList.toggle('full',on);document.body.style.overflow=on?'hidden':'';el.textContent=on?'Close':'⛶ Expand';el.setAttribute('aria-label',on?'Close full screen map':'Full screen map');return}
   if(el=t.closest('[data-season]')){S.season=el.dataset.season===curSeason()?null:el.dataset.season;closeSheet();renderNow();scrollTo(0,0);return}
   if(t.closest('[data-gal-add]')){
     const sh=openSheet(`${shTop('Add to the gallery',esc(viewSeason())+' game')}
@@ -1989,8 +1996,20 @@ function makeDemo(){
 /* ---------- boot ---------- */
 trailMap=new MapView($('#trailMap'),'trail');
 trailMap.onTap=(p,t)=>{const ev=t&&t.closest&&t.closest('[data-ev]');if(ev){openEvent(ev.dataset.ev);return}
-  const g=t&&t.closest&&t.closest('[data-home]');selHome=g?g.dataset.home:null;renderNow();
-  if(g){const li=document.querySelector(`#homeList [data-home="${CSS.escape(selHome)}"]`);li&&li.scrollIntoView({behavior:'smooth',block:'center'})}};
+  const g=t&&t.closest&&t.closest('[data-home]');selHome=g?g.dataset.home:null;renderNow();};
+// Tapping a house pin shows a small bubble on the map with a link to the family's profile.
+function placePinBubble(){const box=$('#trailMap')?.parentElement;if(!box)return;let bub=box.querySelector('.pbub');
+  const h=selHome&&homeById(selHome),g=h&&$('#trailMap').querySelector(`g[data-home="${CSS.escape(selHome)}"]`);
+  if(!h||!g||$('#v-homes').hidden){if(bub)bub.hidden=true;return}
+  if(!bub){bub=document.createElement('button');bub.type='button';bub.className='pbub';box.appendChild(bub);bub.addEventListener('click',e=>{e.stopPropagation();if(selHome)openProfile(selHome)})}
+  if(bub.dataset.id!==h.id||bub.dataset.v!==String(h.photo||'')+h.family){bub.dataset.id=h.id;bub.dataset.v=String(h.photo||'')+h.family;
+    bub.innerHTML=`${avatar(h)}<span><b>${esc(h.number)} · ${esc(h.family)}</b><small>View profile</small></span><span class="chev" aria-hidden="true">›</span>`;bub.setAttribute('aria-label',`View ${h.family}’s profile`)}
+  const r=g.getBoundingClientRect(),br=box.getBoundingClientRect();const cx=r.left+r.width/2-br.left,cy=r.top-br.top;
+  if(cx<0||cx>br.width||cy<0||cy>br.height){bub.hidden=true;return}
+  bub.hidden=false;const half=Math.min(bub.offsetWidth/2,br.width/2-6);const L=Math.min(Math.max(cx,half+6),br.width-half-6);
+  bub.style.left=L+'px';bub.style.top=cy+'px';bub.style.setProperty('--ax',(cx-L+half)+'px');bub.classList.toggle('below',cy<bub.offsetHeight+24);
+  if(bub.classList.contains('below'))bub.style.top=(r.bottom-br.top)+'px'}
+trailMap.onView=()=>requestAnimationFrame(placePinBubble);
 renderNow();
 /* ---------- Firebase data layer ---------- */
 const CFG=window.RG_FIREBASE||{};

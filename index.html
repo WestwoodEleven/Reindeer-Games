@@ -32,6 +32,7 @@ body{margin:0}img{max-width:100%}[hidden]{display:none!important}
   --bg:#F7F0E1; --surface:#FFFFFF; --ink:#2B1A12; --muted:#6E5A4E; --line:#DCCCAF; --edge:#2B1A12;
   --accent:#1D5C3A; --accent-ink:#FFFFFF; --nose:#B3122E; --nose-soft:#F6DCD8;
   --hdr:#B3122E; --hdr-ink:#FFFFFF; --status:#1D5C3A; --tile:#7E0C20; --wire:#1B3A26; --knit-cream:#F7F0E1;
+  --post-r:#FBE3E3; --post-r-line:#EDB9BD; --post-r-ink:#8E0E25; --post-g:#E1EFE5; --post-g-line:#B5D3BE; --post-g-ink:#15462C; --stripe-r:#B3122E; --stripe-g:#1D5C3A;
   --sea:#A7D4CC; --sea-ink:#2D6C66; --land:#E3EBDD; --sand:#E9D7AE; --park:#C9DDBE;
   --road:#FFFFFF; --road-edge:#C3CEC6; --pin:#FFFFFF;
   --map-l:inline; --map-d:none;
@@ -43,12 +44,14 @@ body{margin:0}img{max-width:100%}[hidden]{display:none!important}
   --bg:#1C1511; --surface:#2A201A; --ink:#F7F0E1; --muted:#C4B29C; --line:#4A3A2E; --edge:#0B0705;
   --accent:#5DBB85; --accent-ink:#0E2618; --nose:#E5404F; --nose-soft:#42201F;
   --hdr:#8E0F24; --hdr-ink:#FFFFFF; --status:#174A30; --tile:#5C0918; --wire:#0E2116; --knit-cream:#E9DFCB;
+  --post-r:#3A1F1F; --post-r-line:#5E3234; --post-r-ink:#FF9AA5; --post-g:#1B2E23; --post-g-line:#2F4C3A; --post-g-ink:#8FD6A9; --stripe-r:#C8243B; --stripe-g:#2E7A50;
   --sea:#103539; --sea-ink:#79B9B1; --land:#16271F; --sand:#3B3423; --park:#1D3524;
   --road:#2B4139; --road-edge:#1A2E28; --pin:#2A201A; --map-l:none; --map-d:inline; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#1C1511; --surface:#2A201A; --ink:#F7F0E1; --muted:#C4B29C; --line:#4A3A2E; --edge:#0B0705;
   --accent:#5DBB85; --accent-ink:#0E2618; --nose:#E5404F; --nose-soft:#42201F;
   --hdr:#8E0F24; --hdr-ink:#FFFFFF; --status:#174A30; --tile:#5C0918; --wire:#0E2116; --knit-cream:#E9DFCB;
+  --post-r:#3A1F1F; --post-r-line:#5E3234; --post-r-ink:#FF9AA5; --post-g:#1B2E23; --post-g-line:#2F4C3A; --post-g-ink:#8FD6A9; --stripe-r:#C8243B; --stripe-g:#2E7A50;
   --sea:#103539; --sea-ink:#79B9B1; --land:#16271F; --sand:#3B3423; --park:#1D3524;
   --road:#2B4139; --road-edge:#1A2E28; --pin:#2A201A; --map-l:none; --map-d:inline; color-scheme:dark}
 *{box-sizing:border-box}
@@ -150,12 +153,23 @@ main{padding-block:16px calc(96px + env(safe-area-inset-bottom,0px))}
 .falert{display:flex;gap:10px;align-items:flex-start;text-align:left;width:100%;font:inherit;background:var(--status);color:#fff;border:2px solid var(--edge);border-radius:14px;padding:12px;box-shadow:3px 3px 0 var(--edge)}
 .falert.done{background:var(--surface);color:var(--ink);cursor:pointer}
 .falert b{display:block;font-weight:700}
+.falert b b{display:inline}
 .falert small{display:block;font-size:.8rem;opacity:.85;margin-top:2px}
 .fic{width:30px;height:30px;flex:none;border-radius:50%;background:var(--nose);color:#fff;border:2px solid var(--edge);display:grid;place-items:center;font-weight:700}
 .falert.done .fic{background:var(--accent)}
 .fpost{background:var(--surface);border:2px solid var(--edge);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px}
 .fwho{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:.8rem;color:var(--muted)}
 .fwho b{color:var(--ink);font-size:.95rem}
+/* Sweater cards: each post keeps a red or green tint with a knit stripe on top. */
+.knit{position:relative;overflow:hidden;padding-top:20px}
+.knit::before{content:"";position:absolute;left:0;right:0;top:0;height:9px;background-color:var(--stripe-r);background-image:linear-gradient(135deg,var(--bg) 25%,transparent 25%),linear-gradient(225deg,var(--bg) 25%,transparent 25%);background-size:9px 9px}
+.fpost.tr{background:var(--post-r)}.fpost.tg{background:var(--post-g)}
+.fpost.tg::before{background-color:var(--stripe-g)}
+.fpost.tr .fwho b{color:var(--post-r-ink)}.fpost.tg .fwho b{color:var(--post-g-ink)}
+.fpost.tr .freacts button:not(.on),.fpost.tg .freacts button:not(.on),.fpost.tr .freplybtn,.fpost.tg .freplybtn{background:var(--surface)}
+.fpost.tr .freacts button:not(.on),.fpost.tr .freplybtn{border-color:var(--post-r-line)}
+.fpost.tg .freacts button:not(.on),.fpost.tg .freplybtn{border-color:var(--post-g-line)}
+.fpost.tr .freplies{border-top-color:var(--post-r-line)}.fpost.tg .freplies{border-top-color:var(--post-g-line)}
 .fmore{background:none;border:0;color:var(--muted);font-size:1.2rem;line-height:1;padding:2px 6px;margin-left:4px;cursor:pointer}
 .ftext{white-space:pre-wrap;overflow-wrap:anywhere}
 .fthumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:4px;margin-top:6px}
@@ -1128,6 +1142,7 @@ function renderThread(){const l=$('#thList');if(!S.thread||!l||$('#sheetWrap').h
   l.innerHTML=rs.length?rs.map(r=>replyLine(r,true)).join(''):'<p class="muted small" style="margin:0">No replies yet. Start the conversation.</p>';
   l.scrollTop=l.scrollHeight}
 async function delRepliesOf(postId){for(const r of (D().replies||[]).filter(x=>x.postId===postId))await col('replies').doc(r.id).delete().catch(()=>{})}
+const tint=id=>{let h=0;for(const c of String(id))h=(h*31+c.charCodeAt(0))|0;return (h&1)?'tr':'tg'};
 const postGone=id=>!(D().posts||[]).some(p=>p.id===id);
 function rFeed(C){
   const photos=S.feedMode==='photos';
@@ -1145,12 +1160,12 @@ function rFeed(C){
   const thumbs=ms=>ms.length?`<div class="fthumbs">${ms.slice(0,4).map(m=>`<button data-media="${esc(m.id)}" aria-label="Open ${m.type}">${m.type==='image'?`<img src="${esc(murl(m))}" alt="" loading="lazy">`:`<video src="${esc(murl(m))}#t=0.1" preload="metadata" muted playsinline></video><span class="play">VIDEO</span>`}</button>`).join('')}</div>`:'';
   const fam=h=>h?esc(h.family):'The organizer';
   $('#feedList').innerHTML=items.length?items.slice(0,150).map(it=>{
-    if(it.k==='sealed'&&it.e.kind==='start'){const e=it.e;return `<div class="falert"><span class="fic">★</span><div><b>Let the games begin! Rudolph is on the loose!</b><small>${esc(ago(e.at))} · Find him and steal him.</small></div></div>`}
-    if(it.k==='sealed'){const e=it.e;return `<div class="falert"><span class="fic">!</span><div><b>${e.from?`Rudolph was taken from ${esc(fam(homeById(e.from)))}`:'Rudolph was stolen'}</b><small>${esc(ago(e.at))} · Who has him now? Go look.</small></div></div>`}
-    if(it.k==='steal'){const e=it.e;return `<button class="falert done" data-ev="${esc(e.id)}"><span class="fic">${e.kind==='start'?'★':'#'}</span><div><b>${e.kind==='start'?'Let the games begin! Rudolph is on the loose!':caseLine(e)}</b><small>${e.kind==='start'&&e.to?`Started at ${esc(fam(homeById(e.to)))} · `:''}${esc(fmt(e.at))}${e.note&&!blocked(e.by)?` · “${esc(e.note)}”`:''}</small>${thumbs(mediaFor(e.id))}</div></button>`}
-    if(it.k==='photo'){const m=it.m,h=homeById(m.byHome);return `<div class="fpost"><div class="fwho"><b>${fam(h)}</b><span>${esc(ago(m.at))}</span></div>${m.caption?`<p>${esc(m.caption)}</p>`:''}${thumbs([m])}</div>`}
+    if(it.k==='sealed'&&it.e.kind==='start'){const e=it.e;return `<div class="falert knit"><span class="fic">★</span><div><b>Let the games begin! Rudolph is on the loose!</b><small>${esc(ago(e.at))} · Find him and steal him.</small></div></div>`}
+    if(it.k==='sealed'){const e=it.e;return `<div class="falert knit"><span class="fic">!</span><div><b>${e.from?`Rudolph was taken from ${esc(fam(homeById(e.from)))}`:'Rudolph was stolen'}</b><small>${esc(ago(e.at))} · Who has him now? Go look.</small></div></div>`}
+    if(it.k==='steal'){const e=it.e;return `<button class="falert done knit" data-ev="${esc(e.id)}"><span class="fic">${e.kind==='start'?'★':'#'}</span><div><b>${e.kind==='start'?'Let the games begin! Rudolph is on the loose!':caseLine(e)}</b><small>${e.kind==='start'&&e.to?`Started at ${esc(fam(homeById(e.to)))} · `:''}${esc(fmt(e.at))}${e.note&&!blocked(e.by)?` · “${esc(e.note)}”`:''}</small>${thumbs(mediaFor(e.id))}</div></button>`}
+    if(it.k==='photo'){const m=it.m,h=homeById(m.byHome);return `<div class="fpost knit ${tint(m.id)}"><div class="fwho"><b>${fam(h)}</b><span>${esc(ago(m.at))}</span></div>${m.caption?`<p>${esc(m.caption)}</p>`:''}${thumbs([m])}</div>`}
     const p=it.p,h=homeById(p.byHome),ms=D().media.filter(m=>m.postId===p.id&&!blocked(m.by));const mine=p.by===S.me;
-    return `<div class="fpost"><div class="fwho"><b>${fam(h)}${mine?' <span class="you">You</span>':''}</b><span>${esc(ago(p.at))}<button class="fmore" data-postmenu="${esc(p.id)}" aria-label="More options">⋯</button></span></div>${p.text?`<p class="ftext">${esc(p.text)}</p>`:''}${thumbs(ms)}
+    return `<div class="fpost knit ${tint(p.id)}"><div class="fwho"><b>${fam(h)}${mine?' <span class="you">You</span>':''}</b><span>${esc(ago(p.at))}<button class="fmore" data-postmenu="${esc(p.id)}" aria-label="More options">⋯</button></span></div>${p.text?`<p class="ftext">${esc(p.text)}</p>`:''}${thumbs(ms)}
       <div class="freacts">${(()=>{const tl=reactTally(p);const ems=[...new Set([...Object.keys(tl).sort((a,b)=>tl[b].n-tl[a].n),...DEFAULT_REACTS])].slice(0,10);
         return ems.map(em=>{const x=tl[em]||{n:0,mine:false};return `<button class="${x.mine?'on':''}" data-react="${esc(p.id)}|${esc(em)}" aria-label="React ${esc(em)}">${em}${x.n?` ${x.n}`:''}</button>`}).join('')+`<button class="fadd" data-reactpick="${esc(p.id)}" aria-label="Add a different reaction">＋</button>`})()}</div>${(()=>{const rs=repliesFor(p.id);if(!rs.length&&!canReply())return'';
         return `<div class="freplies">${rs.length>2?`<button class="linkbtn fmorer" data-thread="${esc(p.id)}">View all ${rs.length} replies</button>`:''}${rs.slice(-2).map(r=>replyLine(r,false)).join('')}${canReply()?`<button class="freplybtn" data-thread="${esc(p.id)}">${rs.length?'Reply…':'Be the first to reply…'}</button>`:''}</div>`})()}</div>`}).join('')

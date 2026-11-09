@@ -16,9 +16,11 @@ async function familyOf(homeId) {
 }
 
 // Send to every registered phone except the person who caused the alert.
-async function sendAll({ title, body, exceptUid, link }) {
+async function sendAll({ title, body, exceptUid, link, onlyUids }) {
   const snap = await db.collection('devices').get();
-  const tokens = snap.docs.filter(d => d.data().uid !== exceptUid).map(d => d.id);
+  const tokens = snap.docs
+    .filter(d => d.data().uid !== exceptUid && (!onlyUids || onlyUids.has(d.data().uid)))
+    .map(d => d.id);
   for (let i = 0; i < tokens.length; i += 500) {
     const batch = tokens.slice(i, i + 500);
     const res = await getMessaging().sendEachForMulticast({
@@ -102,6 +104,28 @@ exports.mediaAlert = onDocumentCreated('media/{id}', async (event) => {
     title: fam,
     body: what === 'video' ? 'Shared a video.' : 'Shared a photo.',
     exceptUid: m.by,
+    link: '#feed',
+  });
+});
+
+// Replies alert the post's author and anyone else who replied to that post.
+exports.replyAlert = onDocumentCreated('replies/{id}', async (event) => {
+  const r = event.data && event.data.data();
+  if (!r || !r.postId) return;
+  const post = await db.doc('posts/' + r.postId).get();
+  if (!post.exists) return;
+  const who = new Set([post.data().by]);
+  const others = await db.collection('replies').where('postId', '==', r.postId).get();
+  others.docs.forEach(d => who.add(d.data().by));
+  who.delete(r.by);
+  if (!who.size) return;
+  const fam = (await familyOf(r.byHome)) || 'A neighbor';
+  const text = (r.text || '').trim();
+  await sendAll({
+    title: `${fam} replied`,
+    body: text.length > 140 ? text.slice(0, 137) + '…' : text,
+    exceptUid: r.by,
+    onlyUids: who,
     link: '#feed',
   });
 });

@@ -152,6 +152,16 @@ main{padding-block:16px calc(96px + env(safe-area-inset-bottom,0px))}
 .fthumbs .play{position:absolute;left:4px;bottom:4px;font:600 .6rem var(--f-mono);background:var(--nose);color:#fff;border-radius:5px;padding:1px 5px}
 .freacts{display:flex;gap:6px;flex-wrap:wrap}
 .freacts .fadd{font-weight:700;color:var(--muted)}
+.freplies{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:8px}
+.frep{font-size:.92rem;line-height:1.35;overflow-wrap:anywhere}
+.frep small{display:block;color:var(--muted);font-size:.75rem;margin-top:1px}
+.frep small .linkbtn{font-size:.75rem;padding:0;margin-right:8px}
+.fmorer{align-self:flex-start;padding:0;font-size:.85rem}
+.freplybtn{align-self:stretch;text-align:left;border:1.5px solid var(--line);background:var(--bg);border-radius:999px;padding:7px 12px;font:500 .9rem var(--f-body);color:var(--muted);cursor:pointer}
+.thpost{background:var(--bg);border-radius:12px;padding:10px 12px;margin:0}
+.thlist{display:flex;flex-direction:column;gap:12px;max-height:46vh;overflow:auto;padding:2px}
+.thform{display:flex;gap:8px;align-items:flex-end}
+.thform textarea{flex:1;resize:none;min-height:42px;font:inherit;border:2px solid var(--edge);border-radius:12px;padding:9px 12px;background:var(--surface);color:var(--ink)}
 .epick{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:4px}
 .epick button{aspect-ratio:1;border:0;background:var(--bg);border-radius:10px;font-size:1.5rem;cursor:pointer}
 .epick button:active{background:var(--line)}
@@ -636,7 +646,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const H72=72*3600e3, H12=12*3600e3;
 
 /* ---------- state ---------- */
-const S={feedMode:'all',live:{config:{},homes:[],events:[],media:[],posts:[]},ready:false,demo:null,demoOrg:false,
+const S={feedMode:'all',live:{config:{},homes:[],events:[],media:[],posts:[],replies:[]},ready:false,demo:null,demoOrg:false,
   me:null,isOwner:false,myJoin:undefined,joins:[],blocks:[],reports:[],members:[],memberHome:null,canWrite:null,db:null,assets:null,offline:false,readOnly:false};
 const D=()=>S.demo||S.live;
 const isOrg=()=>S.demo?S.demoOrg:S.isOwner;
@@ -1082,6 +1092,33 @@ function openReactPicker(id){
   sh.querySelector('.epick').addEventListener('click',async e=>{const b=e.target.closest('[data-pick]');if(!b)return;closeSheet();await toggleReact(id,b.dataset.pick)});
   sh.querySelector('#ecForm').addEventListener('submit',async e=>{e.preventDefault();const em=firstEmoji($('#ecIn').value);if(!em){toast('That doesn’t look like an emoji. Use the emoji keyboard.');return}closeSheet();await toggleReact(id,em)});
 }
+// Replies to feed posts.
+const repliesFor=id=>(D().replies||[]).filter(r=>r.postId===id&&!blocked(r.by)).sort((a,b)=>String(a.at).localeCompare(String(b.at)));
+const canReply=()=>S.demo||(canWrite()&&(!isPast()||isOrg()));
+function replyLine(r,full){const h=homeById(r.byHome),mine=r.by===S.me;
+  const acts=full&&!S.demo?((mine||isOrg())?`<button class="linkbtn" data-rdel="${esc(r.id)}">Delete</button>`:'')+(!mine&&canWrite()?`<button class="linkbtn" data-report="reply|${esc(r.id)}">Report</button>${isOrg()?'':`<button class="linkbtn" data-block="${esc(r.by)}|${esc(h?h.family:'')}">Block</button>`}`:''):'';
+  return `<div class="frep"><b>${h?esc(h.family):'The organizer'}${mine&&full?' <span class="you">You</span>':''}</b> <span class="frt">${esc(r.text)}</span><small>${esc(ago(r.at))}${acts?` · ${acts}`:''}</small></div>`}
+function openThread(id){const p=(D().posts||[]).find(x=>x.id===id);if(!p)return;const h=homeById(p.byHome);
+  S.thread=id;
+  const sh=openSheet(`${shTop('Replies',h?esc(h.family):'Post')}${p.text?`<p class="ftext thpost">${esc(p.text)}</p>`:''}
+    <div class="thlist" id="thList"></div>
+    ${canReply()?`<form id="thForm" class="thform" novalidate><label class="sr" for="thIn">Write a reply</label><textarea id="thIn" rows="1" maxlength="500" placeholder="Write a reply…" enterkeyhint="send"></textarea><button class="btn red" type="submit">Send</button></form>`:''}`);
+  renderThread();
+  const f=sh.querySelector('#thForm');if(!f)return;const inp=f.querySelector('#thIn');
+  const grow=()=>{inp.style.height='auto';inp.style.height=Math.min(inp.scrollHeight,140)+'px'};inp.addEventListener('input',grow);
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();f.requestSubmit()}});
+  f.addEventListener('submit',async e=>{e.preventDefault();const text=inp.value.trim();if(!text)return;
+    if(S.demo){toast('The example game doesn’t save changes.');return}
+    const btn=f.querySelector('button');btn.disabled=true;
+    const ok=await W(()=>col('replies').add({postId:id,season:p.season||viewSeason(),by:S.me,byHome:myHome()?.id||null,text,at:new Date().toISOString(),createdAt:Date.now()}));
+    btn.disabled=false;if(ok){inp.value='';grow()}});
+}
+function renderThread(){const l=$('#thList');if(!S.thread||!l||$('#sheetWrap').hidden){S.thread=null;return}
+  if(postGone(S.thread)&&!S.demo){l.innerHTML='<p class="muted small">This post was deleted.</p>';return}
+  const rs=repliesFor(S.thread);
+  l.innerHTML=rs.length?rs.map(r=>replyLine(r,true)).join(''):'<p class="muted small" style="margin:0">No replies yet. Start the conversation.</p>';
+  l.scrollTop=l.scrollHeight}
+async function delRepliesOf(postId){for(const r of (D().replies||[]).filter(x=>x.postId===postId))await col('replies').doc(r.id).delete().catch(()=>{})}
 const postGone=id=>!(D().posts||[]).some(p=>p.id===id);
 function rFeed(C){
   const photos=S.feedMode==='photos';
@@ -1105,7 +1142,8 @@ function rFeed(C){
     const p=it.p,h=homeById(p.byHome),ms=D().media.filter(m=>m.postId===p.id&&!blocked(m.by));const mine=p.by===S.me;
     return `<div class="fpost"><div class="fwho"><b>${fam(h)}${mine?' <span class="you">You</span>':''}</b><span>${esc(ago(p.at))}<button class="fmore" data-postmenu="${esc(p.id)}" aria-label="More options">⋯</button></span></div>${p.text?`<p class="ftext">${esc(p.text)}</p>`:''}${thumbs(ms)}
       <div class="freacts">${(()=>{const tl=reactTally(p);const ems=[...new Set([...Object.keys(tl).sort((a,b)=>tl[b].n-tl[a].n),...DEFAULT_REACTS])].slice(0,10);
-        return ems.map(em=>{const x=tl[em]||{n:0,mine:false};return `<button class="${x.mine?'on':''}" data-react="${esc(p.id)}|${esc(em)}" aria-label="React ${esc(em)}">${em}${x.n?` ${x.n}`:''}</button>`}).join('')+`<button class="fadd" data-reactpick="${esc(p.id)}" aria-label="Add a different reaction">＋</button>`})()}</div></div>`}).join('')
+        return ems.map(em=>{const x=tl[em]||{n:0,mine:false};return `<button class="${x.mine?'on':''}" data-react="${esc(p.id)}|${esc(em)}" aria-label="React ${esc(em)}">${em}${x.n?` ${x.n}`:''}</button>`}).join('')+`<button class="fadd" data-reactpick="${esc(p.id)}" aria-label="Add a different reaction">＋</button>`})()}</div>${(()=>{const rs=repliesFor(p.id);if(!rs.length&&!canReply())return'';
+        return `<div class="freplies">${rs.length>2?`<button class="linkbtn fmorer" data-thread="${esc(p.id)}">View all ${rs.length} replies</button>`:''}${rs.slice(-2).map(r=>replyLine(r,false)).join('')}${canReply()?`<button class="freplybtn" data-thread="${esc(p.id)}">${rs.length?'Reply…':'Be the first to reply…'}</button>`:''}</div>`})()}</div>`}).join('')
     :`<div class="empty"><h3>Nothing here yet</h3><p>Steals show up here automatically. Post a message or photo to get things going.</p></div>`;
 }
 const DRAFT=`The basics (more to come):
@@ -1138,8 +1176,8 @@ function rAdmin(C){
   const nb=$('#newSeason');nb.hidden=isPast();nb.dataset.next=next;if(!nb.dataset.armed)nb.textContent=`Start the ${next} game`;
   const open=S.reports.filter(r=>r.status==='open').sort((a,b)=>String(b.at).localeCompare(String(a.at)));
   $('#reportCount').textContent=open.length?`${open.length} open`:'';
-  $('#reportList').innerHTML=open.length?open.map(r=>{const tgt=r.type==='media'?D().media.find(m=>m.id===r.targetId):r.type==='post'?(D().posts||[]).find(p=>p.id===r.targetId):D().events.find(e=>e.id===r.targetId);
-    const what=r.type==='media'?(tgt?.type==='video'?'Video':'Photo'):r.type==='post'?'Post':'Steal note';const owner=homeById(tgt?.byHome)||homeById(S.members.find(m=>m.id===tgt?.by)?.homeId);
+  $('#reportList').innerHTML=open.length?open.map(r=>{const tgt=r.type==='media'?D().media.find(m=>m.id===r.targetId):r.type==='post'?(D().posts||[]).find(p=>p.id===r.targetId):r.type==='reply'?(D().replies||[]).find(x=>x.id===r.targetId):D().events.find(e=>e.id===r.targetId);
+    const what=r.type==='media'?(tgt?.type==='video'?'Video':'Photo'):r.type==='post'?'Post':r.type==='reply'?'Reply':'Steal note';const owner=homeById(tgt?.byHome)||homeById(S.members.find(m=>m.id===tgt?.by)?.homeId);
     return `<li><span class="hno">${esc(what)}</span><div><b>${esc(r.reason)}</b><div class="case-meta">${tgt?`Posted by ${esc(owner?.family||'someone')}`:'Already removed'} · reported by ${esc(homeById(r.byHome)?.family||'someone')} · ${esc(ago(r.at))}${r.note?` · “${esc(r.note)}”`:''}</div></div>
       <div class="row">${tgt?`<button class="btn sm" data-rview="${esc(r.id)}">View</button><button class="btn sm danger" data-rremove="${esc(r.id)}">Remove</button>`:''}<button class="btn sm" data-rdismiss="${esc(r.id)}">Dismiss</button></div></li>`}).join('')
     :`<li class="muted small">No reports. Players can report any photo, video or note.</li>`;
@@ -1165,7 +1203,7 @@ function renderNow(){
   if(v==='privacy'){$('#privContact').innerHTML=S.live.config.contact&&!S.demo?`contact the organizer at <b>${esc(S.live.config.contact)}</b>.`:'contact the organizer (their contact info is on the Rules page once you’ve joined).';$('#privBack').setAttribute('href',gated?'#':'#rules')}
   document.querySelectorAll('[data-view]').forEach(s=>s.hidden=s.dataset.view!==v);
   document.querySelectorAll('[data-tab]').forEach(a=>{if(a.dataset.tab===v)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
-  rWho();rBanner();syncPush();
+  rWho();rBanner();syncPush();if(S.thread)renderThread();
   if(v==='homes'){rTimeline(C);rHomes();drawTrail()}
   if(v==='leaders')rBoard(C);
   if(v==='log')rLog();
@@ -1291,7 +1329,7 @@ function openEventForm(e,preset={}){
 }
 function modLinks(type,id,uid,fam){return `<div class="row" style="justify-content:center;gap:16px"><button class="linkbtn" data-report="${type}|${esc(id)}">Report</button>${uid===S.me||isOrg()?'':`<button class="linkbtn" data-block="${esc(uid)}|${esc(fam)}">Block this person</button>`}</div>`}
 function openReport(type,id){
-  const what=type==='media'?'photo or video':type==='post'?'post':'note';
+  const what=type==='media'?'photo or video':type==='post'?'post':type==='reply'?'reply':'note';
   const sh=openSheet(`${shTop('Report this '+what,'Goes to the organizer')}
     <div class="stack" role="radiogroup" aria-label="Reason">
       ${['Inappropriate or offensive','Shows someone’s private property or people without permission','Spam or off-topic','Something else'].map((r,i)=>`<label class="row" style="gap:10px;align-items:center"><input type="radio" name="rr" value="${esc(r)}"${i===0?' checked':''}> ${esc(r)}</label>`).join('')}
@@ -1313,6 +1351,8 @@ function openDeleteAccount(){
     if($('#daConfirm').value.trim().toUpperCase()!=='DELETE'){toast('Type DELETE to confirm.');return}
     const b=$('#daGo');b.disabled=true;b.textContent='Deleting…';const db=S.db,me=S.me;
     try{
+      const reps=await db.collection('replies').where('by','==',me).get();
+      for(const d of reps.docs)await d.ref.delete();
       const posts=await db.collection('posts').where('by','==',me).get();
       for(const d of posts.docs){for(const m of D().media.filter(x=>x.postId===d.id))await delMedia(m);await d.ref.delete()}
       for(const m of D().media.filter(x=>x.by===me))await delMedia(m);
@@ -1452,18 +1492,21 @@ document.addEventListener('click',async e=>{
   if(el=t.closest('[data-feedmode]')){S.feedMode=el.dataset.feedmode;renderNow();return}
   if(el=t.closest('[data-react]')){if(S.demo){toast('The example game doesn’t save changes.');return}if(!canWrite())return;
     const i=el.dataset.react.indexOf('|');await toggleReact(el.dataset.react.slice(0,i),el.dataset.react.slice(i+1));return}
+  if(el=t.closest('[data-thread]')){openThread(el.dataset.thread);return}
+  if(el=t.closest('[data-rdel]')){if(!el.dataset.armed){el.dataset.armed=1;el.textContent='Tap again to delete';return}
+    await W(()=>col('replies').doc(el.dataset.rdel).delete(),'Reply deleted');return}
   if(el=t.closest('[data-reactpick]')){if(S.demo){toast('The example game doesn’t save changes.');return}if(!canWrite())return;openReactPicker(el.dataset.reactpick);return}
   if(el=t.closest('[data-postmenu]')){const p=(D().posts||[]).find(x=>x.id===el.dataset.postmenu);if(!p)return;const h=homeById(p.byHome),mine=p.by===S.me;
     const sh=openSheet(`${shTop(h?esc(h.family):'Post',esc(fmt(p.at)))}${p.text?`<p class="ftext">${esc(p.text)}</p>`:''}
       ${(mine||isOrg())&&!S.demo?`<button class="btn danger" id="pDel">Delete post</button>`:''}${!mine&&!S.demo&&canWrite()?modLinks('post',p.id,p.by,h?h.family:''):''}`);
     const d=sh.querySelector('#pDel');if(d)d.addEventListener('click',async()=>{if(!d.dataset.armed){d.dataset.armed=1;d.textContent='Tap again to delete';return}
-      if(await W(async()=>{for(const m of D().media.filter(x=>x.postId===p.id))await delMedia(m);await col('posts').doc(p.id).delete()},'Post deleted'))closeSheet()});
+      if(await W(async()=>{await delRepliesOf(p.id);for(const m of D().media.filter(x=>x.postId===p.id))await delMedia(m);await col('posts').doc(p.id).delete()},'Post deleted'))closeSheet()});
     return}
-  if(el=t.closest('[data-rview]')){const r=S.reports.find(x=>x.id===el.dataset.rview);if(r){if(r.type==='media')openMedia(r.targetId);else if(r.type==='post'){const p=(D().posts||[]).find(x=>x.id===r.targetId);if(p)openSheet(`${shTop('Reported post',esc(fmt(p.at)))}<p class="ftext">${esc(p.text||'(photo only)')}</p>`)}else openEvent(r.targetId)}return}
+  if(el=t.closest('[data-rview]')){const r=S.reports.find(x=>x.id===el.dataset.rview);if(r){if(r.type==='media')openMedia(r.targetId);else if(r.type==='post'){const p=(D().posts||[]).find(x=>x.id===r.targetId);if(p)openSheet(`${shTop('Reported post',esc(fmt(p.at)))}<p class="ftext">${esc(p.text||'(photo only)')}</p>`)}else if(r.type==='reply'){const x=(D().replies||[]).find(y=>y.id===r.targetId);if(x)openSheet(`${shTop('Reported reply',esc(fmt(x.at)))}<p class="ftext">${esc(x.text)}</p>`)}else openEvent(r.targetId)}return}
   if(el=t.closest('[data-rdismiss]')){await W(()=>col('reports').doc(el.dataset.rdismiss).update({status:'dismissed'}),'Dismissed');return}
   if(el=t.closest('[data-rremove]')){if(!el.dataset.armed){el.dataset.armed=1;el.textContent='Tap to confirm';return}
     const r=S.reports.find(x=>x.id===el.dataset.rremove);if(!r)return;
-    await W(async()=>{if(r.type==='media'){const m=D().media.find(x=>x.id===r.targetId);if(m)await delMedia(m)}else if(r.type==='post'){for(const m of D().media.filter(x=>x.postId===r.targetId))await delMedia(m);await col('posts').doc(r.targetId).delete()}else await col('steals').doc(r.targetId).update({note:''});
+    await W(async()=>{if(r.type==='media'){const m=D().media.find(x=>x.id===r.targetId);if(m)await delMedia(m)}else if(r.type==='post'){await delRepliesOf(r.targetId);for(const m of D().media.filter(x=>x.postId===r.targetId))await delMedia(m);await col('posts').doc(r.targetId).delete()}else if(r.type==='reply'){await col('replies').doc(r.targetId).delete()}else await col('steals').doc(r.targetId).update({note:''});
       await col('reports').doc(r.id).update({status:'removed'})},'Removed');return}
   if(el=t.closest('[data-report]')){const [type,id]=el.dataset.report.split('|');openReport(type,id);return}
   if(el=t.closest('[data-block]')){const [uid,fam]=el.dataset.block.split('|');
@@ -1554,7 +1597,9 @@ function makeDemo(){
     E('7','steal','h','d',day(1,21),'Wrapped him in lights for disguise.'),E('8','steal','d','a',day(0,7))];
   const P=(id,by,text,h,r={})=>({id,by:'x-'+by,byHome:by,text,at:day(0,h),season:String(new Date().getFullYear()),reactions:r});
   const posts=[P('p1','b','Wasn’t us this time. Our ladder is suspiciously missing though.',8,{laugh:['a','c','e'],tree:['f']}),P('p2','a','Our lights are up. Bring him here, we dare you.',6,{tree:['b','c','d','e']}),P('p3','e','Anyone else hear sleigh bells on Coast Highway last night?',5)];
-  return{config:{start:null,end:null,rules:''},homes,events,media:[],posts};
+  const R=(id,postId,by,text,minsAgo)=>({id,postId,by:'x-'+by,byHome:by,text,at:new Date(Date.now()-minsAgo*6e4).toISOString()});
+  const replies=[R('r1','p1','g','Sure, Okafors. Sure.',14),R('r2','p1','a','Our ladder is ALSO missing. Coincidence?',9),R('r3','p1','b','Okay fine, we borrowed it. Returning it tonight.',3),R('r4','p2','d','Challenge accepted.',40)];
+  return{config:{start:null,end:null,rules:''},homes,events,media:[],posts,replies};
 }
 
 /* ---------- boot ---------- */
@@ -1591,6 +1636,7 @@ function startMain(){
   if(mainOn)return;mainOn=true;const db=S.db;pushInit();let got=0;const done=()=>{if(++got>=4)S.ready=true;render()};
   const err=e=>{console.error(e);if(e&&e.code==='permission-denied'){mainOn=false}S.netErr=e&&e.code==='unavailable';render()};
   subs.push(db.collection('posts').onSnapshot(q=>{S.live.posts=q.docs.map(d=>({...d.data(),id:d.id}));render()},err));
+  subs.push(db.collection('replies').onSnapshot(q=>{S.live.replies=q.docs.map(d=>({...d.data(),id:d.id}));render()},err));
   subs.push(db.doc('config/game').onSnapshot(d=>{S.live.config=d.exists?{...d.data()}:{};done()},err));
   subs.push(db.collection('homes').onSnapshot(q=>{S.live.homes=q.docs.map(d=>({...d.data(),id:d.id}));done();syncIndex()},err));
   subs.push(db.collection('steals').onSnapshot(q=>{S.live.events=q.docs.map(d=>({...d.data(),id:d.id}));done()},err));
@@ -1602,7 +1648,7 @@ function startMain(){
   if(S.isOwner)subs.push(db.collection('members').onSnapshot(q=>{S.members=q.docs.map(d=>({...d.data(),id:d.id}));render()},err));
   if(S.isOwner)subs.push(db.collection('joins').onSnapshot(q=>{S.joins=q.docs.map(d=>({...d.data(),id:d.id}));render()},err));
 }
-function signedOut(){unsubAll();S.me=null;S.email='';S.isOwner=false;S.memberDoc=false;S.memberHome=null;S.members=[];S.blocks=[];S.reports=[];S.ready=false;S.myJoin=undefined;S.joins=[];S.live={config:{},homes:[],events:[],media:[],posts:[]};S.urls={}}
+function signedOut(){unsubAll();S.me=null;S.email='';S.isOwner=false;S.memberDoc=false;S.memberHome=null;S.members=[];S.blocks=[];S.reports=[];S.ready=false;S.myJoin=undefined;S.joins=[];S.live={config:{},homes:[],events:[],media:[],posts:[],replies:[]};S.urls={}}
 function watchUser(user){
   const db=S.db;let seen={org:false,mem:false,join:false};
   const check=()=>{if(!(seen.org&&seen.mem&&seen.join))return;

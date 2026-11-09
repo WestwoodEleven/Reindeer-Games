@@ -110,6 +110,18 @@ main{padding-block:16px calc(96px + env(safe-area-inset-bottom,0px))}
 .status p{color:rgba(255,255,255,.92)}
 .status .glow{display:none;position:absolute;right:-30px;top:-30px;width:130px;height:130px;border-radius:50%;background:radial-gradient(circle,var(--nose) 0 22%,color-mix(in srgb,var(--nose) 35%,transparent) 40%,transparent 70%);animation:pulse 2.8s ease-in-out infinite}
 .status .btn{margin-top:12px}
+.status{padding:30px 16px 14px}
+.status::after{display:none}
+.status b{display:block;font:400 1.1rem/1.2 var(--f-display);margin:4px 0 4px}
+.switch{position:relative;display:inline-block;width:52px;height:30px;flex:none}
+.switch input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:1}
+.switch span[aria-hidden]{position:absolute;inset:0;border-radius:999px;background:var(--line);border:2px solid var(--edge);transition:background .2s}
+.switch span[aria-hidden]::after{content:"";position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid var(--edge);transition:transform .2s}
+.switch input:checked+span{background:var(--nose)}
+.switch input:checked+span::after{transform:translateX(20px)}
+.switch input:focus-visible+span{outline:3px solid var(--accent);outline-offset:2px}
+.status p{margin:0;font-size:.92rem}
+.status a{color:#fff;font-weight:700}
 .status input{color:var(--ink);background:var(--surface);border-color:transparent}
 .status form{margin-top:14px}
 .gsteps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
@@ -576,6 +588,10 @@ textarea{min-height:120px;resize:vertical}
     <h2>Organizer</h2>
     <div id="adminGate"></div>
     <div class="stack" id="adminBody">
+      <div class="card row" style="justify-content:space-between;align-items:center">
+        <div style="flex:1;min-width:12rem"><h3 style="margin:0">Show Rudolph’s location</h3><p class="small muted" style="margin:2px 0 0">Off: you play like everyone else, with no spoilers. On: this phone shows where he is, on the map, feed and here. Only affects this device.</p></div>
+        <label class="switch"><input type="checkbox" id="revealToggle"><span aria-hidden="true"></span><span class="sr">Show Rudolph’s location</span></label>
+      </div>
       <div class="card stack" id="reportsCard">
         <div class="row" style="justify-content:space-between"><h3>Reports</h3><span class="label" id="reportCount"></span></div>
         <ul class="homes" id="reportList"></ul>
@@ -670,8 +686,10 @@ const ago=iso=>{const m=Math.round((Date.now()-new Date(iso))/6e4);if(m<1)return
 const localInput=d=>{const z=new Date(d.getTime()-d.getTimezoneOffset()*6e4);return z.toISOString().slice(0,16)};
 
 /* ---------- derived game record ---------- */
+// Organizers play spoiler-free unless they switch on "Show Rudolph's location" (per device).
+const orgReveal=()=>{try{return localStorage.getItem('rg-reveal')==='1'}catch{return false}};
 function canSee(e){
-  if(isOrg())return true;const id=myId();if(!id)return false;
+  if(isOrg()&&orgReveal())return true;const id=myId();if(!id)return false;
   const mh=myHome()?.id;return e.by===id||(!!mh&&(e.from===mh||e.to===mh));
 }
 /* ---------- seasons: one game per December ---------- */
@@ -856,31 +874,20 @@ function rBanner(){
   b.hidden=true;
 }
 function rStatus(C){
-  const st=$('#status');const c=seasonCfg();
-  const win=c.start?`<p class="small">Game runs ${esc(new Date(c.start+'T12:00').toLocaleDateString(undefined,{month:'short',day:'numeric'}))}${c.end?' to '+esc(new Date(c.end+'T12:00').toLocaleDateString(undefined,{month:'short',day:'numeric'})):''}.</p>`:'';
-  let h='<div class="glow" aria-hidden="true"></div>';
+  const st=$('#status');let h='';
   if(isPast()){
     const l=C.last,fin=l?(l.to||l.from):null;
     const took={};C.vis.forEach(e=>{if(e.kind==='steal'&&e.to)took[e.to]=(took[e.to]||0)+1});
     const top=Object.entries(took).sort((a,b)=>b[1]-a[1])[0];
-    h+=`<div class="label">The ${esc(viewSeason())} game · Final</div><h2>${fin?`Rudolph finished at ${esc(fam(fin))}`:'No steals were logged'}</h2><p>${C.vis.filter(e=>e.kind==='steal').length} steals logged.${top?` Most steals: ${esc(fam(top[0]))} with ${top[1]}.`:''}</p>${win}`;
-  }else if(!C.evs.length){
-    h+=`<div class="label">Status · Not started</div><h2>Rudolph hasn’t been placed yet</h2><p>Once the organizer picks a starting house, the hunt is on.</p>${win}`;
-    if(isOrg()&&!S.demo)h+=`<a class="btn red" href="#admin">Set the starting house</a>`;
-    else if(!S.demo&&!S.ready&&!S.offline)h=h.replace('Not started','Loading');
-    if(!S.demo&&!isOrg())h+=`<button class="btn" data-demo style="margin-top:12px">See an example game</button>`;
-  }else if(C.hidden){
-    const s=C.seen;
-    h+=`<div class="label">Status · On the loose</div><h2>Where’s Rudolph?</h2><p>${s?`Last confirmed at ${esc(fam(s.home))} (${hno(homeById(s.home))}), ${esc(ago(s.at))}. `:''}He’s been stolen since. Go look. Whoever has him must keep him visible from the street.</p>${win}`;
-  }else{
-    const l=C.last;
-    if(!l.to)h+=`<div class="label">Status · Thief unknown</div><h2>Taken from ${esc(fam(l.from))}</h2><p>${esc(ago(l.at))}. Nobody has logged the steal yet. If it was your family, claim it.</p>`;
-    else h+=`<div class="label">Status · ${isOrg()?'Organizer view':'Only you can see this'}</div><h2>Rudolph is at ${esc(fam(l.to))}</h2><p>${hno(homeById(l.to))} · since ${esc(ago(l.at))}. ${isOrg()?'Everyone else sees only that he’s on the loose.':'Neighbors won’t see where he is until he’s stolen again.'}</p>`;
-    h+=win;
+    h=`<div class="label">The ${esc(viewSeason())} game · Final</div><b>${fin?`Rudolph finished at ${esc(fam(fin))}`:'No steals were logged'}</b><p>${C.vis.filter(e=>e.kind==='steal').length} steals logged.${top?` Most steals: ${esc(fam(top[0]))} with ${top[1]}.`:''}</p>`;
+  }else if(C.evs.length&&!C.hidden&&C.last){
+    const l=C.last,mh=myHome()?.id;
+    if(!l.to&&l.kind==='steal')h=`<div class="label">Thief unknown</div><b>Taken from ${esc(fam(l.from))} ${esc(ago(l.at))}</b><p>Nobody has logged the steal yet. If it was your family, <a href="#log">claim it</a> so it counts.</p>`;
+    else if(l.to&&mh&&l.to===mh)h=`<div class="label">Only your family can see this</div><b>Rudolph is at your house</b><p>Keep him visible from the street. Neighbors find out where he was after he’s stolen again.</p>`;
+    else if(l.to&&isOrg()&&orgReveal())h=`<div class="label">Organizer view · spoilers on</div><b>Rudolph is at ${esc(fam(l.to))}</b><p>${hno(homeById(l.to))} · since ${esc(ago(l.at))}. <a href="#admin">Turn off</a></p>`;
+    else if(l.to)h=`<div class="label">Only your family can see this</div><b>Rudolph is at ${esc(fam(l.to))}</b><p>You were part of this steal, so you know where he went. Everyone else sees that he’s on the loose.</p>`;
   }
-  st.innerHTML=h;st.hidden=false;
-  // Before the game starts there's nothing to report, so the box stays hidden.
-  if(!isPast()&&!C.evs.length&&(S.ready||S.demo))st.hidden=true;
+  st.innerHTML=h;st.hidden=!h;
 }
 function caseLine(e){
   if(e.kind==='start')return `Rudolph starts the game at ${famB(e.to)}`;
@@ -1167,6 +1174,7 @@ function rRules(){const c=seasonCfg();const t=(c.rules||'').trim();
   $('#rulesBody').innerHTML=`${acct}${dates}<div class="rules">${esc(t||DRAFT)}</div>${S.live.config.contact&&!S.demo?`<p class="small muted">Questions, concerns or something inappropriate? Contact the organizer: <b>${esc(S.live.config.contact)}</b>. You can also tap <b>Report</b> on any photo, video or note.</p>`:''}${isOrg()&&!S.demo?`<a class="btn sm" href="#admin" style="align-self:start">Edit rules</a>`:''}<a class="linkbtn" href="#privacy" style="align-self:start;padding:0">Privacy policy</a>`;
 }
 function rAdmin(C){
+  {const t=$('#revealToggle');if(t)t.checked=orgReveal()}
   const ok=isOrg()&&!S.demo;$('#adminGate').innerHTML=ok?'':`<div class="empty"><h3>Organizer only</h3><p>This section is for the person running the game.</p></div>`;$('#adminBody').hidden=!ok;if(!ok)return;
   const c=seasonCfg(),vs=viewSeason(),cur=curSeason();
   const f=$('#setForm');if(f.dataset.season!==vs){f.dataset.season=vs;['#setStart','#setEnd','#setRules'].forEach(x=>delete $(x).dataset.dirty)}
@@ -1193,7 +1201,7 @@ function rAdmin(C){
     :`<li class="muted small">No requests waiting. New families appear here when they ask to join.</li>`;
   const hs=sortHomes(D().homes);
   $('#adminHomes').innerHTML=hs.length?hs.map(h=>`<li><span class="hno">${hno(h)}</span><div><b>${esc(h.family)}</b><div class="case-meta">${(n=>n?`${n} ${n===1?'person':'people'}`:'No one linked yet')(peopleOf(h.id).length)}${!hpos(h)?' · no pin':''}</div></div><button class="btn sm" data-edit-home="${esc(h.id)}">Edit</button></li>`).join(''):`<li class="muted small">No families yet. Add them here, or share the page so they can join.</li>`;
-  $('#adminEvents').innerHTML=C.evs.length?[...C.evs].reverse().map(e=>`<li class="case" data-ev="${esc(e.id)}"><div class="case-n">${pad(C.num.get(e.id))}</div><div><p>${caseLine(e)}</p><p class="case-meta">${esc(fmt(e.at))}${e===C.hidden||(e===C.last&&e.to)?' · hidden from neighbors':''}</p></div></li>`).join(''):`<li class="muted small">Nothing yet. Start by setting Rudolph’s starting house.</li>`;
+  $('#adminEvents').innerHTML=C.evs.length?[...C.evs].reverse().map(e=>e===C.hidden?`<li class="case"><div class="case-n">${pad(C.num.get(e.id))}</div><div><p><b>Newest steal · hidden</b></p><p class="case-meta">${esc(fmt(e.at))} · turn on “Show Rudolph’s location” to see or edit it</p></div></li>`:`<li class="case" data-ev="${esc(e.id)}"><div class="case-n">${pad(C.num.get(e.id))}</div><div><p>${caseLine(e)}</p><p class="case-meta">${esc(fmt(e.at))}${e===C.last&&e.to?' · hidden from neighbors':''}</p></div></li>`).join(''):`<li class="muted small">Nothing yet. Start by setting Rudolph’s starting house.</li>`;
 }
 
 /* ---------- routing / render ---------- */
@@ -1412,6 +1420,8 @@ async function pushAskOnLaunch(){const P=FMsg();if(!P)return;
     const q=await P.requestPermissions();S.push=q.receive;if(q.receive==='granted'&&S.me)await pushSave()}catch(e){console.warn('push launch',e)}
   syncPush()}
 if(inApp)setTimeout(pushAskOnLaunch,600);
+document.addEventListener('change',e=>{if(e.target&&e.target.id==='revealToggle'){try{e.target.checked?localStorage.setItem('rg-reveal','1'):localStorage.removeItem('rg-reveal')}catch{}
+  toast(e.target.checked?'Spoilers on for this device':'Spoilers off. You see what everyone sees.');render()}});
 async function pushForget(){if(!S.pushTok||!S.db)return;const t=S.pushTok;S.pushTok=null;try{await S.db.doc('devices/'+t).delete()}catch{}}
 async function openA2HS(){
   if(installPrompt){try{installPrompt.prompt();const r=await installPrompt.userChoice;if(r&&r.outcome==='accepted'){installPrompt=null;$('#a2hsCard').hidden=true}}catch{}return}

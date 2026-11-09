@@ -777,10 +777,12 @@ const evSeason=e=>String(e.season??yearOf(e.at));
 function seasonCfg(y=viewSeason()){const c=D().config;if(S.demo)return c;const m=c.seasons||{};
   if(m[y])return m[y];if(y===curSeason()&&(c.start||c.rules))return{start:c.start,end:c.end,rules:c.rules};return{}}
 function allSeasons(){const set=new Set([curSeason(),...Object.keys(S.live.config.seasons||{}),...S.live.events.map(evSeason)]);return[...set].sort((a,b)=>b-a)}
+// One numbering everywhere: Steal 1, 2, 3… and ★ for the game start.
+const evTitle=(e,n)=>e&&e.kind==='start'?'Game start':`Steal ${n}`;
 function compute(){
   const vs=viewSeason();
   const evs=[...D().events].filter(e=>S.demo||evSeason(e)===vs).sort((a,b)=>String(a.at).localeCompare(String(b.at))||(a.createdAt||0)-(b.createdAt||0));
-  const num=new Map(evs.map((e,i)=>[e.id,i+1]));
+  let k=0;const num=new Map(evs.map(e=>[e.id,e.kind==='start'?'★':++k]));
   const last=evs[evs.length-1];
   const hidden=!isPast()&&last&&last.to&&!canSee(last)?last:null;
   const vis=evs.filter(e=>e!==hidden);
@@ -918,7 +920,7 @@ function tickReplay(now){const r=S.replay;if(!r)return;const dt=Math.min(100,now
 function replayUI(){const r=S.replay;if(!r)return;const it=r.steps[r.i],n=r.steps.length;
   let cap;
   if(it.gap)cap=`<b>Unlogged move.</b> Rudolph left ${famB(it.from)} and later turned up at ${famB(it.to)}.`;
-  else{const e=it.ev;cap=`<span class="mono">#${String(r.num.get(e.id)).padStart(2,'0')}</span> · ${esc(fmt(e.at))}<br>${caseLine(e)}.`}
+  else{const e=it.ev;cap=`<span class="mono">${esc(evTitle(e,r.num.get(e.id)))}</span> · ${esc(fmt(e.at))}<br>${caseLine(e)}.`}
   if(!r.playing&&r.i===n-1&&r.t>=1)cap+=`<br><span class="muted small">${isPast()?'That’s the whole game.':'That’s everything unsealed so far.'}</span>`;
   $('#replayCap').innerHTML=cap;$('#replayProg').style.width=`${Math.round((r.i+(r.t>=1?1:r.t))/n*100)}%`;
   const tg=$('#rpToggle');const done=!r.playing&&r.i===n-1&&r.t>=1;tg.textContent=done?'↺':r.playing?'⏸':'▶';tg.setAttribute('aria-label',done?'Replay from the start':r.playing?'Pause':'Play')}
@@ -981,11 +983,11 @@ function thumbs(id){const ms=mediaFor(id);if(!ms.length)return'';
 function claimBtn(e){const mh=myHome();return (!e.to&&e.kind!=='start'&&mh&&mh.id!==e.from&&canWrite()&&!isPast())?`<button class="btn sm red" data-claim="${esc(e.id)}">It was us. Claim it</button>`:''}
 function rTimeline(C){
   const t=$('#timeline');let h='';
-  if(C.hidden)h+=`<li class="case sealed"><div class="case-n">${pad(C.num.get(C.hidden.id))}</div><div><p><b>Sealed.</b> A new steal was logged ${esc(ago(C.hidden.at))}.</p><p class="case-meta">Details unlock when Rudolph is stolen again.</p></div></li>`;
+  if(C.hidden)h+=`<li class="case sealed"><div class="case-n">${C.num.get(C.hidden.id)}</div><div><p><b>Sealed.</b> A new steal was logged ${esc(ago(C.hidden.at))}.</p><p class="case-meta">Details unlock when Rudolph is stolen again.</p></div></li>`;
   [...C.items].reverse().forEach(it=>{
     if(it.gap){h+=`<li class="case gap"><div class="case-n">?</div><div><p><b>Unlogged move.</b> Rudolph left ${famB(it.from)} and later turned up at ${famB(it.to)}.</p>${(canWrite()&&!isPast())||isOrg()?`<button class="btn sm" data-gap="${esc(it.from)}|${esc(it.to)}|${esc(it.after)}">Fill in the missing steal</button>`:''}</div></li>`;return}
     const e=it.ev,n=mediaFor(e.id).length;
-    h+=`<li class="case" data-ev="${esc(e.id)}"><div class="case-n">${pad(C.num.get(e.id))}</div><div><p>${caseLine(e)}</p><p class="case-meta">${esc(fmt(e.at))}${n?` · ${n} ${n>1?'files':'file'}`:''}</p>${e.note&&!blocked(e.by)?`<p class="small">“${esc(e.note)}”</p>`:''}${thumbs(e.id)}${claimBtn(e)}</div></li>`;
+    h+=`<li class="case" data-ev="${esc(e.id)}"><div class="case-n">${C.num.get(e.id)}</div><div><p>${caseLine(e)}</p><p class="case-meta">${esc(fmt(e.at))}${n?` · ${n} ${n>1?'files':'file'}`:''}</p>${e.note&&!blocked(e.by)?`<p class="small">“${esc(e.note)}”</p>`:''}${thumbs(e.id)}${claimBtn(e)}</div></li>`;
   });
   t.innerHTML=h||`<li class="empty"><h3>No steals yet</h3><p>Every capture shows up here as a numbered case.</p></li>`;
   $('#trailCount').textContent=C.evs.length?`${C.evs.length} ${C.evs.length>1?'entries':'entry'}`:'';
@@ -1310,7 +1312,7 @@ function rFeed(C){
   for(const m of D().media)if(!m.stealId&&!m.postId&&(S.demo||String(m.season||yearOf(m.at))===vs)&&!blocked(m.by))items.push({t:m.at,k:'photo',m});
   items.sort((a,b)=>String(b.t).localeCompare(String(a.t)));
   // Alternate red/green by age (oldest first), so a new post takes the next color and older ones never change.
-  const sn=new Map(C.evs.filter(e=>e.kind==='steal').map((e,i)=>[e.id,i+1]));
+  const sn=C.num;
   const tints=new Map();items.filter(it=>it.k==='post'||it.k==='photo').reverse().forEach((it,i)=>{const c=i%2?'tr':'tg';tints.set(it,c);if(it.p)S.postTint[it.p.id]=c});
   const thumbs=ms=>ms.length?`<div class="fthumbs">${ms.slice(0,4).map(m=>`<button data-media="${esc(m.id)}" aria-label="Open ${m.type}">${m.type==='image'?`<img src="${esc(murl(m))}" alt="" loading="lazy">`:`<video src="${esc(murl(m))}#t=0.1" preload="metadata" muted playsinline></video><span class="play">VIDEO</span>`}</button>`).join('')}</div>`:'';
   const fam=h=>h?esc(h.family):'The organizer';
@@ -1375,7 +1377,7 @@ function rAdmin(C){
     :`<li class="muted small">No requests waiting. New families appear here when they ask to join.</li>`;
   const hs=sortHomes(D().homes);
   $('#adminHomes').innerHTML=hs.length?hs.map(h=>`<li><span class="hno">${hno(h)}</span><div><b>${esc(h.family)}</b><div class="case-meta">${(n=>n?`${n} ${n===1?'person':'people'}`:'No one linked yet')(peopleOf(h.id).length)}${!hpos(h)?' · no pin':''}</div></div><button class="btn sm" data-edit-home="${esc(h.id)}">Edit</button></li>`).join(''):`<li class="muted small">No families yet. Add them here, or share the page so they can join.</li>`;
-  $('#adminEvents').innerHTML=C.evs.length?[...C.evs].reverse().map(e=>e===C.hidden?`<li class="case"><div class="case-n">${pad(C.num.get(e.id))}</div><div><p><b>Newest steal · hidden</b></p><p class="case-meta">${esc(fmt(e.at))} · turn on “Show Rudolph’s location” to see or edit it</p></div></li>`:`<li class="case" data-ev="${esc(e.id)}"><div class="case-n">${pad(C.num.get(e.id))}</div><div><p>${caseLine(e)}</p><p class="case-meta">${esc(fmt(e.at))}${e===C.last&&e.to?' · hidden from neighbors':''}${e.unsure?' · <b style="color:var(--nose)">thief wasn’t sure whose house, please check</b>':''}</p></div></li>`).join(''):`<li class="muted small">Nothing yet. Start by setting Rudolph’s starting house.</li>`;
+  $('#adminEvents').innerHTML=C.evs.length?[...C.evs].reverse().map(e=>e===C.hidden?`<li class="case"><div class="case-n">${C.num.get(e.id)}</div><div><p><b>Newest steal · hidden</b></p><p class="case-meta">${esc(fmt(e.at))} · turn on “Show Rudolph’s location” to see or edit it</p></div></li>`:`<li class="case" data-ev="${esc(e.id)}"><div class="case-n">${C.num.get(e.id)}</div><div><p>${caseLine(e)}</p><p class="case-meta">${esc(fmt(e.at))}${e===C.last&&e.to?' · hidden from neighbors':''}${e.unsure?' · <b style="color:var(--nose)">thief wasn’t sure whose house, please check</b>':''}</p></div></li>`).join(''):`<li class="muted small">Nothing yet. Start by setting Rudolph’s starting house.</li>`;
 }
 
 /* ---------- routing / render ---------- */
@@ -1478,7 +1480,7 @@ function openEvent(id){
     toast('This one is sealed until the next steal.');return}
   const ms=mediaFor(id),involved=canSee(e)&&(isOrg()||e.by===myId()||[e.from,e.to].includes(myHome()?.id));
   const byHome=homeById(e.byHome)||homeById(S.members.find(m=>m.id===e.by)?.homeId)||D().homes.find(h=>h.ownerId&&h.ownerId===e.by);
-  const sh=openSheet(`${shTop('Case '+pad(C.num.get(id)),esc(fmt(e.at)))}
+  const sh=openSheet(`${shTop(evTitle(e,C.num.get(id)),esc(fmt(e.at)))}
     <p>${caseLine(e)}.</p>
     ${e.note&&!blocked(e.by)?`<p class="small">“${esc(e.note)}”</p>`:''}
     <p class="case-meta">Logged by ${byHome?esc(byHome.family):'the organizer'}</p>
@@ -1561,7 +1563,7 @@ async function setBlocks(list){S.blocks=list;render();await W(()=>S.db.doc('bloc
 function openMedia(id){
   const m=D().media.find(x=>x.id===id);if(!m)return;const e=D().events.find(x=>x.id===m.stealId);const C=compute();
   const byH=homeById(m.byHome);
-  const sh=openSheet(`${shTop(e?'Case '+pad(C.num.get(e.id)):(byH?esc(byH.family):'Gallery'),esc(fmt(m.at)))}
+  const sh=openSheet(`${shTop(e?evTitle(e,C.num.get(e.id)):(byH?esc(byH.family):'Gallery'),esc(fmt(m.at)))}
     ${m.type==='image'?`<img class="media-full" src="${esc(murl(m))}" alt="Capture photo">`:`<video class="media-full" src="${esc(murl(m))}" controls playsinline></video>`}
     ${e?`<p>${caseLine(e)}.</p>`:''}${m.caption?`<p>${esc(m.caption)}</p>`:''}<p class="case-meta">Shared by ${byH?esc(byH.family):'the organizer'}</p>
     ${murl(m)?`<button class="btn block" id="mSave">${inApp||/iPhone|iPad|Android/.test(navigator.userAgent)?'Save to my phone':'Download'}</button>`:''}

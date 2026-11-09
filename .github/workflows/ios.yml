@@ -35,7 +35,7 @@ jobs:
       - name: Create the iOS project
         working-directory: app
         run: |
-          npm install --no-audit --no-fund
+          npm install --no-audit --no-fund --legacy-peer-deps
           npx cap add ios
           npx cap sync ios
 
@@ -54,6 +54,11 @@ jobs:
           ICON=$(ls "$ICON_DIR"/*.png | head -1)
           cp ../../resources/icon-1024.png "$ICON"
           echo "Icon written to $ICON"
+          cp ../../resources/GoogleService-Info.plist App/GoogleService-Info.plist
+          cp ../../resources/App.entitlements App/App.entitlements
+          python3 ../../resources/patch-appdelegate.py App/AppDelegate.swift
+          ruby -e "require 'xcodeproj'" 2>/dev/null || gem install xcodeproj --no-document || sudo gem install xcodeproj --no-document
+          ruby ../../resources/setup-ios.rb
 
       - name: Install the App Store Connect key
         run: |
@@ -77,6 +82,13 @@ jobs:
             IPHONEOS_DEPLOYMENT_TARGET=15.0 MARKETING_VERSION=1.0 CURRENT_PROJECT_VERSION=${{ github.run_number }} \
             archive
 
+      - name: Add the push-notification permission to the build
+        run: |
+          APP="$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app"
+          find "$APP" \( -name '*.framework' -o -name '*.dylib' \) -prune -print0 | xargs -0 -I{} codesign --force --sign - {}
+          codesign --force --sign - --entitlements app/resources/App.entitlements "$APP"
+          codesign -d --entitlements - "$APP" 2>/dev/null | grep -q aps-environment && echo "Push permission added"
+
       - name: Upload to TestFlight
         run: |
           cat > "$RUNNER_TEMP/export.plist" <<PLIST
@@ -89,6 +101,21 @@ jobs:
             <key>signingStyle</key><string>automatic</string>
           </dict></plist>
           PLIST
+          sed 's#<string>upload</string>#<string>export</string>#' "$RUNNER_TEMP/export.plist" > "$RUNNER_TEMP/check.plist"
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/check.plist" \
+            -exportPath "$RUNNER_TEMP/check" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey_$KEY_ID.p8" \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER_ID"
+          (cd "$RUNNER_TEMP/check" && unzip -q -o *.ipa)
+          if codesign -d --entitlements - "$RUNNER_TEMP/check/Payload/App.app" 2>/dev/null | grep -q aps-environment; then
+            echo "Signed build includes push notifications"
+          else
+            echo "::error::The signed build is missing the push-notification permission"; exit 1
+          fi
           xcodebuild -exportArchive \
             -archivePath "$RUNNER_TEMP/App.xcarchive" \
             -exportOptionsPlist "$RUNNER_TEMP/export.plist" \

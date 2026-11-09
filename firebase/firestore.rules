@@ -141,6 +141,13 @@ service cloud.firestore {
       allow read, write: if signedIn() && request.auth.uid == uid;
     }
 
+    // devices/{pushToken} = { uid, homeId, ... }. Each phone registers itself for
+    // alerts. Only the alert-sending function (which bypasses rules) reads them.
+    match /devices/{token} {
+      allow create, update: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow delete: if signedIn() && (resource == null || resource.data.uid == request.auth.uid);
+    }
+
     match /media/{id} {
       allow read: if isMember();
       allow create: if isMember() && request.resource.data.by == request.auth.uid;

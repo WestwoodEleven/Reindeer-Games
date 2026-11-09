@@ -478,6 +478,7 @@ textarea{min-height:120px;resize:vertical}
   <!-- GALLERY -->
   <section class="view" id="v-feed" data-view="feed">
     <div class="status" id="status"></div>
+    <div class="card row" id="pushCard" hidden style="justify-content:space-between"><p style="flex:1;min-width:12rem"><b>Get steal alerts.</b> We’ll let you know the moment the reindeer is stolen, and when neighbors post.</p><div class="row"><button class="btn sm ghost" data-push-hide>Not now</button><button class="btn sm primary" data-push>Turn on alerts</button></div></div>
     <a class="mappv" href="#homes" aria-label="Open the map of houses and Rudolph’s trail"><img class="pv-l" src="assets/map-light.webp" alt=""><img class="pv-d" src="assets/map-dark.webp" alt=""><span>Open map →</span></a>
     <div class="row" style="justify-content:space-between"><h2>Feed</h2>
       <div class="seg feedseg" role="group" aria-label="Show"><button type="button" data-feedmode="all" id="fmAll">Everything</button><button type="button" data-feedmode="photos" id="fmPhotos">Photos</button></div></div>
@@ -1144,7 +1145,7 @@ function renderNow(){
   if(v==='privacy'){$('#privContact').innerHTML=S.live.config.contact&&!S.demo?`contact the organizer at <b>${esc(S.live.config.contact)}</b>.`:'contact the organizer (their contact info is on the Rules page once you’ve joined).';$('#privBack').setAttribute('href',gated?'#':'#rules')}
   document.querySelectorAll('[data-view]').forEach(s=>s.hidden=s.dataset.view!==v);
   document.querySelectorAll('[data-tab]').forEach(a=>{if(a.dataset.tab===v)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
-  rWho();rBanner();
+  rWho();rBanner();syncPush();
   if(v==='homes'){rTimeline(C);rHomes();drawTrail()}
   if(v==='leaders')rBoard(C);
   if(v==='log')rLog();
@@ -1295,6 +1296,7 @@ function openDeleteAccount(){
       const posts=await db.collection('posts').where('by','==',me).get();
       for(const d of posts.docs){for(const m of D().media.filter(x=>x.postId===d.id))await delMedia(m);await d.ref.delete()}
       for(const m of D().media.filter(x=>x.by===me))await delMedia(m);
+      await pushForget();
       await db.doc('blocks/'+me).delete().catch(()=>{});
       await db.doc('joins/'+me).delete().catch(()=>{});
       await db.doc('members/'+me).delete().catch(()=>{});
@@ -1324,6 +1326,24 @@ addEventListener('appinstalled',()=>{installPrompt=null;toast('Added to your pho
 function syncA2HS(){const inst=isInstalled();let hide=false;try{hide=!!localStorage.getItem('rg-a2hs-hide')}catch{}
   $('#a2hsCard').hidden=inst||hide;$('#a2hsRules').hidden=inst}
 syncA2HS();
+// Phone alerts (iPhone app only).
+const FMsg=()=>inApp&&window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.FirebaseMessaging||null;
+let pushListening=false;
+function syncPush(){const c=$('#pushCard');if(!c)return;let hide=false;try{hide=!!localStorage.getItem('rg-push-hide')}catch{}
+  c.hidden=!(S.push==='prompt'&&!hide&&isMember()&&!S.demo)}
+async function pushSave(tok){const P=FMsg();if(!P||!S.me||!S.db)return;
+  try{if(!tok)tok=(await P.getToken()).token;if(!tok)return;S.pushTok=tok;
+    await S.db.doc('devices/'+tok).set({uid:S.me,homeId:(myHome()&&myHome().id)||null,platform:'ios',updatedAt:Date.now()})}catch(e){console.warn('push save',e)}}
+async function pushInit(){const P=FMsg();if(!P||S.demo)return;
+  try{const r=await P.checkPermissions();S.push=r.receive;
+    if(!pushListening){pushListening=true;P.addListener('tokenReceived',e=>pushSave(e&&e.token))}
+    if(r.receive==='granted')await pushSave()}catch(e){console.warn('push',e);S.push='na'}
+  syncPush()}
+async function pushAsk(){const P=FMsg();if(!P)return;
+  try{const r=await P.requestPermissions();S.push=r.receive;if(r.receive==='granted'){await pushSave();toast('Alerts are on')}
+    else toast('You can turn alerts on later in iPhone Settings.')}catch(e){console.warn('push ask',e)}
+  syncPush()}
+async function pushForget(){if(!S.pushTok||!S.db)return;const t=S.pushTok;S.pushTok=null;try{await S.db.doc('devices/'+t).delete()}catch{}}
 async function openA2HS(){
   if(installPrompt){try{installPrompt.prompt();const r=await installPrompt.userChoice;if(r&&r.outcome==='accepted'){installPrompt=null;$('#a2hsCard').hidden=true}}catch{}return}
   const ua=navigator.userAgent||'',ios=/iPhone|iPad|iPod/i.test(ua)||(/Macintosh/.test(ua)&&'ontouchend' in document),android=/Android/i.test(ua);
@@ -1436,6 +1456,8 @@ document.addEventListener('click',async e=>{
     openSheet(`${shTop('Game year','Reindeer Games')}<ul class="homes">${allSeasons().map(y=>{const n=S.live.events.filter(e=>e.kind==='steal'&&evSeason(e)===y).length;
       return `<li class="${y===vs?'on':''}"><span class="hno">${esc(y)}</span><div><b>December ${esc(y)}</b><div class="case-meta">${y===curSeason()?'Current game · ':''}${n} ${n===1?'steal':'steals'}</div></div><button class="btn sm${y===vs?' primary':''}" data-season="${esc(y)}">${y===vs?'Viewing':'View'}</button></li>`}).join('')}</ul>`);return}
   if(t.closest('[data-a2hs]')){openA2HS();return}
+  if(t.closest('[data-push]')){pushAsk();return}
+  if(t.closest('[data-push-hide]')){try{localStorage.setItem('rg-push-hide','1')}catch{};syncPush();return}
   if(t.closest('[data-a2hs-hide]')){try{localStorage.setItem('rg-a2hs-hide','1')}catch{};syncA2HS();return}
   if(t.closest('[data-join]')){openHomeForm('join');return}
   if(t.closest('[data-demo]')){S.demo=makeDemo();S.demoOrg=false;renderNow();scrollTo(0,0);return}
@@ -1540,7 +1562,7 @@ let idxT=0;function syncIndex(){clearTimeout(idxT);idxT=setTimeout(async()=>{
     for(const k of Object.keys(S.houseIdx))if(!want[k])await S.db.doc('houseIndex/'+k).delete()}catch(e){console.warn('house index',e)}},800)}
 const unsubAll=()=>{subs.forEach(u=>{try{u()}catch{}});subs=[];mainOn=false};
 function startMain(){
-  if(mainOn)return;mainOn=true;const db=S.db;let got=0;const done=()=>{if(++got>=4)S.ready=true;render()};
+  if(mainOn)return;mainOn=true;const db=S.db;pushInit();let got=0;const done=()=>{if(++got>=4)S.ready=true;render()};
   const err=e=>{console.error(e);if(e&&e.code==='permission-denied'){mainOn=false}S.netErr=e&&e.code==='unavailable';render()};
   subs.push(db.collection('posts').onSnapshot(q=>{S.live.posts=q.docs.map(d=>({...d.data(),id:d.id}));render()},err));
   subs.push(db.doc('config/game').onSnapshot(d=>{S.live.config=d.exists?{...d.data()}:{};done()},err));
@@ -1616,7 +1638,7 @@ document.addEventListener('click',async e=>{
   if(e.target.closest('[data-join-edit]')){S.editJoin=true;renderNow();return}
   if(e.target.closest('[data-signin-start]')){S.needEmail=false;S.sentTo='';S.phoneTo='';history.replaceState(null,'',linkUrl());renderNow();return}
   if(e.target.closest('[data-phone-reset]')){S.phoneTo='';smsConfirm=null;resetRecaptcha();renderNow();return}
-  if(e.target.closest('[data-signout]')&&fbAuth){await fbAuth.signOut();S.needEmail=false;S.sentTo='';S.phoneTo='';closeSheet();history.replaceState(null,'',linkUrl());toast('Signed out');renderNow();scrollTo(0,0)}
+  if(e.target.closest('[data-signout]')&&fbAuth){await pushForget();await fbAuth.signOut();S.needEmail=false;S.sentTo='';S.phoneTo='';closeSheet();history.replaceState(null,'',linkUrl());toast('Signed out');renderNow();scrollTo(0,0)}
 });
 (async()=>{
   if(!window.firebase||!CFG.apiKey||!CFG.projectId){S.notConfigured=true;S.authReady=true;renderNow();return}

@@ -1343,6 +1343,12 @@ async function pushAsk(){const P=FMsg();if(!P)return;
   try{const r=await P.requestPermissions();S.push=r.receive;if(r.receive==='granted'){await pushSave();toast('Alerts are on')}
     else toast('You can turn alerts on later in iPhone Settings.')}catch(e){console.warn('push ask',e)}
   syncPush()}
+// Ask once, the first time the app opens.
+async function pushAskOnLaunch(){const P=FMsg();if(!P)return;
+  try{const r=await P.checkPermissions();if(r.receive!=='prompt')return;
+    const q=await P.requestPermissions();S.push=q.receive;if(q.receive==='granted'&&S.me)await pushSave()}catch(e){console.warn('push launch',e)}
+  syncPush()}
+if(inApp)setTimeout(pushAskOnLaunch,600);
 async function pushForget(){if(!S.pushTok||!S.db)return;const t=S.pushTok;S.pushTok=null;try{await S.db.doc('devices/'+t).delete()}catch{}}
 async function openA2HS(){
   if(installPrompt){try{installPrompt.prompt();const r=await installPrompt.userChoice;if(r&&r.outcome==='accepted'){installPrompt=null;$('#a2hsCard').hidden=true}}catch{}return}

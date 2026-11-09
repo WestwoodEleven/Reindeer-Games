@@ -116,6 +116,7 @@ main{padding-block:16px calc(96px + env(safe-area-inset-bottom,0px))}
 .status{padding:30px 16px 14px}
 .status::after{display:none}
 .status b{display:block;font:400 1.1rem/1.2 var(--f-display);margin:4px 0 4px}
+.sep{border:0;border-top:1px solid var(--line);margin:2px 0;width:100%}
 .switch{position:relative;display:inline-block;width:52px;height:30px;flex:none}
 .switch input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:1}
 .switch span[aria-hidden]{position:absolute;inset:0;border-radius:999px;background:var(--line);border:2px solid var(--edge);transition:background .2s}
@@ -1433,9 +1434,24 @@ const FMsg=()=>inApp&&window.Capacitor&&window.Capacitor.Plugins&&window.Capacit
 let pushListening=false;
 function syncPush(){const c=$('#pushCard');if(!c)return;let hide=false;try{hide=!!localStorage.getItem('rg-push-hide')}catch{}
   c.hidden=!(S.push==='prompt'&&!hide&&isMember()&&!S.demo)}
+const ALERT_DEFAULTS={sound:false,steals:true,posts:true,replies:true};
+function alertPrefs(){try{return{...ALERT_DEFAULTS,...JSON.parse(localStorage.getItem('rg-alerts')||'{}')}}catch{return{...ALERT_DEFAULTS}}}
 async function pushSave(tok){const P=FMsg();if(!P||!S.me||!S.db)return;
   try{if(!tok)tok=(await P.getToken()).token;if(!tok)return;S.pushTok=tok;
-    await S.db.doc('devices/'+tok).set({uid:S.me,homeId:(myHome()&&myHome().id)||null,platform:'ios',updatedAt:Date.now()})}catch(e){console.warn('push save',e)}}
+    await S.db.doc('devices/'+tok).set({uid:S.me,homeId:(myHome()&&myHome().id)||null,platform:'ios',updatedAt:Date.now(),prefs:alertPrefs()})}catch(e){console.warn('push save',e)}}
+async function openAlertSettings(){const pr=alertPrefs();
+  const row=(k,t,d)=>`<div class="row" style="justify-content:space-between;align-items:center;flex-wrap:nowrap"><div><b>${t}</b><div class="small muted">${d}</div></div><label class="switch"><input type="checkbox" data-apref="${k}"${pr[k]?' checked':''}><span aria-hidden="true"></span><span class="sr">${t}</span></label></div>`;
+  const sh=openSheet(`${shTop('Alert settings','This phone')}
+    <div id="alertWarn"></div>
+    ${row('sound','Play a sound','Off: alerts show quietly on your lock screen.')}
+    <hr class="sep">
+    ${row('steals','Steals and game start','“The reindeer was stolen!” Never says where he is now.')}
+    ${row('posts','New posts, photos and videos','When a neighbor shares something in the feed.')}
+    ${row('replies','Replies','When someone replies to your post or a conversation you joined.')}`);
+  try{const r=await FMsg().checkPermissions();if(r.receive!=='granted')sh.querySelector('#alertWarn').innerHTML=`<p class="small" style="background:var(--nose-soft);border-radius:10px;padding:10px;margin:0">Alerts are turned off for this app. ${r.receive==='denied'?'Turn them on in iPhone <b>Settings → Reindeer Games → Notifications</b>.':'<button class="linkbtn" data-push style="padding:0">Turn on alerts</button>'}</p>`}catch{}
+  sh.addEventListener('change',async e=>{const k=e.target.dataset.apref;if(!k)return;const p=alertPrefs();p[k]=e.target.checked;
+    try{localStorage.setItem('rg-alerts',JSON.stringify(p))}catch{}
+    if(S.pushTok&&S.db){try{await S.db.doc('devices/'+S.pushTok).set({prefs:p,updatedAt:Date.now()},{merge:true})}catch(err){console.warn(err)}}else await pushSave()})}
 async function pushInit(){const P=FMsg();if(!P||S.demo)return;
   try{const r=await P.checkPermissions();S.push=r.receive;
     if(!pushListening){pushListening=true;P.addListener('tokenReceived',e=>pushSave(e&&e.token))}
@@ -1562,9 +1578,10 @@ document.addEventListener('click',async e=>{
       <p>Signed in as <b>${esc(S.email||S.phone||'')}</b>${isOrg()?' · Organizer':''}</p>
       ${mh?`<p class="small muted">${esc(mh.number)} Emerald Bay. To change your family name, house number or pin, ask the organizer.</p>`:''}
       ${S.blocks.length?`<div class="field"><span>Blocked people</span><ul class="homes">${S.blocks.map((u,i)=>`<li><div style="grid-column:1/3"><b>Blocked person ${i+1}</b><div class="case-meta">Their photos, videos and notes are hidden for you</div></div><button class="btn sm" data-unblock="${esc(u)}">Unblock</button></li>`).join('')}</ul></div>`:''}
-      <div class="row">${mh?`<a class="btn" href="#homes" data-close>See participating houses</a>`:''}${isInstalled()?'':'<button class="btn" data-a2hs data-close>Add to phone</button>'}<button class="btn danger" data-signout data-close>Sign out</button></div>
+      <div class="row">${FMsg()&&!S.demo?'<button class="btn" data-alerts>Alert settings</button>':''}${mh?`<a class="btn" href="#homes" data-close>See participating houses</a>`:''}${isInstalled()?'':'<button class="btn" data-a2hs data-close>Add to phone</button>'}<button class="btn danger" data-signout data-close>Sign out</button></div>
       <div class="row" style="justify-content:space-between;margin-top:4px"><a class="linkbtn" href="#privacy" data-close>Privacy policy</a>${S.demo?'':'<button class="linkbtn" data-delacct style="color:var(--nose)">Delete my account</button>'}</div>`);return}
   if(t.closest('[data-delacct]')){openDeleteAccount();return}
+  if(t.closest('[data-alerts]')){openAlertSettings();return}
   if(t.closest('[data-seasons]')){const vs=viewSeason();
     openSheet(`${shTop('Game year','Reindeer Games')}<ul class="homes">${allSeasons().map(y=>{const n=S.live.events.filter(e=>e.kind==='steal'&&evSeason(e)===y).length;
       return `<li class="${y===vs?'on':''}"><span class="hno">${esc(y)}</span><div><b>December ${esc(y)}</b><div class="case-meta">${y===curSeason()?'Current game · ':''}${n} ${n===1?'steal':'steals'}</div></div><button class="btn sm${y===vs?' primary':''}" data-season="${esc(y)}">${y===vs?'Viewing':'View'}</button></li>`}).join('')}</ul>`);return}

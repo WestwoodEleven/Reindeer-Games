@@ -21,6 +21,7 @@
     "FirebaseMessaging": {
       "presentationOptions": [
         "badge",
+        "sound",
         "alert"
       ]
     }

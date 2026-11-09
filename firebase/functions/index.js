@@ -15,28 +15,36 @@ async function familyOf(homeId) {
   return d.exists ? d.data().family || null : null;
 }
 
-// Send to every registered phone except the person who caused the alert.
-async function sendAll({ title, body, exceptUid, link, onlyUids }) {
+// Send to every registered phone that wants this kind of alert, except the person who caused it.
+// kind: 'steals' | 'posts' | 'replies'. Each phone also chooses whether alerts make a sound.
+async function sendAll({ title, body, exceptUid, link, onlyUids, kind }) {
   const snap = await db.collection('devices').get();
-  const tokens = snap.docs
-    .filter(d => d.data().uid !== exceptUid && (!onlyUids || onlyUids.has(d.data().uid)))
-    .map(d => d.id);
-  for (let i = 0; i < tokens.length; i += 500) {
-    const batch = tokens.slice(i, i + 500);
-    const res = await getMessaging().sendEachForMulticast({
-      tokens: batch,
-      notification: { title, body },
-      data: { link: link || '#feed' },
-      // No sound: alerts show on the lock screen and as banners, silently.
-    });
-    // Forget phones that uninstalled the app or turned alerts off.
-    await Promise.all(res.responses.map((r, j) => {
-      const code = r.error && r.error.code;
-      if (code === 'messaging/registration-token-not-registered' || code === 'messaging/invalid-registration-token') {
-        return db.doc('devices/' + batch[j]).delete().catch(() => {});
-      }
-      return null;
-    }));
+  const loud = [], quiet = [];
+  snap.docs.forEach(d => {
+    const v = d.data(), prefs = v.prefs || {};
+    if (v.uid === exceptUid) return;
+    if (onlyUids && !onlyUids.has(v.uid)) return;
+    if (kind && prefs[kind] === false) return;
+    (prefs.sound ? loud : quiet).push(d.id);
+  });
+  for (const [tokens, sound] of [[loud, true], [quiet, false]]) {
+    for (let i = 0; i < tokens.length; i += 500) {
+      const batch = tokens.slice(i, i + 500);
+      const res = await getMessaging().sendEachForMulticast({
+        tokens: batch,
+        notification: { title, body },
+        data: { link: link || '#feed' },
+        apns: { payload: { aps: sound ? { sound: 'default' } : {} } },
+      });
+      // Forget phones that uninstalled the app or turned alerts off.
+      await Promise.all(res.responses.map((r, j) => {
+        const code = r.error && r.error.code;
+        if (code === 'messaging/registration-token-not-registered' || code === 'messaging/invalid-registration-token') {
+          return db.doc('devices/' + batch[j]).delete().catch(() => {});
+        }
+        return null;
+      }));
+    }
   }
 }
 
@@ -44,7 +52,7 @@ exports.stealAlert = onDocumentCreated('steals/{id}', async (event) => {
   const s = event.data && event.data.data();
   if (!s) return;
   if (s.kind === 'start') {
-    await sendAll({ title: '🦌 Let the games begin!', body: 'Rudolph is on the loose! Find him and steal him.', link: '#feed' });
+    await sendAll({ title: '🦌 Let the games begin!', body: 'Rudolph is on the loose! Find him and steal him.', link: '#feed', kind: 'steals' });
     return;
   }
   if (s.kind !== 'steal') return;
@@ -57,6 +65,7 @@ exports.stealAlert = onDocumentCreated('steals/{id}', async (event) => {
     body: from ? `He was taken from ${from}. Who has him now? Go look.` : 'Who has him now? Go look.',
     exceptUid: s.by,
     link: '#feed',
+    kind: 'steals',
   });
 });
 
@@ -72,6 +81,7 @@ exports.postAlert = onDocumentCreated('posts/{id}', async (event) => {
     body: text.length > 140 ? text.slice(0, 137) + '…' : text,
     exceptUid: p.by,
     link: '#feed',
+    kind: 'posts',
   });
 });
 
@@ -106,6 +116,7 @@ exports.mediaAlert = onDocumentCreated('media/{id}', async (event) => {
       body: 'Open the feed to see it.',
       exceptUid: m.by,
       link: '#feed',
+      kind: 'posts',
     });
     return;
   }
@@ -115,6 +126,7 @@ exports.mediaAlert = onDocumentCreated('media/{id}', async (event) => {
     body: what === 'video' ? 'Shared a video.' : 'Shared a photo.',
     exceptUid: m.by,
     link: '#feed',
+    kind: 'posts',
   });
 });
 
@@ -137,5 +149,6 @@ exports.replyAlert = onDocumentCreated('replies/{id}', async (event) => {
     exceptUid: r.by,
     onlyUids: who,
     link: '#feed',
+    kind: 'replies',
   });
 });

@@ -486,7 +486,7 @@ textarea{min-height:120px;resize:vertical}
       <div class="legend"><span><i></i>Logged steal</span><span><i class="dash"></i>Unlogged move</span><span><i class="dot"></i>Last confirmed sighting</span><span><i class="tagkey">153</i>Playing</span></div>
     </div>
     <div id="joinCta"></div>
-    <div class="stack"><div class="row" style="justify-content:space-between"><h2>Participating houses</h2><span class="label" id="homeCount"></span></div>
+    <div class="stack"><div class="row" style="justify-content:space-between"><h2>Who’s Playing?</h2><span class="label" id="homeCount"></span></div>
     <ul class="homes" id="homeList"></ul></div>
     <div class="stack"><div class="row" style="justify-content:space-between"><h2>Case file</h2><span class="label">Newest first</span></div><ol class="cases" id="timeline"></ol></div>
     <div class="card row" id="a2hsCard" style="justify-content:space-between"><p style="flex:1;min-width:12rem"><b>Keep the hunt one tap away.</b> Add Reindeer Games to your phone’s home screen.</p><div class="row"><button class="btn sm ghost" data-a2hs-hide>Not now</button><button class="btn sm primary" data-a2hs>Add to phone</button></div></div>
@@ -1584,7 +1584,7 @@ document.addEventListener('click',async e=>{
       <p>Signed in as <b>${esc(S.email||S.phone||'')}</b>${isOrg()?' · Organizer':''}</p>
       ${mh?`<p class="small muted">${esc(mh.number)} Emerald Bay. To change your family name, house number or pin, ask the organizer.</p>`:''}
       ${S.blocks.length?`<div class="field"><span>Blocked people</span><ul class="homes">${S.blocks.map((u,i)=>`<li><div style="grid-column:1/3"><b>Blocked person ${i+1}</b><div class="case-meta">Their photos, videos and notes are hidden for you</div></div><button class="btn sm" data-unblock="${esc(u)}">Unblock</button></li>`).join('')}</ul></div>`:''}
-      <div class="row">${FMsg()&&!S.demo?'<button class="btn" data-alerts>Alert settings</button>':''}${mh?`<a class="btn" href="#homes" data-close>See participating houses</a>`:''}${isInstalled()?'':'<button class="btn" data-a2hs data-close>Add to phone</button>'}<button class="btn danger" data-signout data-close>Sign out</button></div>
+      <div class="row">${FMsg()&&!S.demo?'<button class="btn" data-alerts>Alert settings</button>':''}${mh?`<a class="btn" href="#homes" data-close>See who’s playing</a>`:''}${isInstalled()?'':'<button class="btn" data-a2hs data-close>Add to phone</button>'}<button class="btn danger" data-signout data-close>Sign out</button></div>
       <div class="row" style="justify-content:space-between;margin-top:4px"><a class="linkbtn" href="#privacy" data-close>Privacy policy</a>${S.demo?'':'<button class="linkbtn" data-delacct style="color:var(--nose)">Delete my account</button>'}</div>`);return}
   if(t.closest('[data-delacct]')){openDeleteAccount();return}
   if(t.closest('[data-alerts]')){openAlertSettings();return}

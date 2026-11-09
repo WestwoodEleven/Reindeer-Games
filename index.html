@@ -117,6 +117,9 @@ main{padding-block:16px calc(96px + env(safe-area-inset-bottom,0px))}
 .status::after{display:none}
 .status b{display:block;font:400 1.1rem/1.2 var(--f-display);margin:4px 0 4px}
 .check{display:flex;gap:10px;align-items:center;font-size:.95rem;cursor:pointer}.check input{width:20px;height:20px;accent-color:var(--nose);flex:none}
+.menu{display:flex;flex-direction:column;border:1.5px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface)}
+.menu button{border:0;border-top:1px solid var(--line);background:transparent;text-align:left;padding:12px 14px;font:600 .95rem var(--f-body);color:var(--ink);cursor:pointer}
+.menu button:first-child{border-top:0}.menu button:hover{background:var(--bg)}.menu button.danger{color:var(--nose)}
 .sep{border:0;border-top:1px solid var(--line);margin:2px 0;width:100%}
 .switch{position:relative;display:inline-block;width:52px;height:30px;flex:none}
 .switch input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:1}
@@ -324,8 +327,8 @@ main{padding-block:16px calc(96px + env(safe-area-inset-bottom,0px))}
 .pod .pname{font-weight:700;font-size:.95rem;line-height:1.2;overflow-wrap:anywhere}
 .pod .pname small{display:block;font:500 .78rem var(--f-mono);color:var(--muted)}
 .pod .medal{width:38px;height:38px;font-size:1rem}
-.block{width:100%;border:2px solid var(--edge);border-bottom:0;border-radius:12px 12px 0 0;display:flex;justify-content:center;padding-top:10px;font:600 1.6rem var(--f-mono);color:#fff}
-.block.p1{height:120px;background:var(--nose)}.block.p2{height:88px;background:var(--accent)}.block.p3{height:64px;background:var(--accent)}
+.pod .block{width:100%;border:2px solid var(--edge);border-bottom:0;border-radius:12px 12px 0 0;display:flex;justify-content:center;padding-top:10px;font:600 1.6rem var(--f-mono);color:#fff}
+.pod .block.p1{height:120px;background:var(--nose)}.pod .block.p2{height:88px;background:var(--accent)}.pod .block.p3{height:64px;background:var(--accent)}
 .podbase{height:8px;background:var(--edge);border-radius:4px;margin-top:-18px}
 .pod.mine .block{box-shadow:inset 0 0 0 3px #FFD86B}
 .pod .you{margin-left:0;display:inline-block;margin-top:3px}
@@ -1156,9 +1159,9 @@ function replyLine(r,full,tc=''){const h=homeById(r.byHome),mine=r.by===S.me;
 function openReplyMenu(id){const r=(D().replies||[]).find(x=>x.id===id);if(!r)return;const h=homeById(r.byHome),mine=r.by===S.me;
   const sh=openSheet(`${shTop('Reply',h?esc(h.family):'The organizer')}
     <p class="ftext thpost">${esc(r.text)}</p>
-    <div class="stack">
-      ${mine||isOrg()?`<button class="btn danger block" id="rmDel">Delete reply</button>`:''}
-      ${!mine&&canWrite()?`<button class="btn block" data-report="reply|${esc(r.id)}">Report reply</button>${isOrg()?'':`<button class="btn block" data-block="${esc(r.by)}|${esc(h?h.family:'')}">Block ${h?esc(h.family):'this person'}</button>`}`:''}
+    <div class="menu">
+      ${mine||isOrg()?`<button class="danger" id="rmDel">Delete reply</button>`:''}
+      ${!mine&&canWrite()?`<button data-report="reply|${esc(r.id)}">Report reply</button>${isOrg()?'':`<button data-block="${esc(r.by)}|${esc(h?h.family:'')}">Block ${h?esc(h.family):'this person'}</button>`}`:''}
     </div>`);
   const d=sh.querySelector('#rmDel');if(d)d.addEventListener('click',async()=>{if(!d.dataset.armed){d.dataset.armed=1;d.textContent='Tap again to delete';return}
     if(await W(()=>col('replies').doc(r.id).delete(),'Reply deleted'))closeSheet()})}
@@ -1631,7 +1634,7 @@ document.addEventListener('click',async e=>{
   if(el=t.closest('[data-reactpick]')){if(S.demo){toast('The example game doesn’t save changes.');return}if(!canWrite())return;openReactPicker(el.dataset.reactpick);return}
   if(el=t.closest('[data-postmenu]')){const p=(D().posts||[]).find(x=>x.id===el.dataset.postmenu);if(!p)return;const h=homeById(p.byHome),mine=p.by===S.me;
     const sh=openSheet(`${shTop(h?esc(h.family):'Post',esc(fmt(p.at)))}${p.text?`<p class="ftext">${esc(p.text)}</p>`:''}
-      ${(mine||isOrg())&&!S.demo?`<button class="btn danger" id="pDel">Delete post</button>`:''}${!mine&&!S.demo&&canWrite()?modLinks('post',p.id,p.by,h?h.family:''):''}`);
+      ${!S.demo&&(mine||isOrg()||canWrite())?`<div class="menu">${mine||isOrg()?`<button class="danger" id="pDel">Delete post</button>`:''}${!mine&&canWrite()?`<button data-report="post|${esc(p.id)}">Report post</button>${isOrg()?'':`<button data-block="${esc(p.by)}|${esc(h?h.family:'')}">Block ${h?esc(h.family):'this person'}</button>`}`:''}</div>`:''}`);
     const d=sh.querySelector('#pDel');if(d)d.addEventListener('click',async()=>{if(!d.dataset.armed){d.dataset.armed=1;d.textContent='Tap again to delete';return}
       if(await W(async()=>{await delRepliesOf(p.id);for(const m of D().media.filter(x=>x.postId===p.id))await delMedia(m);await col('posts').doc(p.id).delete()},'Post deleted'))closeSheet()});
     return}

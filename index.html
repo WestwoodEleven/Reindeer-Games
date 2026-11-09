@@ -723,7 +723,8 @@ const localInput=d=>{const z=new Date(d.getTime()-d.getTimezoneOffset()*6e4);ret
 const orgReveal=()=>{try{return localStorage.getItem('rg-reveal')==='1'}catch{return false}};
 function canSee(e){
   if(isOrg()&&orgReveal())return true;const id=myId();if(!id)return false;
-  const mh=myHome()?.id;return e.by===id||(!!mh&&(e.from===mh||e.to===mh));
+  // Only the thieves (and whoever logged it) know where he went. The family he was taken from doesn't.
+  const mh=myHome()?.id;return e.by===id||(!!mh&&e.to===mh);
 }
 /* ---------- seasons: one game per December ---------- */
 const yearOf=iso=>{const d=new Date(iso||Date.now());return String(d.getMonth()===0?d.getFullYear()-1:d.getFullYear())};
@@ -1189,7 +1190,7 @@ function rFeed(C){
   const fam=h=>h?esc(h.family):'The organizer';
   $('#feedList').innerHTML=items.length?items.slice(0,150).map(it=>{
     if(it.k==='sealed'&&it.e.kind==='start'){const e=it.e;return `<div class="falert knit"><span class="fic">★</span><div><b>Let the games begin! Rudolph is on the loose!</b><small>${esc(ago(e.at))} · Find him and steal him.</small></div></div>`}
-    if(it.k==='sealed'){const e=it.e;return `<div class="falert knit"><span class="fic">!</span><div><b>${e.from?`Rudolph was taken from ${esc(fam(homeById(e.from)))}`:'Rudolph was stolen'}</b><small>${esc(ago(e.at))} · Who has him now? Go look.</small></div></div>`}
+    if(it.k==='sealed'){const e=it.e;return `<div class="falert knit"><span class="fic">!</span><div><b>${e.from?`Rudolph was taken from ${esc(fam(homeById(e.from)))}`:'Rudolph was stolen'}</b><small>${esc(ago(e.at))} · Who has him now? Go look.</small>${e.from&&e.from===myHome()?.id&&S.assets&&canWrite()?`<button class="linkbtn" data-ev="${esc(e.id)}" style="color:#fff;padding:0;margin-top:4px">Add your photos or videos</button>`:''}</div></div>`}
     if(it.k==='steal'){const e=it.e;return `<button class="falert done knit" data-ev="${esc(e.id)}"><span class="fic${e.kind==='start'?'':' num'}" ${e.kind==='start'?'':`title="Steal number ${sn.get(e.id)}"`}>${e.kind==='start'?'★':sn.get(e.id)||'🦌'}</span><div><b>${e.kind==='start'?'Let the games begin! Rudolph is on the loose!':caseLine(e)}</b><small>${e.kind==='start'&&e.to?`Started at ${esc(fam(homeById(e.to)))} · `:''}${esc(fmt(e.at))}${e.note&&!blocked(e.by)?` · “${esc(e.note)}”`:''}</small>${thumbs(mediaFor(e.id))}</div></button>`}
     if(it.k==='photo'){const m=it.m,h=homeById(m.byHome);return `<div class="fpost knit ${tints.get(it)}"><div class="fwho"><b>${fam(h)}</b><span>${esc(ago(m.at))}</span></div>${m.caption?`<p>${esc(m.caption)}</p>`:''}${thumbs([m])}</div>`}
     const p=it.p,h=homeById(p.byHome),ms=D().media.filter(m=>m.postId===p.id&&!blocked(m.by));const mine=p.by===S.me;
@@ -1339,7 +1340,13 @@ function openHomeForm(mode,id){
 /* ---------- event detail / edit ---------- */
 function openEvent(id){
   const e=D().events.find(x=>x.id===id);if(!e)return;const C=compute();
-  if(e===C.hidden){toast('This one is sealed until the next steal.');return}
+  if(e===C.hidden){
+    if(e.from&&e.from===myHome()?.id&&S.assets&&canWrite()&&!isPast()){
+      const sh=openSheet(`${shTop('Rudolph was taken from you',esc(fmt(e.at)))}
+        <p>Where he went stays secret until he’s stolen again. You can still add your photos or videos of the empty spot.</p>
+        <label class="drop"><input type="file" id="evFiles" accept="image/*,video/*" multiple><b>Add your photos or videos</b><br><small>They appear in the feed once he moves again.</small></label><ul class="files" id="evFileList"></ul>`);
+      const f=sh.querySelector('#evFiles');f.addEventListener('change',async()=>{await uploadAll([...f.files],id,$('#evFileList'));f.value=''});return}
+    toast('This one is sealed until the next steal.');return}
   const ms=mediaFor(id),involved=canSee(e)&&(isOrg()||e.by===myId()||[e.from,e.to].includes(myHome()?.id));
   const byHome=homeById(e.byHome)||homeById(S.members.find(m=>m.id===e.by)?.homeId)||D().homes.find(h=>h.ownerId&&h.ownerId===e.by);
   const sh=openSheet(`${shTop('Case '+pad(C.num.get(id)),esc(fmt(e.at)))}

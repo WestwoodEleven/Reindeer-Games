@@ -1024,11 +1024,11 @@ function rTimeline(C){
   $('#trailCount').textContent=C.evs.length?`${C.evs.length} ${C.evs.length>1?'entries':'entry'}`:'';
 }
 S.lbTab=S.lbTab||'standings';
-function rLeaders(C){const sup=S.lbTab==='sup';if(sup)$('#boardLabel').textContent=viewSeason();$('#lbStand').setAttribute('aria-pressed',!sup);$('#lbSup').setAttribute('aria-pressed',sup);
+function rLeaders(C){const sup=S.lbTab==='sup';$('#boardLabel').textContent=`${viewSeason()} · ${sup?'Superlatives':'Standings'}`;$('#lbStand').setAttribute('aria-pressed',!sup);$('#lbSup').setAttribute('aria-pressed',sup);
   $('#scoreboard').hidden=sup;$('#lbNote').hidden=sup;$('#superlatives').hidden=!sup;if(sup)rSuper(C);else rBoard(C)}
 function rBoard(C){
   const took={},lost={};C.vis.forEach(e=>{if(e.kind==='steal'){if(e.to)took[e.to]=(took[e.to]||0)+1;if(e.from)lost[e.from]=(lost[e.from]||0)+1}});
-  const mine=myHome()?.id;$('#boardLabel').textContent=`${viewSeason()} · Steals`;
+  const mine=myHome()?.id;
   // Every playing house, best first; ties go to the house stolen from least, then by house number.
   const hs=sortHomes(D().homes).map(h=>({h,t:took[h.id]||0,l:lost[h.id]||0})).sort((a,b)=>b.t-a.t||a.l-b.l);
   let prev=null;hs.forEach((x,k)=>{x.r=(prev&&x.t===prev.t&&x.l===prev.l)?prev.r:k+1;prev=x});

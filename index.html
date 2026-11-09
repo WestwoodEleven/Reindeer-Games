@@ -77,6 +77,7 @@ a{color:var(--accent)}
 .bar .wrap{display:flex;align-items:center;gap:12px;padding-block:10px}
 .lights-gap{height:18px}
 .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--hdr-ink);min-width:0;flex:1}
+.brand>span:last-child{min-width:0;flex:1}
 .brand b{font-family:var(--f-display);font-weight:400;font-size:1.15rem;display:block;line-height:1}
 .brand small{font:500 .72rem var(--f-mono);color:rgba(255,255,255,.82);letter-spacing:.06em}
 .nose{width:22px;height:22px;border-radius:50%;background:var(--nose);box-shadow:0 0 0 4px var(--nose-soft),0 0 14px var(--nose);flex:none}
@@ -143,6 +144,9 @@ main{padding-block:16px calc(96px + env(safe-area-inset-bottom,0px))}
 .prof-stats b{display:block;font:400 1.2rem var(--f-display);color:#fff}.prof-stats i{font:600 .66rem var(--f-mono);font-style:normal;letter-spacing:.05em;text-transform:uppercase;color:#CFE3D6}
 .prof-won{display:flex;flex-wrap:wrap;gap:6px}.prof-won span{font:600 .72rem var(--f-mono);letter-spacing:.04em;text-transform:uppercase;background:var(--post-g);border:1.5px solid var(--post-g-line);border-radius:999px;padding:4px 9px}
 .chip.acct{position:relative}.dotn{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:#F2C14E;color:#2B1A12;font:700 .75rem var(--f-body);margin-left:2px}
+.feedhead{justify-content:space-between;flex-wrap:nowrap;gap:10px;align-items:center}
+.feedhead h2{white-space:nowrap;flex:none}.rulesbtn{flex:none;border:2px solid var(--edge);box-shadow:2px 2px 0 var(--edge);background:var(--surface)}
+.brand b{white-space:nowrap}
 .sep{border:0;border-top:1px solid var(--line);margin:2px 0;width:100%}
 .switch{position:relative;display:inline-block;width:52px;height:30px;flex:none}
 .switch input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:1}
@@ -604,7 +608,7 @@ textarea{min-height:120px;resize:vertical}
   <section class="view" id="v-feed" data-view="feed">
     <div class="status" id="status"></div>
     <div class="card row" id="pushCard" hidden style="justify-content:space-between"><p style="flex:1;min-width:12rem"><b>Get steal alerts.</b> We’ll let you know the moment the reindeer is stolen, and when neighbors post.</p><div class="row"><button class="btn sm ghost" data-push-hide>Not now</button><button class="btn sm primary" data-push>Turn on alerts</button></div></div>
-    <div class="row" style="justify-content:space-between"><h2>Reindeer Rumblings</h2>
+    <div class="row feedhead"><h2>Reindeer Rumblings</h2><a class="btn sm rulesbtn" href="#rules">📜 Rules</a>
 </div>
     <div id="feedAll">
       <form class="card stack" id="composer" novalidate>
@@ -972,7 +976,6 @@ function rWho(){
   // Organizer tools live in the account menu; the family button shows a count when something needs review.
   const orgN=isOrg()&&!S.demo?orgPending():0;
   if(isOrg()&&!S.demo&&!mh)h+=`<a class="chip${orgN?' solid':''}" href="#admin">Organizer${orgN?` · ${orgN}`:''}</a>`;
-  if(isMember()||S.demo)h+=`<a class="chip rules-chip" href="#rules" aria-label="Rules"><span class="rc-i" aria-hidden="true">📜</span><span class="rc-t">Rules</span></a>`;
   if(mh&&S.demo)h+=`<span class="chip">${esc(mh.family)}</span>`;
   else if(S.me&&isMember())h+=`<button class="chip acct" data-account aria-label="Account${orgN?`, ${orgN} organizer items to review`:''}">${esc(mh?mh.family:"Account")}${orgN?`<span class="dotn">${orgN}</span>`:' ▾'}</button>`;
   else if(!S.demo&&isOrg()&&!mh)h+=`<button class="chip solid" data-join>Join</button>`;
@@ -1467,7 +1470,7 @@ function renderNow(){
   if(v==='privacy'){$('#privContact').innerHTML=S.live.config.contact&&!S.demo?`contact the organizer at <b>${esc(S.live.config.contact)}</b>.`:'contact the organizer (their contact info is on the Rules page once you’ve joined).';$('#privBack').setAttribute('href',gated?'#':'#rules')}
   document.querySelectorAll('[data-view]').forEach(s=>s.hidden=s.dataset.view!==v);
   document.querySelectorAll('[data-tab]').forEach(a=>{if(a.dataset.tab===v)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
-  rWho();rBanner();syncPush();if(S.thread)renderThread();
+  rWho();rBanner();syncPush();if(S.thread)renderThread();requestAnimationFrame(fitTitles);
   if(v==='homes'){rTimeline(C);rHomes();drawTrail()}
   if(v==='leaders')rLeaders(C);
   if(v==='log')rLog();
@@ -1716,6 +1719,12 @@ async function pushAskOnLaunch(){const P=FMsg();if(!P)return;
   sh.querySelector('#wYes').addEventListener('click',async()=>{closeSheet();try{const q=await P.requestPermissions();S.push=q.receive;if(q.receive==='granted'&&S.me)await pushSave()}catch(e){console.warn('push launch',e)}syncPush()});
   sh.querySelector('#wNo').addEventListener('click',()=>{closeSheet();S.push='prompt';syncPush()})}
 if(inApp)setTimeout(pushAskOnLaunch,600);
+// Keep one-line titles on one line: shrink a little if the space is tight.
+function fitOne(el,box,max,min,extra=0){if(!el||!box||!box.offsetParent)return;let px=max;el.style.fontSize=px+'px';
+  while(el.scrollWidth+extra>box.clientWidth+1&&px>min){px-=.5;el.style.fontSize=px+'px'}}
+function fitTitles(){const b=document.querySelector('.brand b');if(b)fitOne(b,b.parentElement,18.4,14);
+  const row=document.querySelector('.feedhead');if(row){const h=row.querySelector('h2'),btn=row.querySelector('.rulesbtn');fitOne(h,row,24,15,(btn?btn.offsetWidth:0)+10)}}
+addEventListener('resize',fitTitles);if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fitTitles);
 // Inline replies: keep drafts, Enter sends, and catch up on feed updates after typing.
 document.addEventListener('input',e=>{const f=e.target.closest&&e.target.closest('.irep');if(!f)return;S.repDraft[f.dataset.irep]=e.target.value;e.target.style.height='auto';e.target.style.height=Math.min(e.target.scrollHeight,140)+'px'});
 document.addEventListener('keydown',e=>{const f=e.target.closest&&e.target.closest('.irep');if(f&&e.key==='Enter'&&!e.shiftKey){e.preventDefault();f.requestSubmit()}});

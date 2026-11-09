@@ -42,7 +42,12 @@ async function sendAll({ title, body, exceptUid, link, onlyUids }) {
 
 exports.stealAlert = onDocumentCreated('steals/{id}', async (event) => {
   const s = event.data && event.data.data();
-  if (!s || s.kind !== 'steal') return;
+  if (!s) return;
+  if (s.kind === 'start') {
+    await sendAll({ title: '🦌 Let the games begin!', body: 'Rudolph is on the loose! Find him and steal him.', link: '#feed' });
+    return;
+  }
+  if (s.kind !== 'steal') return;
   // Skip old steals typed in after the fact (e.g. filling a gap in the trail).
   const at = Date.parse(s.at || '') || s.createdAt || Date.now();
   if (Date.now() - at > 24 * 60 * 60 * 1000) return;

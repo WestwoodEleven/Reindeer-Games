@@ -759,7 +759,9 @@ const personLabel=m=>{const c=m.email||m.phone||'';return m.name&&c?`${m.name} (
 const isMember=()=>!!S.demo||isOrg()||!!myHome()||!!S.memberDoc;
 const canWrite=()=>!S.demo&&!!S.db&&!!S.me;
 const fam=id=>{const h=homeById(id);return h?h.family:'a house no longer in the game'};
-const famB=id=>`<b>${esc(fam(id))}</b>`;
+// Mid-sentence, "The Smiths" reads as "the Smiths".
+const mid=n=>String(n??'').replace(/^The\s/,'the ');
+const famB=(id,m)=>`<b>${esc(m?mid(fam(id)):fam(id))}</b>`;
 const hno=h=>h?`No. ${esc(h.number)}`:'';
 const sortHomes=a=>[...a].sort((x,y)=>(parseInt(x.number)||9999)-(parseInt(y.number)||9999)||String(x.family).localeCompare(y.family));
 
@@ -927,7 +929,7 @@ function tickReplay(now){const r=S.replay;if(!r)return;const dt=Math.min(100,now
 }
 function replayUI(){const r=S.replay;if(!r)return;const it=r.steps[r.i],n=r.steps.length;
   let cap;
-  if(it.gap)cap=`<b>Unlogged move.</b> Rudolph left ${famB(it.from)} and later turned up at ${famB(it.to)}.`;
+  if(it.gap)cap=`<b>Unlogged move.</b> Rudolph left ${famB(it.from,1)} and later turned up at ${famB(it.to,1)}.`;
   else{const e=it.ev;cap=`<span class="mono">${esc(evTitle(e,r.num.get(e.id)))}</span> · ${esc(fmt(e.at))}<br>${caseLine(e)}.`}
   if(!r.playing&&r.i===n-1&&r.t>=1)cap+=`<br><span class="muted small">${isPast()?'That’s the whole game.':'That’s everything unsealed so far.'}</span>`;
   $('#replayCap').innerHTML=cap;$('#replayProg').style.width=`${Math.round((r.i+(r.t>=1?1:r.t))/n*100)}%`;
@@ -969,21 +971,21 @@ function rStatus(C){
     const l=C.last,fin=l?(l.to||l.from):null;
     const took={};C.vis.forEach(e=>{if(e.kind==='steal'&&e.to)took[e.to]=(took[e.to]||0)+1});
     const top=Object.entries(took).sort((a,b)=>b[1]-a[1])[0];
-    h=`<div class="label">The ${esc(viewSeason())} game · Final</div><b>${fin?`Rudolph finished at ${esc(fam(fin))}`:'No steals were logged'}</b><p>${C.vis.filter(e=>e.kind==='steal').length} steals logged.${top?` Most steals: ${esc(fam(top[0]))} with ${top[1]}.`:''}</p>`;
+    h=`<div class="label">The ${esc(viewSeason())} game · Final</div><b>${fin?`Rudolph finished at ${esc(mid(fam(fin)))}`:'No steals were logged'}</b><p>${C.vis.filter(e=>e.kind==='steal').length} steals logged.${top?` Most steals: ${esc(fam(top[0]))} with ${top[1]}.`:''}</p>`;
   }else if(C.evs.length&&!C.hidden&&C.last){
     const l=C.last,mh=myHome()?.id;
-    if(!l.to&&l.kind==='steal')h=`<div class="label">Thief unknown</div><b>Taken from ${esc(fam(l.from))} ${esc(ago(l.at))}</b><p>Nobody has logged the steal yet. If it was your family, <a href="#log">claim it</a> so it counts.</p>`;
+    if(!l.to&&l.kind==='steal')h=`<div class="label">Thief unknown</div><b>Taken from ${esc(mid(fam(l.from)))} ${esc(ago(l.at))}</b><p>Nobody has logged the steal yet. If it was your family, <a href="#log">claim it</a> so it counts.</p>`;
     else if(l.to&&mh&&l.to===mh)h=`<div class="label">Only your family can see this</div><b>Rudolph is at your house</b><p>Keep him visible from the street. Neighbors find out where he was after he’s stolen again.</p>`;
-    else if(l.to&&isOrg()&&orgReveal())h=`<div class="label">Organizer view · spoilers on</div><b>Rudolph is at ${esc(fam(l.to))}</b><p>${hno(homeById(l.to))} · since ${esc(ago(l.at))}. <a href="#admin">Turn off</a></p>`;
-    else if(l.to)h=`<div class="label">Only your family can see this</div><b>Rudolph is at ${esc(fam(l.to))}</b><p>You were part of this steal, so you know where he went. Everyone else sees that he’s on the loose.</p>`;
+    else if(l.to&&isOrg()&&orgReveal())h=`<div class="label">Organizer view · spoilers on</div><b>Rudolph is at ${esc(mid(fam(l.to)))}</b><p>${hno(homeById(l.to))} · since ${esc(ago(l.at))}. <a href="#admin">Turn off</a></p>`;
+    else if(l.to)h=`<div class="label">Only your family can see this</div><b>Rudolph is at ${esc(mid(fam(l.to)))}</b><p>You were part of this steal, so you know where he went. Everyone else sees that he’s on the loose.</p>`;
   }
   st.innerHTML=h;st.hidden=!h;
 }
 function caseLine(e){
-  if(e.kind==='start')return `Rudolph starts the game at ${famB(e.to)}`;
+  if(e.kind==='start')return `Rudolph starts the game at ${famB(e.to,1)}`;
   if(!e.from)return `${famB(e.to)} had Rudolph. Where he came from wasn’t logged`;
-  if(!e.to)return `Rudolph was taken from ${famB(e.from)}. Thief not logged yet`;
-  return `${famB(e.to)} took Rudolph from ${famB(e.from)}`;
+  if(!e.to)return `Rudolph was taken from ${famB(e.from,1)}. Thief not logged yet`;
+  return `${famB(e.to)} took Rudolph from ${famB(e.from,1)}`;
 }
 const pad=n=>'#'+String(n).padStart(2,'0');
 function mediaFor(id){return D().media.filter(m=>m.stealId===id&&!blocked(m.by)).sort((a,b)=>String(a.at).localeCompare(String(b.at)))}
@@ -994,7 +996,7 @@ function rTimeline(C){
   const t=$('#timeline');let h='';
   if(C.hidden)h+=`<li class="case sealed"><div class="case-n">${C.num.get(C.hidden.id)}</div><div><p><b>Sealed.</b> A new steal was logged ${esc(ago(C.hidden.at))}.</p><p class="case-meta">Details unlock when Rudolph is stolen again.</p></div></li>`;
   [...C.items].reverse().forEach(it=>{
-    if(it.gap){h+=`<li class="case gap"><div class="case-n">?</div><div><p><b>Unlogged move.</b> Rudolph left ${famB(it.from)} and later turned up at ${famB(it.to)}.</p>${(canWrite()&&!isPast())||isOrg()?`<button class="btn sm" data-gap="${esc(it.from)}|${esc(it.to)}|${esc(it.after)}">Fill in the missing steal</button>`:''}</div></li>`;return}
+    if(it.gap){h+=`<li class="case gap"><div class="case-n">?</div><div><p><b>Unlogged move.</b> Rudolph left ${famB(it.from,1)} and later turned up at ${famB(it.to,1)}.</p>${(canWrite()&&!isPast())||isOrg()?`<button class="btn sm" data-gap="${esc(it.from)}|${esc(it.to)}|${esc(it.after)}">Fill in the missing steal</button>`:''}</div></li>`;return}
     const e=it.ev,n=mediaFor(e.id).length;
     h+=`<li class="case" data-ev="${esc(e.id)}"><div class="case-n">${C.num.get(e.id)}</div><div><p>${caseLine(e)}</p><p class="case-meta">${esc(fmt(e.at))}${n?` · ${n} ${n>1?'files':'file'}`:''}</p>${e.note&&!blocked(e.by)?`<p class="small">“${esc(e.note)}”</p>`:''}${thumbs(e.id)}${claimBtn(e)}</div></li>`;
   });
@@ -1021,7 +1023,7 @@ function rBoard(C){
   else if(!total)lead='No steals yet. The first family to grab Rudolph takes the lead.';
   else{
     const top=hs.filter(x=>x.r===1);
-    const names=a=>a.length<3?a.join(' and '):`${a.slice(0,-1).join(', ')} and ${a[a.length-1]}`;
+    const names=a=>{a=a.map((n,i)=>i?mid(n):n);return a.length<3?a.join(' and '):`${a.slice(0,-1).join(', ')} and ${a[a.length-1]}`};
     const next=hs.find(x=>x.r>1);
     lead=top.length>1?(top.length>3?`🦌 <b>${top.length} families</b> are tied for the lead with ${hs[0].t}.`:`🦌 <b>${esc(names(top.map(x=>x.h.family)))}</b> are tied for the lead with ${hs[0].t}.`)
       :`🦌 <b>${esc(hs[0].h.family)}</b> ${next&&next.t<hs[0].t?`lead by ${plural(hs[0].t-next.t,'steal')}.`:'lead.'}`;
@@ -1029,7 +1031,7 @@ function rBoard(C){
     if(me&&!isPast()){
       if(me.r===1)lead+=top.length>1?' You’re one of them!':' That’s you!';
       else{const above=[...hs].reverse().find(x=>x.r<me.r);const gap=above.t-me.t;
-        lead+=gap?` You’re ${ord(me.r)}, ${plural(gap,'steal')} behind ${esc(above.h.family)}.`:` You’re ${ord(me.r)}: same steals as ${esc(above.h.family)}, but you’ve been stolen from more.`}
+        lead+=gap?` You’re ${ord(me.r)}, ${plural(gap,'steal')} behind ${esc(mid(above.h.family))}.`:` You’re ${ord(me.r)}: same steals as ${esc(mid(above.h.family))}, but you’ve been stolen from more.`}
     }
   }
   const meta=[total?plural(total,'steal'):'',day?`day ${day}`:''].filter(Boolean).join(' · ');
@@ -1073,7 +1075,7 @@ function rSuper(C){
     add('Most likely to never let go','🏰',[lo.h],durTxt(lo.ms),'Longest anyone kept him');
     if(stays.length>1)add('Most likely to lose him by dinner','🥔',[sh.h],durTxt(sh.ms),'Shortest stay of the game')}
   // Robbed: stolen from the most.
-  {const m=new Map();steals.forEach(e=>{if(e.from)m.set(e.from,(m.get(e.from)||0)+1)});const r=best(m,2);if(r)add('Most likely to be robbed','🎯',r.ids,`Robbed ${r.v}×`,`Sorry, ${names(r.ids)}`)}
+  {const m=new Map();steals.forEach(e=>{if(e.from)m.set(e.from,(m.get(e.from)||0)+1)});const r=best(m,2);if(r)add('Most likely to be robbed','🎯',r.ids,`Robbed ${r.v}×`,`Sorry, ${mid(names(r.ids))}`)}
   // Feud: the pair with the most steals between them.
   {const m=new Map();steals.forEach(e=>{if(!e.from||!e.to)return;const k=[e.from,e.to].sort().join('|');m.set(k,(m.get(k)||0)+1)});const r=best(m,2);
     if(r){const [a,b]=r.ids[0].split('|');out.push({title:'Most likely to feud forever',em:'⚔️',ids:[a,b],label:`${famOf(a).replace(/^The /,'')} vs. ${famOf(b).replace(/^The /,'')}`,val:`${r.v} swaps`,sub:'Back and forth all season'})}}
@@ -1176,7 +1178,7 @@ function mountJoinStep(root){
     if(found){$('#jhTitle').textContent=`${found.family} play from ${number}`;
       s2.innerHTML=`<p>Join them and you’ll play as one family.</p><div class="famrow"><span class="hno">${esc(number)}</span><b>${esc(found.family)}</b></div>
         <div class="pwbox"${S.pwJoin?'':' hidden'}><label class="field"><span>Game password</span><input type="text" id="jhPw" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="From the organizer"></label><button class="btn red" id="jhPwBtn">Join now</button><div class="or">OR</div></div>
-        <button class="btn ${S.pwJoin?'outline-c':'red'}" id="jhSend">${S.pwJoin?'No password? Ask the organizer to approve you':`Request to join ${esc(found.family)}`}</button><button class="linkbtn" id="jhBack">Not your family? Change house number</button>`}
+        <button class="btn ${S.pwJoin?'outline-c':'red'}" id="jhSend">${S.pwJoin?'No password? Ask the organizer to approve you':`Request to join ${esc(mid(found.family))}`}</button><button class="linkbtn" id="jhBack">Not your family? Change house number</button>`}
     else{$('#jhTitle').textContent=`You’re the first from ${number}`;
       s2.innerHTML=`<p>Name your family. Everyone in your household will join under this name.</p>
         <label class="field"><span>Family name</span><input type="text" id="jhFam" maxlength="40" placeholder="The Garcias" value="${esc(req&&!found?req.family:'')}"></label>
@@ -1279,7 +1281,7 @@ function openReplyMenu(id){const r=(D().replies||[]).find(x=>x.id===id);if(!r)re
     <p class="ftext thpost">${esc(r.text)}</p>
     <div class="menu">
       ${mine||isOrg()?`<button class="danger" id="rmDel">Delete reply</button>`:''}
-      ${!mine&&canWrite()?`<button data-report="reply|${esc(r.id)}">Report reply</button>${isOrg()?'':`<button data-block="${esc(r.by)}|${esc(h?h.family:'')}">Block ${h?esc(h.family):'this person'}</button>`}`:''}
+      ${!mine&&canWrite()?`<button data-report="reply|${esc(r.id)}">Report reply</button>${isOrg()?'':`<button data-block="${esc(r.by)}|${esc(h?h.family:'')}">Block ${h?esc(mid(h.family)):'this person'}</button>`}`:''}
     </div>`);
   const d=sh.querySelector('#rmDel');if(d)d.addEventListener('click',async()=>{if(!d.dataset.armed){d.dataset.armed=1;d.textContent='Tap again to delete';return}
     if(await W(()=>col('replies').doc(r.id).delete(),'Reply deleted'))closeSheet()})}
@@ -1323,8 +1325,8 @@ function rFeed(C){
   const fam=h=>h?esc(h.family):'The organizer';
   $('#feedList').innerHTML=items.length?items.slice(0,150).map(it=>{
     if(it.k==='sealed'&&it.e.kind==='start'){const e=it.e;return `<div class="falert knit"><span class="fic">★</span><div><b>Let the games begin! Rudolph is on the loose!</b><small>${esc(ago(e.at))} · Find him and steal him.</small></div></div>`}
-    if(it.k==='sealed'){const e=it.e;return `<div class="falert knit"><span class="fic">!</span><div><b>${e.from?`Rudolph was taken from ${esc(fam(homeById(e.from)))}`:'Rudolph was stolen'}</b><small>${esc(ago(e.at))} · Who has him now? Go look.</small>${e.from&&e.from===myHome()?.id&&S.assets&&canWrite()?`<button class="linkbtn" data-ev="${esc(e.id)}" style="color:#fff;padding:0;margin-top:4px">Add your photos or videos</button>`:''}</div></div>`}
-    if(it.k==='steal'){const e=it.e;return `<button class="falert done knit" data-ev="${esc(e.id)}"><span class="fic${e.kind==='start'?'':' num'}" ${e.kind==='start'?'':`title="Steal number ${sn.get(e.id)}"`}>${e.kind==='start'?'★':sn.get(e.id)||'🦌'}</span><div><b>${e.kind==='start'?'Let the games begin! Rudolph is on the loose!':caseLine(e)}</b><small>${e.kind==='start'&&e.to?`Started at ${esc(fam(homeById(e.to)))} · `:''}${esc(fmt(e.at))}${e.note&&!blocked(e.by)?` · “${esc(e.note)}”`:''}</small>${thumbs(mediaFor(e.id))}</div></button>`}
+    if(it.k==='sealed'){const e=it.e;return `<div class="falert knit"><span class="fic">!</span><div><b>${e.from?`Rudolph was taken from ${mid(fam(homeById(e.from)))}`:'Rudolph was stolen'}</b><small>${esc(ago(e.at))} · Who has him now? Go look.</small>${e.from&&e.from===myHome()?.id&&S.assets&&canWrite()?`<button class="linkbtn" data-ev="${esc(e.id)}" style="color:#fff;padding:0;margin-top:4px">Add your photos or videos</button>`:''}</div></div>`}
+    if(it.k==='steal'){const e=it.e;return `<button class="falert done knit" data-ev="${esc(e.id)}"><span class="fic${e.kind==='start'?'':' num'}" ${e.kind==='start'?'':`title="Steal number ${sn.get(e.id)}"`}>${e.kind==='start'?'★':sn.get(e.id)||'🦌'}</span><div><b>${e.kind==='start'?'Let the games begin! Rudolph is on the loose!':caseLine(e)}</b><small>${e.kind==='start'&&e.to?`Started at ${mid(fam(homeById(e.to)))} · `:''}${esc(fmt(e.at))}${e.note&&!blocked(e.by)?` · “${esc(e.note)}”`:''}</small>${thumbs(mediaFor(e.id))}</div></button>`}
     if(it.k==='photo'){const m=it.m,h=homeById(m.byHome);return `<div class="fpost knit ${tints.get(it)}"><div class="fwho"><b>${fam(h)}</b><span>${esc(ago(m.at))}</span></div>${m.caption?`<p>${esc(m.caption)}</p>`:''}${thumbs([m])}</div>`}
     const p=it.p,h=homeById(p.byHome),ms=D().media.filter(m=>m.postId===p.id&&!blocked(m.by));const mine=p.by===S.me;
     return `<div class="fpost knit ${tints.get(it)}"><div class="fwho"><b>${fam(h)}${mine?' <span class="you">You</span>':''}</b><span>${esc(ago(p.at))}<button class="fmore" data-postmenu="${esc(p.id)}" aria-label="More options">⋯</button></span></div>${p.text?`<p class="ftext">${esc(p.text)}</p>`:''}${thumbs(ms)}
@@ -1759,7 +1761,7 @@ document.addEventListener('click',async e=>{
   if(el=t.closest('[data-reactpick]')){if(S.demo){toast('The example game doesn’t save changes.');return}if(!canWrite())return;openReactPicker(el.dataset.reactpick);return}
   if(el=t.closest('[data-postmenu]')){const p=(D().posts||[]).find(x=>x.id===el.dataset.postmenu);if(!p)return;const h=homeById(p.byHome),mine=p.by===S.me;
     const sh=openSheet(`${shTop(h?esc(h.family):'Post',esc(fmt(p.at)))}${p.text?`<p class="ftext">${esc(p.text)}</p>`:''}
-      ${!S.demo&&(mine||isOrg()||canWrite())?`<div class="menu">${mine||isOrg()?`<button class="danger" id="pDel">Delete post</button>`:''}${!mine&&canWrite()?`<button data-report="post|${esc(p.id)}">Report post</button>${isOrg()?'':`<button data-block="${esc(p.by)}|${esc(h?h.family:'')}">Block ${h?esc(h.family):'this person'}</button>`}`:''}</div>`:''}`);
+      ${!S.demo&&(mine||isOrg()||canWrite())?`<div class="menu">${mine||isOrg()?`<button class="danger" id="pDel">Delete post</button>`:''}${!mine&&canWrite()?`<button data-report="post|${esc(p.id)}">Report post</button>${isOrg()?'':`<button data-block="${esc(p.by)}|${esc(h?h.family:'')}">Block ${h?esc(mid(h.family)):'this person'}</button>`}`:''}</div>`:''}`);
     const d=sh.querySelector('#pDel');if(d)d.addEventListener('click',async()=>{if(!d.dataset.armed){d.dataset.armed=1;d.textContent='Tap again to delete';return}
       if(await W(async()=>{await delRepliesOf(p.id);for(const m of D().media.filter(x=>x.postId===p.id))await delMedia(m);await col('posts').doc(p.id).delete()},'Post deleted'))closeSheet()});
     return}

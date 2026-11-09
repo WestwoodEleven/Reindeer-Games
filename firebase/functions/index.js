@@ -63,7 +63,7 @@ exports.stealAlert = onDocumentCreated('steals/{id}', async (event) => {
   const from = await familyOf(s.from);
   await sendAll({
     title: '🦌 The reindeer was stolen!',
-    body: from ? `He was taken from ${from}. Who has him now? Go look.` : 'Who has him now? Go look.',
+    body: from ? `He was taken from ${from.replace(/^The\s/, 'the ')}. Who has him now? Go look.` : 'Who has him now? Go look.',
     exceptUid: s.by,
     link: '#feed',
     kind: 'steals',

@@ -58,7 +58,12 @@ jobs:
       - name: Install the App Store Connect key
         run: |
           mkdir -p "$RUNNER_TEMP/keys"
-          printf '%s' "${{ secrets.ASC_KEY_P8 }}" > "$RUNNER_TEMP/keys/AuthKey_$KEY_ID.p8"
+          F="$RUNNER_TEMP/keys/AuthKey_$KEY_ID.p8"
+          # Rebuild the key's line breaks in case they were lost when pasting.
+          BODY=$(printf '%s' "$P8" | sed -e 's/-----BEGIN PRIVATE KEY-----//' -e 's/-----END PRIVATE KEY-----//' | tr -d ' \r\n\t')
+          { echo "-----BEGIN PRIVATE KEY-----"; printf '%s' "$BODY" | fold -w 64; echo; echo "-----END PRIVATE KEY-----"; } > "$F"
+        env:
+          P8: ${{ secrets.ASC_KEY_P8 }}
 
       - name: Build the app
         working-directory: app/ios/App

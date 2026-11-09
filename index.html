@@ -547,7 +547,7 @@ textarea{min-height:120px;resize:vertical}
     <div id="joinCta"></div>
     <div class="stack"><div class="row" style="justify-content:space-between"><h2>Who’s Playing?</h2><span class="label" id="homeCount"></span></div>
     <ul class="homes" id="homeList"></ul></div>
-    <div class="stack"><div class="row" style="justify-content:space-between"><h2>Case file</h2><span class="label">Newest first</span></div><ol class="cases" id="timeline"></ol></div>
+    <div class="stack"><div class="row" style="justify-content:space-between"><h2>Steal history</h2><span class="label">Newest first</span></div><ol class="cases" id="timeline"></ol></div>
     <div class="card row" id="a2hsCard" style="justify-content:space-between"><p style="flex:1;min-width:12rem"><b>Keep the hunt one tap away.</b> Add Reindeer Games to your phone’s home screen.</p><div class="row"><button class="btn sm ghost" data-a2hs-hide>Not now</button><button class="btn sm primary" data-a2hs>Add to phone</button></div></div>
   </section>
 
@@ -1002,7 +1002,7 @@ function rTimeline(C){
   $('#trailCount').textContent=C.evs.length?`${C.evs.length} ${C.evs.length>1?'entries':'entry'}`:'';
 }
 S.lbTab=S.lbTab||'standings';
-function rLeaders(C){const sup=S.lbTab==='sup';$('#lbStand').setAttribute('aria-pressed',!sup);$('#lbSup').setAttribute('aria-pressed',sup);
+function rLeaders(C){const sup=S.lbTab==='sup';if(sup)$('#boardLabel').textContent=viewSeason();$('#lbStand').setAttribute('aria-pressed',!sup);$('#lbSup').setAttribute('aria-pressed',sup);
   $('#scoreboard').hidden=sup;$('#lbNote').hidden=sup;$('#superlatives').hidden=!sup;if(sup)rSuper(C);else rBoard(C)}
 function rBoard(C){
   const took={},lost={};C.vis.forEach(e=>{if(e.kind==='steal'){if(e.to)took[e.to]=(took[e.to]||0)+1;if(e.from)lost[e.from]=(lost[e.from]||0)+1}});
@@ -1355,7 +1355,7 @@ function rRules(){const c=seasonCfg();const t=(c.rules||'').trim();
 }
 function rAdmin(C){
   {const t=$('#revealToggle');if(t)t.checked=orgReveal()}
-  const ok=isOrg()&&!S.demo;$('#adminGate').innerHTML=ok?'':`<div class="empty"><h3>Organizer only</h3><p>This section is for the person running the game.</p></div>`;$('#adminBody').hidden=!ok;if(!ok)return;
+  const ok=isOrg()&&!S.demo;$('#adminGate').innerHTML=ok?'':S.demo&&isOrg()?`<div class="empty"><h3>Not in the example</h3><p>Organizer tools (approving families, the join password, reports and fixing steals) only work in the real game. In the example you can still see what organizers see on every other page.</p></div>`:`<div class="empty"><h3>Organizer only</h3><p>This section is for the person running the game.</p></div>`;$('#adminBody').hidden=!ok;if(!ok)return;
   const c=seasonCfg(),vs=viewSeason(),cur=curSeason();
   const f=$('#setForm');if(f.dataset.season!==vs){f.dataset.season=vs;['#setStart','#setEnd','#setRules'].forEach(x=>delete $(x).dataset.dirty)}
   for(const [id,k] of [['#setStart','start'],['#setEnd','end'],['#setRules','rules']]){const el=$(id);if(!el.dataset.dirty&&document.activeElement!==el)el.value=c[k]||''}

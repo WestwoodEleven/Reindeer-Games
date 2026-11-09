@@ -179,7 +179,10 @@ main{padding-block:16px calc(96px + env(safe-area-inset-bottom,0px))}
 .freacts{display:flex;gap:6px;flex-wrap:wrap}
 .freacts .fadd{font-weight:700;color:var(--muted)}
 .freplies{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:8px}
-.frep{font-size:.92rem;line-height:1.35;overflow-wrap:anywhere}
+.frep{font-size:.92rem;line-height:1.35;overflow-wrap:anywhere;border-radius:10px;padding:7px 10px;border-left:5px solid transparent}
+.frep.tr{background:var(--post-r);border-left-color:var(--stripe-r);box-shadow:inset 0 0 0 1px var(--post-r-line)}
+.frep.tg{background:var(--post-g);border-left-color:var(--stripe-g);box-shadow:inset 0 0 0 1px var(--post-g-line)}
+.fpost .frep.tr,.fpost .frep.tg{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--edge) 18%,transparent)}
 .frep small{display:block;color:var(--muted);font-size:.75rem;margin-top:1px}
 .frep small .linkbtn{font-size:.75rem;padding:0;margin-right:8px}
 .fmorer{align-self:flex-start;padding:0;font-size:.85rem}
@@ -1116,11 +1119,13 @@ function openReactPicker(id){
   sh.querySelector('#ecForm').addEventListener('submit',async e=>{e.preventDefault();const em=firstEmoji($('#ecIn').value);if(!em){toast('That doesn’t look like an emoji. Use the emoji keyboard.');return}closeSheet();await toggleReact(id,em)});
 }
 // Replies to feed posts.
+S.postTint={};
+const replyTint=(postId,i)=>{const pt=S.postTint[postId]||'tr';const first=pt==='tr'?'tg':'tr';return i%2?pt:first};
 const repliesFor=id=>(D().replies||[]).filter(r=>r.postId===id&&!blocked(r.by)).sort((a,b)=>String(a.at).localeCompare(String(b.at)));
 const canReply=()=>S.demo||(canWrite()&&(!isPast()||isOrg()));
-function replyLine(r,full){const h=homeById(r.byHome),mine=r.by===S.me;
+function replyLine(r,full,tc=''){const h=homeById(r.byHome),mine=r.by===S.me;
   const acts=full&&!S.demo?((mine||isOrg())?`<button class="linkbtn" data-rdel="${esc(r.id)}">Delete</button>`:'')+(!mine&&canWrite()?`<button class="linkbtn" data-report="reply|${esc(r.id)}">Report</button>${isOrg()?'':`<button class="linkbtn" data-block="${esc(r.by)}|${esc(h?h.family:'')}">Block</button>`}`:''):'';
-  return `<div class="frep"><b>${h?esc(h.family):'The organizer'}${mine&&full?' <span class="you">You</span>':''}</b> <span class="frt">${esc(r.text)}</span><small>${esc(ago(r.at))}${acts?` · ${acts}`:''}</small></div>`}
+  return `<div class="frep ${tc}"><b>${h?esc(h.family):'The organizer'}${mine&&full?' <span class="you">You</span>':''}</b> <span class="frt">${esc(r.text)}</span><small>${esc(ago(r.at))}${acts?` · ${acts}`:''}</small></div>`}
 function openThread(id){const p=(D().posts||[]).find(x=>x.id===id);if(!p)return;const h=homeById(p.byHome);
   S.thread=id;
   const sh=openSheet(`${shTop('Replies',h?esc(h.family):'Post')}${p.text?`<p class="ftext thpost">${esc(p.text)}</p>`:''}
@@ -1139,7 +1144,7 @@ function openThread(id){const p=(D().posts||[]).find(x=>x.id===id);if(!p)return;
 function renderThread(){const l=$('#thList');if(!S.thread||!l||$('#sheetWrap').hidden){S.thread=null;return}
   if(postGone(S.thread)&&!S.demo){l.innerHTML='<p class="muted small">This post was deleted.</p>';return}
   const rs=repliesFor(S.thread);
-  l.innerHTML=rs.length?rs.map(r=>replyLine(r,true)).join(''):'<p class="muted small" style="margin:0">No replies yet. Start the conversation.</p>';
+  l.innerHTML=rs.length?rs.map((r,i)=>replyLine(r,true,replyTint(S.thread,i))).join(''):'<p class="muted small" style="margin:0">No replies yet. Start the conversation.</p>';
   l.scrollTop=l.scrollHeight}
 async function delRepliesOf(postId){for(const r of (D().replies||[]).filter(x=>x.postId===postId))await col('replies').doc(r.id).delete().catch(()=>{})}
 const postGone=id=>!(D().posts||[]).some(p=>p.id===id);
@@ -1157,7 +1162,7 @@ function rFeed(C){
   for(const m of D().media)if(!m.stealId&&!m.postId&&(S.demo||String(m.season||yearOf(m.at))===vs)&&!blocked(m.by))items.push({t:m.at,k:'photo',m});
   items.sort((a,b)=>String(b.t).localeCompare(String(a.t)));
   // Alternate red/green by age (oldest first), so a new post takes the next color and older ones never change.
-  const tints=new Map();items.filter(it=>it.k==='post'||it.k==='photo').reverse().forEach((it,i)=>tints.set(it,i%2?'tr':'tg'));
+  const tints=new Map();items.filter(it=>it.k==='post'||it.k==='photo').reverse().forEach((it,i)=>{const c=i%2?'tr':'tg';tints.set(it,c);if(it.p)S.postTint[it.p.id]=c});
   const thumbs=ms=>ms.length?`<div class="fthumbs">${ms.slice(0,4).map(m=>`<button data-media="${esc(m.id)}" aria-label="Open ${m.type}">${m.type==='image'?`<img src="${esc(murl(m))}" alt="" loading="lazy">`:`<video src="${esc(murl(m))}#t=0.1" preload="metadata" muted playsinline></video><span class="play">VIDEO</span>`}</button>`).join('')}</div>`:'';
   const fam=h=>h?esc(h.family):'The organizer';
   $('#feedList').innerHTML=items.length?items.slice(0,150).map(it=>{
@@ -1169,7 +1174,7 @@ function rFeed(C){
     return `<div class="fpost knit ${tints.get(it)}"><div class="fwho"><b>${fam(h)}${mine?' <span class="you">You</span>':''}</b><span>${esc(ago(p.at))}<button class="fmore" data-postmenu="${esc(p.id)}" aria-label="More options">⋯</button></span></div>${p.text?`<p class="ftext">${esc(p.text)}</p>`:''}${thumbs(ms)}
       <div class="freacts">${(()=>{const tl=reactTally(p);const ems=[...new Set([...Object.keys(tl).sort((a,b)=>tl[b].n-tl[a].n),...DEFAULT_REACTS])].slice(0,10);
         return ems.map(em=>{const x=tl[em]||{n:0,mine:false};return `<button class="${x.mine?'on':''}" data-react="${esc(p.id)}|${esc(em)}" aria-label="React ${esc(em)}">${em}${x.n?` ${x.n}`:''}</button>`}).join('')+`<button class="fadd" data-reactpick="${esc(p.id)}" aria-label="Add a different reaction">＋</button>`})()}</div>${(()=>{const rs=repliesFor(p.id);if(!rs.length&&!canReply())return'';
-        return `<div class="freplies">${rs.length>2?`<button class="linkbtn fmorer" data-thread="${esc(p.id)}">View all ${rs.length} replies</button>`:''}${rs.slice(-2).map(r=>replyLine(r,false)).join('')}${canReply()?`<button class="freplybtn" data-thread="${esc(p.id)}">${rs.length?'Reply…':'Be the first to reply…'}</button>`:''}</div>`})()}</div>`}).join('')
+        return `<div class="freplies">${rs.length>2?`<button class="linkbtn fmorer" data-thread="${esc(p.id)}">View all ${rs.length} replies</button>`:''}${rs.slice(-2).map((r,k)=>replyLine(r,false,replyTint(p.id,rs.length-Math.min(2,rs.length)+k))).join('')}${canReply()?`<button class="freplybtn" data-thread="${esc(p.id)}">${rs.length?'Reply…':'Be the first to reply…'}</button>`:''}</div>`})()}</div>`}).join('')
     :`<div class="empty"><h3>Nothing here yet</h3><p>Steals show up here automatically. Post a message or photo to get things going.</p></div>`;
 }
 const DRAFT=`The basics (more to come):

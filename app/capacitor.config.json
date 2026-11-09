@@ -1,0 +1,14 @@
+{
+  "appId": "com.mitchellaustin.reindeergames",
+  "appName": "Reindeer Games",
+  "webDir": "www",
+  "server": {
+    "url": "https://westwoodeleven.github.io/Reindeer-Games/",
+    "allowNavigation": ["westwoodeleven.github.io", "*.firebaseapp.com", "*.googleapis.com", "*.google.com", "*.gstatic.com"]
+  },
+  "ios": {
+    "appendUserAgent": "RGApp",
+    "contentInset": "never",
+    "backgroundColor": "#7E0C20"
+  }
+}

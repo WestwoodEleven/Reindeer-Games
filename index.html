@@ -621,6 +621,8 @@ textarea{min-height:120px;resize:vertical}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script src="config.js"></script>
 <script>
+const inApp=/RGApp/.test(navigator.userAgent);
+
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const H72=72*3600e3, H12=12*3600e3;
@@ -913,7 +915,7 @@ function rGate(){
     ${S.otherSignin?`<div class="or" style="margin-top:14px">OTHER WAYS TO SIGN IN</div>
     <button class="btn outline-c block" data-google style="margin-top:12px">Continue with Google</button>
     <form id="emailForm" class="stack" novalidate><label class="field"><span>Or get a sign-in link by email</span><input type="email" id="emailId" name="email" autocomplete="email" placeholder="you@example.com"></label><button class="btn outline-c" type="submit" id="emailBtn">Email me a link</button></form>`
-    :`<button class="linkbtn" data-other-signin style="display:block;margin:14px auto 0">Other ways to sign in</button>`}
+    :inApp?'':`<button class="linkbtn" data-other-signin style="display:block;margin:14px auto 0">Other ways to sign in</button>`}
     <button class="linkbtn" data-demo style="display:block;margin:8px auto 0">See an example game</button>
     <a class="linkbtn" href="#privacy" style="display:block;margin:4px auto 0;text-align:center;font-weight:500">Privacy policy</a>`}
   else if(!S.ready||j===undefined){key='load2';h=`<div class="label">Loading</div><h2>Checking your invite…</h2>`}
@@ -1316,7 +1318,7 @@ function openMedia(id){
 
 /* ---------- add to phone (home screen) ---------- */
 let installPrompt=null;
-const isInstalled=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+const isInstalled=()=>inApp||matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e});
 addEventListener('appinstalled',()=>{installPrompt=null;toast('Added to your phone');syncA2HS()});
 function syncA2HS(){const inst=isInstalled();let hide=false;try{hide=!!localStorage.getItem('rg-a2hs-hide')}catch{}

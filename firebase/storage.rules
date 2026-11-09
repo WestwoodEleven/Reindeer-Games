@@ -16,6 +16,17 @@ service firebase.storage {
       return isOrg() || (request.auth != null
         && firestore.exists(/databases/(default)/documents/members/$(request.auth.uid)));
     }
+    // Family profile photos: anyone playing can see them; only that family (or an organizer) can change them.
+    match /profiles/{homeId}/{file} {
+      allow read: if isMember();
+      allow create: if isMember()
+        && (isOrg() || firestore.get(/databases/(default)/documents/members/$(request.auth.uid)).data.homeId == homeId)
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if isOrg() || (isMember()
+        && firestore.get(/databases/(default)/documents/members/$(request.auth.uid)).data.homeId == homeId);
+    }
+
     match /media/{season}/{file} {
       allow read: if isMember();
       allow create: if isMember()

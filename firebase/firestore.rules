@@ -90,7 +90,11 @@ service cloud.firestore {
         && shortText(request.resource.data.number, 10)
         && rightPassword(newMember().code)
         && newMember().homeId == id);
-      allow update, delete: if isOrg();
+      // Families can edit their own profile: photo and motto only.
+      allow update: if isOrg() || (isMember() && myHome() == id
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['photo', 'photoPath', 'motto', 'updatedAt'])
+        && (!('motto' in request.resource.data) || (request.resource.data.motto is string && request.resource.data.motto.size() <= 80)));
+      allow delete: if isOrg();
     }
 
     // Join requests: each person can create or edit only their own pending request.

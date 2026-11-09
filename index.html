@@ -126,6 +126,22 @@ main{padding-block:16px calc(96px + env(safe-area-inset-bottom,0px))}
 .welcome{display:flex;flex-direction:column;gap:12px;text-align:center;padding:6px 4px 4px}
 .welcome .wdeer{font-size:3rem;line-height:1}.welcome p{margin:0}
 #otherFind{margin-bottom:6px}
+.av{width:28px;height:28px;border-radius:50%;overflow:hidden;flex:none;display:inline-grid;place-items:center;border:1.5px solid var(--edge);background:var(--surface);vertical-align:middle}
+.av img{width:100%;height:100%;object-fit:cover}
+.av.sm{width:24px;height:24px}.av.xl{width:72px;height:72px;font-size:1.8rem}
+.av-i{background:var(--stripe-r);color:#fff;font:700 .8rem var(--f-body)}.av-i.g{background:var(--stripe-g)}.av.xl.av-i{font-size:1.8rem}
+.fwho-n{display:inline-flex;align-items:center;gap:8px;border:0;background:none;padding:0;color:inherit;font:inherit;cursor:pointer;text-align:left;min-width:0}
+.fwho-n b{overflow-wrap:anywhere}
+.sb .nm{display:block;cursor:pointer}.sb .nm .av{margin-right:7px;border-color:rgba(0,0,0,.4)}
+.sb .av-i{background:#F7F0E1;color:#2B1A12}.sb .nm small{padding-left:31px}
+.prof{display:flex;flex-direction:column;gap:12px}
+.prof-photo{width:100%;max-height:52vh;object-fit:cover;border-radius:14px;border:2px solid var(--edge)}
+.prof-none{display:flex;align-items:center;gap:12px}
+.prof-motto{margin:0;font-size:1.05rem;font-style:italic;text-align:center}
+.prof-stats{display:grid;grid-template-columns:repeat(3,1fr);background:var(--status);color:#F7F0E1;border:2px solid var(--edge);border-radius:12px;overflow:hidden}
+.prof-stats div{text-align:center;padding:8px 2px;border-left:1px solid rgba(247,240,225,.15)}.prof-stats div:first-child{border-left:0}
+.prof-stats b{display:block;font:400 1.2rem var(--f-display);color:#fff}.prof-stats i{font:600 .66rem var(--f-mono);font-style:normal;letter-spacing:.05em;text-transform:uppercase;color:#CFE3D6}
+.prof-won{display:flex;flex-wrap:wrap;gap:6px}.prof-won span{font:600 .72rem var(--f-mono);letter-spacing:.04em;text-transform:uppercase;background:var(--post-g);border:1.5px solid var(--post-g-line);border-radius:999px;padding:4px 9px}
 .sep{border:0;border-top:1px solid var(--line);margin:2px 0;width:100%}
 .switch{position:relative;display:inline-block;width:52px;height:30px;flex:none}
 .switch input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:1}
@@ -1037,7 +1053,7 @@ function rBoard(C){
   const meta=[total?plural(total,'steal'):'',day?`day ${day}`:''].filter(Boolean).join(' · ');
   $('#scoreboard').innerHTML=`<div class="sb-top"><span>Steals</span><b>${meta||(isPast()?'Final':'Ready to go')}</b></div><div class="sb-lead">${lead}</div>
     ${hs.length?`<ol>${hs.map((x,k)=>{const you=x.h.id===mine;const rc=!x.t?'n':x.r===1?'g':x.r===2?'s':x.r===3?'b':'';
-      return `<li class="${k%2?'r':'gr'}${you?' me':''}"><span class="rk ${rc}">${x.t?x.r:'–'}</span><div class="nm"><b>${esc(x.h.family)}</b>${you?'<span class="you">You</span>':''}<small>${esc(x.h.number)}${x.l?` · stolen from ${x.l}×`:''}</small></div><span class="ct">${x.t}</span></li>`}).join('')}</ol>`:''}`;
+      return `<li class="${k%2?'r':'gr'}${you?' me':''}"><span class="rk ${rc}">${x.t?x.r:'–'}</span><div class="nm" data-profile="${esc(x.h.id)}" role="button" tabindex="0">${avatar(x.h,'sm')}<b>${esc(x.h.family)}</b>${you?'<span class="you">You</span>':''}<small>${esc(x.h.number)}${x.l?` · stolen from ${x.l}×`:''}</small></div><span class="ct">${x.t}</span></li>`}).join('')}</ol>`:''}`;
 }
 /* ---------- superlatives ---------- */
 const MAP_MI=0.95; // rough height of the Emerald Bay map in miles
@@ -1046,12 +1062,11 @@ function milesBetween(a,b){const p=hpos(homeById(a)),q=hpos(homeById(b));if(!p||
 const dayKey=iso=>{const d=new Date(iso);return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`};
 const durTxt=ms=>{const m=Math.round(ms/6e4);if(m<60)return `${m} min`;const h=Math.floor(m/60);if(h<24)return `${h}h ${m%60?`${m%60}m`:''}`.trim();const d=Math.floor(h/24);return `${d}d ${h%24}h`};
 const tod=iso=>new Date(iso).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
-function rSuper(C){
-  const el=$('#superlatives'),mine=myHome()?.id;
+function supCompute(C){
   const all=C.evs.filter(e=>e.kind==='steal'||e.kind==='start').sort((a,b)=>String(a.at).localeCompare(String(b.at)));
   const vis=new Set(C.vis.map(e=>e.id));
   const steals=all.filter(e=>e.kind==='steal'&&vis.has(e.id));
-  if(steals.length<2){el.innerHTML=`<div class="card emptyc"><h3>Superlatives are coming</h3><p>Once a few steals are logged, the neighborhood’s yearbook awards show up here.</p></div>`;return}
+  if(steals.length<2)return null;
   // Finished stays: a visible arrival, ended by the next event.
   const stays=[];all.forEach((e,i)=>{const nx=all[i+1];if(e.to&&vis.has(e.id)&&nx)stays.push({h:e.to,ms:+new Date(nx.at)-+new Date(e.at)})});
   const famOf=id=>homeById(id)?.family||'Unknown';
@@ -1098,10 +1113,61 @@ function rSuper(C){
   const houses=new Set(all.filter(e=>vis.has(e.id)&&e.to).map(e=>e.to)).size;
   const miles=steals.reduce((t,e)=>t+(e.from&&e.to?(milesBetween(e.from,e.to)||0):0),0);
   const avg=stays.length?stays.reduce((t,x)=>t+x.ms,0)/stays.length:0;
+  return {steals,out,houses,miles,avg,names};
+}
+function rSuper(C){
+  const el=$('#superlatives'),mine=myHome()?.id;const R=supCompute(C);
+  if(!R){el.innerHTML=`<div class="card emptyc"><h3>Superlatives are coming</h3><p>Once a few steals are logged, the neighborhood’s yearbook awards show up here.</p></div>`;return}
+  const {steals,out,houses,miles,avg,names}=R;
   el.innerHTML=`<div class="totals"><div><b>${steals.length}</b><i>steals</i></div><div><b>${houses}</b><i>houses</i></div><div><b>${miles.toFixed(1)}</b><i>miles</i></div><div><b>${avg?durTxt(avg).split(' ')[0]:'–'}</b><i>avg stay</i></div></div>
     <div class="supgrid">${out.map((a,i)=>{const me=a.ids.includes(mine);return `<div class="supc knit ${i%2?'tg':'tr'}${me?' me':''}"><span class="supt">${esc(a.title)} <span class="supem">${a.em}</span></span><b>${esc(a.label||names(a.ids))}${me?'<span class="you">You</span>':''}</b><span class="supv">${esc(a.val)}</span><small>${a.sub}</small></div>`}).join('')}</div>
     <p class="small muted" style="text-align:center;margin:0">The newest steal joins the stats once he moves again. Distances are approximate.</p>`;
 }
+/* ---------- family profiles ---------- */
+// Small round family picture, or a colored circle with the initial.
+function avatar(h,size=''){if(!h)return '';const nm=String(h.family||'').replace(/^The\s+/i,'');
+  return h.photo?`<span class="av ${size}"><img src="${esc(h.photo)}" alt="" loading="lazy"></span>`
+    :`<span class="av ${size} av-i${(nm.charCodeAt(0)||0)%2?' g':''}" aria-hidden="true">${esc((nm[0]||'?').toUpperCase())}</span>`}
+function openProfile(id){const h=homeById(id);if(!h)return;const C=compute(),mine=myHome()?.id===id;
+  const steals=C.vis.filter(e=>e.kind==='steal'&&e.to===id).length,robbed=C.vis.filter(e=>e.kind==='steal'&&e.from===id).length;
+  const R=supCompute(C),won=R?R.out.filter(a=>a.ids.includes(id)):[];
+  const hid=C.hidden?.id;const ms=D().media.filter(m=>m.byHome===id&&!blocked(m.by)&&(!m.stealId||m.stealId!==hid)&&murl(m)).sort((a,b)=>String(b.at).localeCompare(String(a.at)));
+  const sh=openSheet(`${shTop(esc(h.family),'No. '+esc(h.number))}
+    <div class="prof">
+      ${h.photo?`<img class="prof-photo" src="${esc(h.photo)}" alt="${esc(h.family)} family photo">`:`<div class="prof-none">${avatar(h,'xl')}<span class="small muted">${mine?'No family photo yet.':'No family photo.'}</span></div>`}
+      ${h.motto?`<p class="prof-motto">“${esc(h.motto)}”</p>`:''}
+      <div class="prof-stats"><div><b>${steals}</b><i>steals</i></div><div><b>${robbed}</b><i>times robbed</i></div><div><b>${won.length}</b><i>superlatives</i></div></div>
+      ${won.length?`<div class="prof-won">${won.map(a=>`<span>${esc(a.title)} ${a.em}</span>`).join('')}</div>`:''}
+      <div class="row" style="justify-content:space-between"><b>Their photos</b><span class="label">${ms.length}</span></div>
+      ${ms.length?`<div class="gallery">${ms.slice(0,24).map(m=>`<button data-media="${esc(m.id)}" aria-label="Open ${m.type}">${m.type==='image'?`<img src="${esc(murl(m))}" alt="" loading="lazy">`:`<video src="${esc(murl(m))}#t=0.1" preload="metadata" muted playsinline></video><span class="play">VIDEO</span>`}</button>`).join('')}</div>`:'<p class="small muted" style="margin:0">Nothing shared yet.</p>'}
+      ${mine&&!S.demo&&canWrite()?'<button class="btn block" data-editprofile>Edit family profile</button>':''}
+      ${isOrg()&&!S.demo&&!mine&&h.photo?'<button class="btn danger block" id="pfRemove">Remove this photo</button>':''}
+    </div>`);
+  const rm=sh.querySelector('#pfRemove');if(rm)rm.addEventListener('click',async()=>{if(!rm.dataset.armed){rm.dataset.armed=1;rm.textContent='Tap again to remove';return}
+    if(await W(async()=>{if(h.photoPath)await fbStore.ref(h.photoPath).delete().catch(()=>{});await col('homes').doc(id).update({photo:null,photoPath:null})},'Photo removed'))closeSheet()})}
+// Shrink a photo to a reasonable size before uploading.
+async function shrinkImage(file,max=1000){const bmp=await createImageBitmap(file);const k=Math.min(1,max/Math.max(bmp.width,bmp.height));
+  const c=document.createElement('canvas');c.width=Math.round(bmp.width*k);c.height=Math.round(bmp.height*k);c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
+  return await new Promise(r=>c.toBlob(r,'image/jpeg',.85))}
+function openProfileEditor(){const h=myHome();if(!h)return;let blob=null,clear=false;
+  const sh=openSheet(`${shTop('Edit family profile',esc(h.family))}
+    <div class="stack">
+      <div class="prof-edit">${h.photo?`<img id="pfPrev" class="prof-photo" src="${esc(h.photo)}" alt="">`:`<img id="pfPrev" class="prof-photo" alt="" hidden><div id="pfNone" class="prof-none">${avatar(h,'xl')}</div>`}</div>
+      <div class="row"><label class="btn primary sm cpphoto"><input type="file" id="pfFile" accept="image/*" hidden>${h.photo?'Change photo':'Add a family photo'}</label>${h.photo?'<button type="button" class="btn sm danger" id="pfClear">Remove photo</button>':''}</div>
+      <p class="small muted" style="margin:0">Everyone playing can see this photo. Only share what your family is comfortable with.</p>
+      <label class="field"><span>Family motto <span class="muted">(optional)</span></span><input type="text" id="pfMotto" maxlength="80" value="${esc(h.motto||'')}" placeholder="We will find him."></label>
+      <button class="btn red block" id="pfSave">Save</button>
+    </div>`);
+  const prev=sh.querySelector('#pfPrev');
+  sh.querySelector('#pfFile').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{blob=await shrinkImage(f);clear=false;prev.src=URL.createObjectURL(blob);prev.hidden=false;sh.querySelector('#pfNone')?.remove()}catch{toast('That photo couldn’t be opened. Try another one.')}});
+  const cl=sh.querySelector('#pfClear');if(cl)cl.addEventListener('click',()=>{clear=true;blob=null;prev.hidden=true;cl.remove()});
+  sh.querySelector('#pfSave').addEventListener('click',async()=>{const btn=sh.querySelector('#pfSave');btn.disabled=true;btn.textContent='Saving…';
+    const ok=await W(async()=>{const upd={motto:sh.querySelector('#pfMotto').value.trim(),updatedAt:Date.now()};
+      if(blob){const path=`profiles/${h.id}/${crypto.randomUUID()}.jpg`;await fbStore.ref(path).put(blob,{contentType:'image/jpeg',customMetadata:{by:S.me}});
+        upd.photo=await fbStore.ref(path).getDownloadURL();upd.photoPath=path;if(h.photoPath)fbStore.ref(h.photoPath).delete().catch(()=>{})}
+      else if(clear){upd.photo=null;upd.photoPath=null;if(h.photoPath)fbStore.ref(h.photoPath).delete().catch(()=>{})}
+      await col('homes').doc(h.id).update(upd)},'Profile saved');
+    btn.disabled=false;btn.textContent='Save';if(ok)closeSheet()})}
 function rGate(){
   const g=$('#gateBody'),j=S.myJoin,glow='<div class="glow" aria-hidden="true"></div>';
   let key,h='',step=0;
@@ -1216,7 +1282,7 @@ function rHomes(){
   $('#joinCta').innerHTML=mh&&!S.demo?`<p class="small muted">Need to change your family name, house number or pin? Ask the organizer.</p>`:(!mh&&!S.demo&&!S.offline&&isOrg())?`<div class="card row" style="justify-content:space-between"><p style="flex:1;min-width:12rem"><b>Playing this year?</b> Add your family and drop a pin on your house.</p><button class="btn red" data-join>Join the game</button></div>`:'';
   $('#homeList').innerHTML=hs.length?hs.map(h=>{
     const you=mh&&mh.id===h.id;
-    return `<li data-home="${esc(h.id)}" class="${selHome===h.id?'on':''}"><span class="hno">${esc(h.number)}</span><div><b>${esc(h.family)}</b>${!hpos(h)?'<div class="case-meta">No pin yet</div>':''}</div><div class="row">${you?`<span class="tag you">You</span>`:''}${isOrg()&&!S.demo?`<button class="btn sm" data-edit-home="${esc(h.id)}">Edit</button>`:''}</div></li>`}).join('')
+    return `<li data-home="${esc(h.id)}" class="${selHome===h.id?'on':''}"><span class="hno">${esc(h.number)}</span><div><button class="fwho-n" data-profile="${esc(h.id)}">${avatar(h,'sm')}<b>${esc(h.family)}</b></button>${!hpos(h)?'<div class="case-meta">No pin yet</div>':''}</div><div class="row">${you?`<span class="tag you">You</span>`:''}${isOrg()&&!S.demo?`<button class="btn sm" data-edit-home="${esc(h.id)}">Edit</button>`:''}</div></li>`}).join('')
     :`<li class="empty"><h3>No families yet</h3><p>Families can join themselves, or the organizer can add them.</p></li>`;
 }
 function fillSelect(sel,opts){const v=sel.value;sel.innerHTML=opts.map(([val,l])=>`<option value="${esc(val)}">${esc(l)}</option>`).join('');if(opts.some(o=>o[0]===v))sel.value=v}
@@ -1327,9 +1393,9 @@ function rFeed(C){
     if(it.k==='sealed'&&it.e.kind==='start'){const e=it.e;return `<div class="falert knit"><span class="fic">★</span><div><b>Let the games begin! Rudolph is on the loose!</b><small>${esc(ago(e.at))} · Find him and steal him.</small></div></div>`}
     if(it.k==='sealed'){const e=it.e;return `<div class="falert knit"><span class="fic">!</span><div><b>${e.from?`Rudolph was taken from ${mid(fam(homeById(e.from)))}`:'Rudolph was stolen'}</b><small>${esc(ago(e.at))} · Who has him now? Go look.</small>${e.from&&e.from===myHome()?.id&&S.assets&&canWrite()?`<button class="linkbtn" data-ev="${esc(e.id)}" style="color:#fff;padding:0;margin-top:4px">Add your photos or videos</button>`:''}</div></div>`}
     if(it.k==='steal'){const e=it.e;return `<button class="falert done knit" data-ev="${esc(e.id)}"><span class="fic${e.kind==='start'?'':' num'}" ${e.kind==='start'?'':`title="Steal number ${sn.get(e.id)}"`}>${e.kind==='start'?'★':sn.get(e.id)||'🦌'}</span><div><b>${e.kind==='start'?'Let the games begin! Rudolph is on the loose!':caseLine(e)}</b><small>${e.kind==='start'&&e.to?`Started at ${mid(fam(homeById(e.to)))} · `:''}${esc(fmt(e.at))}${e.note&&!blocked(e.by)?` · “${esc(e.note)}”`:''}</small>${thumbs(mediaFor(e.id))}</div></button>`}
-    if(it.k==='photo'){const m=it.m,h=homeById(m.byHome);return `<div class="fpost knit ${tints.get(it)}"><div class="fwho"><b>${fam(h)}</b><span>${esc(ago(m.at))}</span></div>${m.caption?`<p>${esc(m.caption)}</p>`:''}${thumbs([m])}</div>`}
+    if(it.k==='photo'){const m=it.m,h=homeById(m.byHome);return `<div class="fpost knit ${tints.get(it)}"><div class="fwho">${h?`<button class="fwho-n" data-profile="${esc(h.id)}">${avatar(h)}<b>${fam(h)}</b></button>`:`<b>${fam(h)}</b>`}<span>${esc(ago(m.at))}</span></div>${m.caption?`<p>${esc(m.caption)}</p>`:''}${thumbs([m])}</div>`}
     const p=it.p,h=homeById(p.byHome),ms=D().media.filter(m=>m.postId===p.id&&!blocked(m.by));const mine=p.by===S.me;
-    return `<div class="fpost knit ${tints.get(it)}"><div class="fwho"><b>${fam(h)}${mine?' <span class="you">You</span>':''}</b><span>${esc(ago(p.at))}<button class="fmore" data-postmenu="${esc(p.id)}" aria-label="More options">⋯</button></span></div>${p.text?`<p class="ftext">${esc(p.text)}</p>`:''}${thumbs(ms)}
+    return `<div class="fpost knit ${tints.get(it)}"><div class="fwho">${h?`<button class="fwho-n" data-profile="${esc(h.id)}">${avatar(h)}<b>${fam(h)}${mine?' <span class="you">You</span>':''}</b></button>`:`<b>${fam(h)}</b>`}<span>${esc(ago(p.at))}<button class="fmore" data-postmenu="${esc(p.id)}" aria-label="More options">⋯</button></span></div>${p.text?`<p class="ftext">${esc(p.text)}</p>`:''}${thumbs(ms)}
       <div class="freacts">${(()=>{const tl=reactTally(p);const ems=[...new Set([...Object.keys(tl).sort((a,b)=>tl[b].n-tl[a].n),...DEFAULT_REACTS])].slice(0,10);
         return ems.map(em=>{const x=tl[em]||{n:0,mine:false};return `<button class="${x.mine?'on':''}" data-react="${esc(p.id)}|${esc(em)}" aria-label="React ${esc(em)}">${em}${x.n?` ${x.n}`:''}</button>`}).join('')+`<button class="fadd" data-reactpick="${esc(p.id)}" aria-label="Add a different reaction">＋</button>`})()}</div>${(()=>{const rs=repliesFor(p.id);if(!rs.length&&!canReply())return'';
         const open=S.repOpen.has(p.id),shown=open?rs:rs.slice(-2),off=rs.length-shown.length,id=esc(p.id);
@@ -1754,6 +1820,8 @@ document.addEventListener('click',async e=>{
   if(el=t.closest('[data-thread]')){const id=el.dataset.thread;S.repOpen.add(id);renderNow();return}
   if(el=t.closest('[data-repmore]')){const id=el.dataset.repmore;S.repOpen.has(id)?S.repOpen.delete(id):S.repOpen.add(id);renderNow();return}
   if(el=t.closest('[data-repbox]')){const id=el.dataset.repbox;S.repBox=id;renderNow();const ta=document.getElementById('irep-'+id);if(ta){ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length)}return}
+  if(el=t.closest('[data-profile]')){e.stopPropagation();openProfile(el.dataset.profile);return}
+  if(t.closest('[data-editprofile]')){if(S.demo){toast('The example game doesn’t save changes.');return}openProfileEditor();return}
   if(el=t.closest('[data-lbtab]')){S.lbTab=el.dataset.lbtab;renderNow();return}
   if(el=t.closest('[data-repmenu]')){openReplyMenu(el.dataset.repmenu);return}
   if(el=t.closest('[data-rdel]')){if(!el.dataset.armed){el.dataset.armed=1;el.textContent='Tap again to delete';return}
@@ -1781,7 +1849,7 @@ document.addEventListener('click',async e=>{
       <p>Signed in as <b>${esc(S.email||S.phone||'')}</b>${isOrg()?' · Organizer':''}</p>
       ${mh?`<p class="small muted">${esc(mh.number)} Emerald Bay. To change your family name, house number or pin, ask the organizer.</p>`:''}
       ${S.blocks.length?`<div class="field"><span>Blocked people</span><ul class="homes">${S.blocks.map((u,i)=>`<li><div style="grid-column:1/3"><b>Blocked person ${i+1}</b><div class="case-meta">Their photos, videos and notes are hidden for you</div></div><button class="btn sm" data-unblock="${esc(u)}">Unblock</button></li>`).join('')}</ul></div>`:''}
-      <div class="row"><a class="btn" href="#rules" data-close>📜 How to play</a>${FMsg()&&!S.demo?'<button class="btn" data-alerts>Alert settings</button>':''}${mh?`<a class="btn" href="#homes" data-close>See who’s playing</a>`:''}${isInstalled()?'':'<button class="btn" data-a2hs data-close>Add to phone</button>'}<button class="btn danger" data-signout data-close>Sign out</button></div>
+      <div class="row">${mh?`<button class="btn" data-editprofile>Edit family profile</button>`:''}<a class="btn" href="#rules" data-close>📜 How to play</a>${FMsg()&&!S.demo?'<button class="btn" data-alerts>Alert settings</button>':''}${mh?`<a class="btn" href="#homes" data-close>See who’s playing</a>`:''}${isInstalled()?'':'<button class="btn" data-a2hs data-close>Add to phone</button>'}<button class="btn danger" data-signout data-close>Sign out</button></div>
       <div class="row" style="justify-content:space-between;margin-top:4px"><a class="linkbtn" href="#privacy" data-close>Privacy policy</a>${S.demo?'':'<button class="linkbtn" data-delacct style="color:var(--nose)">Delete my account</button>'}</div>`);return}
   if(t.closest('[data-delacct]')){openDeleteAccount();return}
   if(t.closest('[data-alerts]')){openAlertSettings();return}

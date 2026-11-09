@@ -640,7 +640,7 @@ textarea{min-height:120px;resize:vertical}
 
   <!-- RULES -->
   <section class="view" id="v-rules" data-view="rules" hidden>
-    <div class="row" style="justify-content:space-between"><h2>Rules</h2><span class="draft" id="draftTag">DRAFT · TBD</span></div>
+    <div class="row" style="justify-content:space-between;align-items:center"><div class="row" style="gap:10px;align-items:center"><h2>Rules</h2><span class="draft" id="draftTag">DRAFT · TBD</span></div><button type="button" class="btn sm" data-closerules>Close</button></div>
     <div class="card stack" id="rulesBody"></div>
     <button class="btn" data-a2hs id="a2hsRules" style="align-self:start">Add to phone</button>
   </section>
@@ -1476,6 +1476,7 @@ function route(){let v=location.hash.slice(1);if(v==='join'){v='homes';setTimeou
 let raf=0;function render(){if(raf)return;raf=requestAnimationFrame(()=>{raf=0;renderNow()})}
 function renderNow(){
   let v=route();const C=compute();
+  if(v!=='rules'&&v!=='privacy')S.backTo=v;
   const gated=!isMember();if(gated&&v!=='privacy')v='gate';$('#tabs').hidden=gated;
   if(v==='privacy'){$('#privContact').innerHTML=S.live.config.contact&&!S.demo?`contact the organizer at <b>${esc(S.live.config.contact)}</b>.`:'contact the organizer (their contact info is on the Rules page once you’ve joined).';$('#privBack').setAttribute('href',gated?'#':'#rules')}
   document.querySelectorAll('[data-view]').forEach(s=>s.hidden=s.dataset.view!==v);
@@ -1846,6 +1847,7 @@ document.addEventListener('click',async e=>{
   if(el=t.closest('[data-profile]')){e.stopPropagation();openProfile(el.dataset.profile);return}
   if(t.closest('[data-editprofile]')){if(S.demo){toast('The example game doesn’t save changes.');return}openProfileEditor();return}
   if(t.closest('[data-feedmore]')){S.feedLimit+=25;renderNow();return}
+  if(t.closest('[data-closerules]')){location.hash='#'+(S.backTo||'feed');return}
   if(t.closest('[data-quickpost]')){openQuickPost();return}
   if(t.closest('[data-totop]')){scrollTo({top:0,behavior:'smooth'});return}
   if(el=t.closest('[data-lbtab]')){S.lbTab=el.dataset.lbtab;renderNow();return}

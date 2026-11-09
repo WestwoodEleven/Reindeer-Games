@@ -550,7 +550,7 @@ textarea{min-height:120px;resize:vertical}
   <section class="view" id="v-feed" data-view="feed">
     <div class="status" id="status"></div>
     <div class="card row" id="pushCard" hidden style="justify-content:space-between"><p style="flex:1;min-width:12rem"><b>Get steal alerts.</b> We’ll let you know the moment the reindeer is stolen, and when neighbors post.</p><div class="row"><button class="btn sm ghost" data-push-hide>Not now</button><button class="btn sm primary" data-push>Turn on alerts</button></div></div>
-    <div class="row" style="justify-content:space-between"><h2>Feed</h2>
+    <div class="row" style="justify-content:space-between"><h2>Reindeer Rumblings</h2>
       <div class="seg feedseg" role="group" aria-label="Show"><button type="button" data-feedmode="all" id="fmAll">Everything</button><button type="button" data-feedmode="photos" id="fmPhotos">Photos</button></div></div>
     <div id="feedAll">
       <form class="card stack" id="composer" novalidate>
@@ -600,7 +600,7 @@ textarea{min-height:120px;resize:vertical}
       <p>We don’t collect your location from your phone, and we don’t use ads, analytics or tracking tools.</p>
       <h3>Who can see it</h3>
       <ul>
-        <li><b>Approved families</b> can see family names, house numbers and pins, the game record, the feed, and photos and videos. The newest steal stays hidden from everyone except the two families involved and the organizer until Rudolph is stolen again.</li>
+        <li><b>Approved families</b> can see family names, house numbers and pins, the game record, Reindeer Rumblings, and photos and videos. The newest steal stays hidden from everyone except the family who has Rudolph until he is stolen again. The organizer can see it only by turning on a spoiler setting.</li>
         <li><b>The organizer</b> can also see each person’s phone number or email (to approve people and keep the game safe), join requests, and reports.</li>
         <li><b>People who aren’t approved</b> see only the sign-in screen. Anyone signed in can check whether a single house number is already playing and see that family’s name.</li>
         <li>Photo and video links can be opened by anyone who has the exact link, so please don’t forward them outside the game.</li>
@@ -1366,7 +1366,7 @@ function openEvent(id){
     if(e.from&&e.from===myHome()?.id&&S.assets&&canWrite()&&!isPast()){
       const sh=openSheet(`${shTop('Rudolph was taken from you',esc(fmt(e.at)))}
         <p>Where he went stays secret until he’s stolen again. You can still add your photos or videos of the theft.</p>
-        <label class="drop"><input type="file" id="evFiles" accept="image/*,video/*" multiple><b>Add your photos or videos</b><br><small>They appear in the feed once he moves again.</small></label><ul class="files" id="evFileList"></ul>`);
+        <label class="drop"><input type="file" id="evFiles" accept="image/*,video/*" multiple><b>Add your photos or videos</b><br><small>They appear in Reindeer Rumblings once he moves again.</small></label><ul class="files" id="evFileList"></ul>`);
       const f=sh.querySelector('#evFiles');f.addEventListener('change',async()=>{await uploadAll([...f.files],id,$('#evFileList'));f.value=''});return}
     toast('This one is sealed until the next steal.');return}
   const ms=mediaFor(id),involved=canSee(e)&&(isOrg()||e.by===myId()||[e.from,e.to].includes(myHome()?.id));
@@ -1503,7 +1503,7 @@ async function openAlertSettings(){const pr=alertPrefs();
     ${row('sound','Play a sound','Off: alerts show quietly on your lock screen.')}
     <hr class="sep">
     ${row('steals','Steals and game start','“The reindeer was stolen!” Never says where he is now.')}
-    ${row('posts','New posts, photos and videos','When a neighbor shares something in the feed.')}
+    ${row('posts','New posts, photos and videos','When a neighbor shares something in Reindeer Rumblings.')}
     ${row('replies','Replies','When someone replies to your post or a conversation you joined.')}`);
   try{const r=await FMsg().checkPermissions();if(r.receive!=='granted')sh.querySelector('#alertWarn').innerHTML=`<p class="small" style="background:var(--nose-soft);border-radius:10px;padding:10px;margin:0">Alerts are turned off for this app. ${r.receive==='denied'?'Turn them on in iPhone <b>Settings → Reindeer Games → Notifications</b>.':'<button class="linkbtn" data-push style="padding:0">Turn on alerts</button>'}</p>`}catch{}
   sh.addEventListener('change',async e=>{const k=e.target.dataset.apref;if(!k)return;const p=alertPrefs();p[k]=e.target.checked;

@@ -185,7 +185,10 @@ main{padding-block:16px calc(96px + env(safe-area-inset-bottom,0px))}
 .frep.tr{background:var(--post-r);border-left-color:var(--stripe-r);box-shadow:inset 0 0 0 1px var(--post-r-line)}
 .frep.tg{background:var(--post-g);border-left-color:var(--stripe-g);box-shadow:inset 0 0 0 1px var(--post-g-line)}
 .fpost .frep.tr,.fpost .frep.tg{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--edge) 18%,transparent)}
+.frep{position:relative}
 .frep small{display:block;color:var(--muted);font-size:.75rem;margin-top:1px}
+.frmore{float:right;margin:-4px -6px 0 6px;min-width:36px;min-height:32px;border:0;background:transparent;color:var(--muted);font-size:1.15rem;font-weight:700;line-height:1;border-radius:8px;cursor:pointer}
+.frmore:hover,.frmore:focus-visible{background:color-mix(in srgb,var(--ink) 8%,transparent)}
 .frep small .linkbtn{font-size:.75rem;padding:0;margin-right:8px}
 .fmorer{align-self:flex-start;padding:0;font-size:.85rem}
 .freplybtn{align-self:stretch;text-align:left;border:1.5px solid var(--line);background:var(--bg);border-radius:999px;padding:7px 12px;font:500 .9rem var(--f-body);color:var(--muted);cursor:pointer}
@@ -1148,8 +1151,17 @@ const replyTint=(postId,i)=>{const pt=S.postTint[postId]||'tr';const first=pt===
 const repliesFor=id=>(D().replies||[]).filter(r=>r.postId===id&&!blocked(r.by)).sort((a,b)=>String(a.at).localeCompare(String(b.at)));
 const canReply=()=>S.demo||(canWrite()&&(!isPast()||isOrg()));
 function replyLine(r,full,tc=''){const h=homeById(r.byHome),mine=r.by===S.me;
-  const acts=full&&!S.demo?((mine||isOrg())?`<button class="linkbtn" data-rdel="${esc(r.id)}">Delete</button>`:'')+(!mine&&canWrite()?`<button class="linkbtn" data-report="reply|${esc(r.id)}">Report</button>${isOrg()?'':`<button class="linkbtn" data-block="${esc(r.by)}|${esc(h?h.family:'')}">Block</button>`}`:''):'';
-  return `<div class="frep ${tc}"><b>${h?esc(h.family):'The organizer'}${mine&&full?' <span class="you">You</span>':''}</b> <span class="frt">${esc(r.text)}</span><small>${esc(ago(r.at))}${acts?` · ${acts}`:''}</small></div>`}
+  const more=!S.demo&&((mine||isOrg())||canWrite())?`<button class="frmore" data-repmenu="${esc(r.id)}" aria-label="More options for this reply">⋯</button>`:'';
+  return `<div class="frep ${tc}">${more}<b>${h?esc(h.family):'The organizer'}${mine?' <span class="you">You</span>':''}</b> <span class="frt">${esc(r.text)}</span><small>${esc(ago(r.at))}</small></div>`}
+function openReplyMenu(id){const r=(D().replies||[]).find(x=>x.id===id);if(!r)return;const h=homeById(r.byHome),mine=r.by===S.me;
+  const sh=openSheet(`${shTop('Reply',h?esc(h.family):'The organizer')}
+    <p class="ftext thpost">${esc(r.text)}</p>
+    <div class="stack">
+      ${mine||isOrg()?`<button class="btn danger block" id="rmDel">Delete reply</button>`:''}
+      ${!mine&&canWrite()?`<button class="btn block" data-report="reply|${esc(r.id)}">Report reply</button>${isOrg()?'':`<button class="btn block" data-block="${esc(r.by)}|${esc(h?h.family:'')}">Block ${h?esc(h.family):'this person'}</button>`}`:''}
+    </div>`);
+  const d=sh.querySelector('#rmDel');if(d)d.addEventListener('click',async()=>{if(!d.dataset.armed){d.dataset.armed=1;d.textContent='Tap again to delete';return}
+    if(await W(()=>col('replies').doc(r.id).delete(),'Reply deleted'))closeSheet()})}
 function openThread(id){const p=(D().posts||[]).find(x=>x.id===id);if(!p)return;const h=homeById(p.byHome);
   S.thread=id;
   const sh=openSheet(`${shTop('Replies',h?esc(h.family):'Post')}${p.text?`<p class="ftext thpost">${esc(p.text)}</p>`:''}
@@ -1613,6 +1625,7 @@ document.addEventListener('click',async e=>{
   if(el=t.closest('[data-thread]')){const id=el.dataset.thread;S.repOpen.add(id);renderNow();return}
   if(el=t.closest('[data-repmore]')){const id=el.dataset.repmore;S.repOpen.has(id)?S.repOpen.delete(id):S.repOpen.add(id);renderNow();return}
   if(el=t.closest('[data-repbox]')){const id=el.dataset.repbox;S.repBox=id;renderNow();const ta=document.getElementById('irep-'+id);if(ta){ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length)}return}
+  if(el=t.closest('[data-repmenu]')){openReplyMenu(el.dataset.repmenu);return}
   if(el=t.closest('[data-rdel]')){if(!el.dataset.armed){el.dataset.armed=1;el.textContent='Tap again to delete';return}
     await W(()=>col('replies').doc(el.dataset.rdel).delete(),'Reply deleted');return}
   if(el=t.closest('[data-reactpick]')){if(S.demo){toast('The example game doesn’t save changes.');return}if(!canWrite())return;openReactPicker(el.dataset.reactpick);return}

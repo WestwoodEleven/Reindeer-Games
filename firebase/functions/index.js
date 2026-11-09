@@ -5,6 +5,7 @@ const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
+const { getAuth } = require('firebase-admin/auth');
 
 initializeApp();
 const db = getFirestore();
@@ -150,5 +151,35 @@ exports.replyAlert = onDocumentCreated('replies/{id}', async (event) => {
     onlyUids: who,
     link: '#feed',
     kind: 'replies',
+  });
+});
+
+// Reports and "Rudolph's gone" notes go to the organizers' phones only.
+async function organizerUids() {
+  const orgs = new Set((await db.collection('organizers').get()).docs.map(d => d.id.toLowerCase()));
+  const devices = await db.collection('devices').get();
+  const uids = new Set(devices.docs.map(d => d.data().uid).filter(Boolean));
+  const out = new Set();
+  await Promise.all([...uids].map(async uid => {
+    try {
+      const u = await getAuth().getUser(uid);
+      if ((u.email && orgs.has(u.email.toLowerCase())) || (u.phoneNumber && orgs.has(u.phoneNumber))) out.add(uid);
+    } catch (e) { /* deleted user */ }
+  }));
+  return out;
+}
+
+exports.reportAlert = onDocumentCreated('reports/{id}', async (event) => {
+  const r = event.data && event.data.data();
+  if (!r) return;
+  const uids = await organizerUids();
+  if (!uids.size) return;
+  const fam = (await familyOf(r.byHome)) || 'A family';
+  const missing = r.type === 'missing';
+  await sendAll({
+    title: missing ? `${fam} says Rudolph is gone` : 'New report to review',
+    body: missing ? 'Nobody has logged the steal yet. Check your organizer page.' : `${fam} reported something: ${r.reason || 'see your organizer page'}.`,
+    onlyUids: uids,
+    link: '#admin',
   });
 });

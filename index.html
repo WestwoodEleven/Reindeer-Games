@@ -116,6 +116,7 @@ main{padding-block:16px calc(96px + env(safe-area-inset-bottom,0px))}
 .status{padding:30px 16px 14px}
 .status::after{display:none}
 .status b{display:block;font:400 1.1rem/1.2 var(--f-display);margin:4px 0 4px}
+.check{display:flex;gap:10px;align-items:center;font-size:.95rem;cursor:pointer}.check input{width:20px;height:20px;accent-color:var(--nose);flex:none}
 .sep{border:0;border-top:1px solid var(--line);margin:2px 0;width:100%}
 .switch{position:relative;display:inline-block;width:52px;height:30px;flex:none}
 .switch input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:1}
@@ -522,11 +523,9 @@ textarea{min-height:120px;resize:vertical}
     <div id="logGate"></div>
     <form class="stack" id="logForm" novalidate>
       <div class="field" id="actingWrap" hidden><span>Logging for</span><select id="acting"></select><small>Organizer only: log on behalf of any family.</small></div>
-      <div class="seg" role="group" aria-label="What happened">
-        <button type="button" id="modeTook" aria-pressed="true">We took Rudolph</button>
-        <button type="button" id="modeLost" aria-pressed="false">He was taken from us</button>
-      </div>
-      <label class="field"><span id="otherLbl">Who did you take him from?</span><select id="other"></select></label>
+      <label class="field" id="otherWrap"><span id="otherLbl">Who did you take him from?</span><select id="other"></select></label>
+      <label class="check"><input type="checkbox" id="unsure"> <span>We’re not sure whose house it was</span></label>
+      <p class="small muted" id="unsureNote" hidden style="margin-top:-6px">No problem. We’ll fill it in from the last house on record, and the organizer will double-check.</p>
       <label class="field"><span>When</span><input type="datetime-local" id="when"></label>
       <label class="field"><span>Note <span class="muted">(optional)</span></span><input type="text" id="note" maxlength="200" placeholder="Snuck in during the boat parade"></label>
       <div class="field"><span>Photos &amp; videos</span>
@@ -535,6 +534,7 @@ textarea{min-height:120px;resize:vertical}
         <ul class="files" id="fileList"></ul>
       </div>
       <button class="btn red block" id="logSubmit" type="submit">Log it</button>
+      <p class="small muted" style="text-align:center;margin:4px 0 0">Rudolph’s gone from your house and nobody’s logged it? <button type="button" class="linkbtn" data-missing style="padding:0">Tell the organizer</button></p>
     </form>
   </section>
 
@@ -1095,7 +1095,6 @@ function rHomes(){
     :`<li class="empty"><h3>No families yet</h3><p>Families can join themselves, or the organizer can add them.</p></li>`;
 }
 function fillSelect(sel,opts){const v=sel.value;sel.innerHTML=opts.map(([val,l])=>`<option value="${esc(val)}">${esc(l)}</option>`).join('');if(opts.some(o=>o[0]===v))sel.value=v}
-let logMode='took';
 function rLog(){
   const mh=myHome(),org=isOrg()&&!S.demo,gate=$('#logGate'),form=$('#logForm');
   let g='';
@@ -1110,9 +1109,8 @@ function rLog(){
   if(!org||!$('#acting').value)$('#acting').value=mh?.id||hs[0]?.id||'';
   const acting=$('#acting').value||mh?.id;
   const others=hs.filter(h=>h.id!==acting).map(h=>[h.id,`${h.family} · No. ${h.number}`]);
-  fillSelect($('#other'),logMode==='took'?[['','Choose a family'],...others]:[['','We don’t know yet'],...others]);
-  $('#otherLbl').textContent=logMode==='took'?'Who did you take him from?':'Who took him?';
-  $('#modeTook').setAttribute('aria-pressed',logMode==='took');$('#modeLost').setAttribute('aria-pressed',logMode==='lost');
+  {const keep=$('#other').value;fillSelect($('#other'),[['','Choose a family'],...others]);if(keep)$('#other').value=keep}
+  const un=$('#unsure').checked;$('#otherWrap').hidden=un;$('#unsureNote').hidden=!un;
   if(!$('#when').value)$('#when').value=localInput(new Date());
   $('#dropLbl').hidden=!S.assets;$('#noUpload').hidden=!!S.assets;
 }
@@ -1233,6 +1231,7 @@ function rAdmin(C){
   const open=S.reports.filter(r=>r.status==='open').sort((a,b)=>String(b.at).localeCompare(String(a.at)));
   $('#reportCount').textContent=open.length?`${open.length} open`:'';
   $('#reportList').innerHTML=open.length?open.map(r=>{const tgt=r.type==='media'?D().media.find(m=>m.id===r.targetId):r.type==='post'?(D().posts||[]).find(p=>p.id===r.targetId):r.type==='reply'?(D().replies||[]).find(x=>x.id===r.targetId):D().events.find(e=>e.id===r.targetId);
+    if(r.type==='missing')return `<li><span class="hno">Missing</span><div><b>${esc(homeById(r.byHome)?.family||'A family')} says Rudolph is gone</b><div class="case-meta">Nobody has logged the steal · ${esc(ago(r.at))}${r.note?` · “${esc(r.note)}”`:''}</div></div><div class="row"><button class="btn sm" data-rdismiss="${esc(r.id)}">Done</button></div></li>`;
     const what=r.type==='media'?(tgt?.type==='video'?'Video':'Photo'):r.type==='post'?'Post':r.type==='reply'?'Reply':'Steal note';const owner=homeById(tgt?.byHome)||homeById(S.members.find(m=>m.id===tgt?.by)?.homeId);
     return `<li><span class="hno">${esc(what)}</span><div><b>${esc(r.reason)}</b><div class="case-meta">${tgt?`Posted by ${esc(owner?.family||'someone')}`:'Already removed'} · reported by ${esc(homeById(r.byHome)?.family||'someone')} · ${esc(ago(r.at))}${r.note?` · “${esc(r.note)}”`:''}</div></div>
       <div class="row">${tgt?`<button class="btn sm" data-rview="${esc(r.id)}">View</button><button class="btn sm danger" data-rremove="${esc(r.id)}">Remove</button>`:''}<button class="btn sm" data-rdismiss="${esc(r.id)}">Dismiss</button></div></li>`}).join('')
@@ -1246,7 +1245,7 @@ function rAdmin(C){
     :`<li class="muted small">No requests waiting. New families appear here when they ask to join.</li>`;
   const hs=sortHomes(D().homes);
   $('#adminHomes').innerHTML=hs.length?hs.map(h=>`<li><span class="hno">${hno(h)}</span><div><b>${esc(h.family)}</b><div class="case-meta">${(n=>n?`${n} ${n===1?'person':'people'}`:'No one linked yet')(peopleOf(h.id).length)}${!hpos(h)?' · no pin':''}</div></div><button class="btn sm" data-edit-home="${esc(h.id)}">Edit</button></li>`).join(''):`<li class="muted small">No families yet. Add them here, or share the page so they can join.</li>`;
-  $('#adminEvents').innerHTML=C.evs.length?[...C.evs].reverse().map(e=>e===C.hidden?`<li class="case"><div class="case-n">${pad(C.num.get(e.id))}</div><div><p><b>Newest steal · hidden</b></p><p class="case-meta">${esc(fmt(e.at))} · turn on “Show Rudolph’s location” to see or edit it</p></div></li>`:`<li class="case" data-ev="${esc(e.id)}"><div class="case-n">${pad(C.num.get(e.id))}</div><div><p>${caseLine(e)}</p><p class="case-meta">${esc(fmt(e.at))}${e===C.last&&e.to?' · hidden from neighbors':''}</p></div></li>`).join(''):`<li class="muted small">Nothing yet. Start by setting Rudolph’s starting house.</li>`;
+  $('#adminEvents').innerHTML=C.evs.length?[...C.evs].reverse().map(e=>e===C.hidden?`<li class="case"><div class="case-n">${pad(C.num.get(e.id))}</div><div><p><b>Newest steal · hidden</b></p><p class="case-meta">${esc(fmt(e.at))} · turn on “Show Rudolph’s location” to see or edit it</p></div></li>`:`<li class="case" data-ev="${esc(e.id)}"><div class="case-n">${pad(C.num.get(e.id))}</div><div><p>${caseLine(e)}</p><p class="case-meta">${esc(fmt(e.at))}${e===C.last&&e.to?' · hidden from neighbors':''}${e.unsure?' · <b style="color:var(--nose)">thief wasn’t sure whose house, please check</b>':''}</p></div></li>`).join(''):`<li class="muted small">Nothing yet. Start by setting Rudolph’s starting house.</li>`;
 }
 
 /* ---------- routing / render ---------- */
@@ -1537,16 +1536,21 @@ async function uploadAll(files,stealId,list,extra={}){
 $('#files').addEventListener('change',()=>{const fs=[...$('#files').files];$('#fileList').innerHTML=fs.map(f=>`<li><span>${esc(f.name)}</span><span class="mono">${(f.size/1048576).toFixed(1)} MB</span></li>`).join('')});
 
 /* ---------- log form ---------- */
-$('#modeTook').addEventListener('click',()=>{logMode='took';rLog()});
-$('#modeLost').addEventListener('click',()=>{logMode='lost';rLog()});
+$('#unsure').addEventListener('change',()=>rLog());
 $('#acting').addEventListener('change',rLog);
 $('#logForm').addEventListener('submit',async ev=>{ev.preventDefault();
-  const acting=$('#acting').value||myHome()?.id;const other=$('#other').value||null;const atv=$('#when').value;
+  const acting=$('#acting').value||myHome()?.id;const unsure=$('#unsure').checked;const atv=$('#when').value;
   if(!acting){toast('Join the game first.');return}
-  if(logMode==='took'&&!other){toast('Pick the family you took him from.');return}
+  if(!unsure&&!$('#other').value){toast('Pick the family you took him from, or check “not sure.”');return}
   if(!atv){toast('Pick when it happened.');return}
   const at=new Date(atv).toISOString(),t=+new Date(at);
-  const from=logMode==='took'?other:acting,to=logMode==='took'?acting:other;
+  // Not sure? Use the last house on record (the app knows even when the player can't see it).
+  let other=$('#other').value||null;
+  if(unsure){const prior=D().events.filter(e=>evSeason(e)===viewSeason()&&+new Date(e.at)<=t).sort((a,b)=>String(a.at).localeCompare(String(b.at))).pop();
+    if(prior&&prior.to===acting){toast('Our records already have Rudolph at your house. Ask the organizer if that’s wrong.');return}
+    if(prior&&!prior.to&&prior.from&&prior.from!==acting)other=prior.from; // they reported it stolen; this steal joins that record
+    else other=prior&&prior.to?prior.to:null}
+  const from=other,to=acting;
   const near=(e,win)=>Math.abs(+new Date(e.at)-t)<win;
   const btn=$('#logSubmit');btn.disabled=true;btn.textContent='Saving…';
   let stealId=null;
@@ -1554,11 +1558,11 @@ $('#logForm').addEventListener('submit',async ev=>{ev.preventDefault();
     const evs=D().events.filter(e=>e.kind==='steal'&&evSeason(e)===viewSeason());
     const same=evs.find(e=>e.from===from&&(e.to===to||(!to&&e.to)||(!e.to&&to))&&near(e,H72));
     if(same){stealId=same.id;if(!same.to&&to)await col('steals').doc(same.id).update({to,at})}
-    else{const r=await col('steals').add({kind:'steal',season:viewSeason(),byHome:myHome()?.id||null,from,to,at,note:$('#note').value.trim(),by:S.me,createdAt:Date.now()});stealId=r.id}
+    else{const r=await col('steals').add({kind:'steal',season:viewSeason(),byHome:myHome()?.id||null,from,to,at,note:$('#note').value.trim(),by:S.me,createdAt:Date.now(),...(unsure?{unsure:true}:{})});stealId=r.id}
   });
   if(ok&&stealId){const fs=[...$('#files').files];if(fs.length&&S.assets)await uploadAll(fs,stealId,$('#fileList'));
-    toast(logMode==='took'?'Logged. Keep him visible from the street.':'Logged. The hunt continues.');
-    $('#logForm').reset();$('#when').value='';$('#fileList').innerHTML='';location.hash='#feed'}
+    toast('Logged. Keep him visible from the street.');
+    $('#logForm').reset();rLog();$('#when').value='';$('#fileList').innerHTML='';location.hash='#feed'}
   btn.disabled=false;btn.textContent='Log it';
 });
 
@@ -1611,6 +1615,12 @@ document.addEventListener('click',async e=>{
       <div class="row" style="justify-content:space-between;margin-top:4px"><a class="linkbtn" href="#privacy" data-close>Privacy policy</a>${S.demo?'':'<button class="linkbtn" data-delacct style="color:var(--nose)">Delete my account</button>'}</div>`);return}
   if(t.closest('[data-delacct]')){openDeleteAccount();return}
   if(t.closest('[data-alerts]')){openAlertSettings();return}
+  if(t.closest('[data-missing]')){if(S.demo){toast('The example game doesn’t save changes.');return}
+    const sh=openSheet(`${shTop('Rudolph’s gone?','Goes to the organizer')}
+      <p>If Rudolph disappeared from your house and nobody has logged the steal, let the organizer know. They can nudge everyone or log it for the thieves.</p>
+      <label class="field"><span>When did you notice? <span class="muted">(optional)</span></span><input type="text" id="msNote" maxlength="200" placeholder="Gone when we woke up Saturday"></label>
+      <button class="btn red block" id="msSend">Tell the organizer</button>`);
+    sh.querySelector('#msSend').addEventListener('click',async()=>{if(await W(()=>col('reports').add({type:'missing',targetId:null,reason:'Rudolph is gone and nobody logged it',note:$('#msNote').value.trim(),by:S.me,byHome:myHome()?.id||null,status:'open',at:new Date().toISOString()}),'Sent. The organizer will take a look.'))closeSheet()});return}
   if(t.closest('[data-seasons]')){const vs=viewSeason();
     openSheet(`${shTop('Game year','Reindeer Games')}<ul class="homes">${allSeasons().map(y=>{const n=S.live.events.filter(e=>e.kind==='steal'&&evSeason(e)===y).length;
       return `<li class="${y===vs?'on':''}"><span class="hno">${esc(y)}</span><div><b>December ${esc(y)}</b><div class="case-meta">${y===curSeason()?'Current game · ':''}${n} ${n===1?'steal':'steals'}</div></div><button class="btn sm${y===vs?' primary':''}" data-season="${esc(y)}">${y===vs?'Viewing':'View'}</button></li>`}).join('')}</ul>`);return}
@@ -1642,7 +1652,7 @@ document.addEventListener('click',async e=>{
   if(el=t.closest('[data-edit-home]')){openHomeForm(isOrg()?'admin':'self',el.dataset.editHome);return}
   if(el=t.closest('[data-gap]')){const [from,to,after]=el.dataset.gap.split('|');const at=new Date(+new Date(after)+60e3).toISOString();
     if(isOrg()&&!S.demo){openEventForm(null,{kind:'steal',from,to,at});return}
-    logMode='took';location.hash='#log';setTimeout(()=>{rLog();$('#other').value=from;$('#when').value=localInput(new Date(at))},30);return}
+    location.hash='#log';setTimeout(()=>{rLog();$('#other').value=from;$('#when').value=localInput(new Date(at))},30);return}
   if(el=t.closest('[data-media]')){openMedia(el.dataset.media);return}
   if(el=t.closest('[data-ev]')){const bt=t.closest('button');if(bt&&bt!==el)return;openEvent(el.dataset.ev);return}
   if(el=t.closest('#homeList [data-home]')){if(t.closest('button'))return;selHome=selHome===el.dataset.home?null:el.dataset.home;renderNow();if(selHome){const h=homeById(selHome),q=hpos(h);if(q)trailMap.focus(q.x,q.y,trailMap.W/2.5);$('#trailMap').scrollIntoView({behavior:'smooth',block:'center'})}return}

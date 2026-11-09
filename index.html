@@ -1105,11 +1105,11 @@ function rLog(){
   gate.innerHTML=g;form.hidden=!!g;if(g)return;
   $('#actingWrap').hidden=!org;
   const hs=sortHomes(D().homes);
-  if(org)fillSelect($('#acting'),hs.map(h=>[h.id,`${h.family} · No. ${h.number}`]));
+  if(org)fillSelect($('#acting'),hs.map(h=>[h.id,`${h.number} · ${h.family}`]));
   if(!org||!$('#acting').value)$('#acting').value=mh?.id||hs[0]?.id||'';
   const acting=$('#acting').value||mh?.id;
-  const others=hs.filter(h=>h.id!==acting).map(h=>[h.id,`${h.family} · No. ${h.number}`]);
-  {const keep=$('#other').value;fillSelect($('#other'),[['','Choose a family'],...others]);if(keep)$('#other').value=keep}
+  const others=hs.filter(h=>h.id!==acting).map(h=>[h.id,`${h.number} · ${h.family}`]);
+  {const keep=$('#other').value;fillSelect($('#other'),[['','Choose a house'],...others]);if(keep)$('#other').value=keep}
   const un=$('#unsure').checked;$('#otherWrap').hidden=un;$('#unsureNote').hidden=!un;
   if(!$('#when').value)$('#when').value=localInput(new Date());
   $('#dropLbl').hidden=!S.assets;$('#noUpload').hidden=!!S.assets;
@@ -1354,7 +1354,7 @@ function openEvent(id){
   const f=sh.querySelector('#evFiles');if(f)f.addEventListener('change',async()=>{await uploadAll([...f.files],id,$('#evFileList'));f.value=''});
   const ed=sh.querySelector('#evEdit');if(ed)ed.addEventListener('click',()=>openEventForm(e));
 }
-function homeOpts(unknownLabel){return [...(unknownLabel?[['',unknownLabel]]:[]),...sortHomes(D().homes).map(h=>[h.id,`${h.family} · No. ${h.number}`])]}
+function homeOpts(unknownLabel){return [...(unknownLabel?[['',unknownLabel]]:[]),...sortHomes(D().homes).map(h=>[h.id,`${h.number} · ${h.family}`])]}
 function openEventForm(e,preset={}){
   const isNew=!e;const kind=e?.kind||preset.kind||'steal';
   const sh=openSheet(`${shTop(isNew?(kind==='start'?'Set starting house':'Add an unlogged move'):'Edit entry')}

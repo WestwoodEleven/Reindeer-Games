@@ -95,6 +95,11 @@ exports.mediaAlert = onDocumentCreated('media/{id}', async (event) => {
   }
   const what = m.type === 'video' ? 'video' : 'photo';
   if (m.stealId) {
+    // Photos of the newest steal stay hidden until he moves again, so don't announce them.
+    const steals = await db.collection('steals').get();
+    let latest = null;
+    steals.docs.forEach(d => { const a = d.data().at || ''; if (!latest || a > latest.at) latest = { id: d.id, at: a }; });
+    if (latest && latest.id === m.stealId) return;
     // Capture media: no family name, so it can't give away who has the reindeer.
     await sendAll({
       title: what === 'video' ? '🎥 New capture video' : '📸 New capture photo',

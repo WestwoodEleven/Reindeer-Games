@@ -120,6 +120,12 @@ main{padding-block:16px calc(96px + env(safe-area-inset-bottom,0px))}
 .menu{display:flex;flex-direction:column;border:1.5px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface)}
 .menu button{border:0;border-top:1px solid var(--line);background:transparent;text-align:left;padding:12px 14px;font:600 .95rem var(--f-body);color:var(--ink);cursor:pointer}
 .menu button:first-child{border-top:0}.menu button:hover{background:var(--bg)}.menu button.danger{color:var(--nose)}
+.toast{display:flex;align-items:center;gap:12px}
+.toast:has(.toastbtn){width:min(420px,calc(100% - 32px));justify-content:space-between}
+.toastbtn{border:0;background:#F2C14E;color:#2B1A12;font:700 .9rem var(--f-body);border-radius:8px;padding:6px 12px;cursor:pointer;flex:none}
+.welcome{display:flex;flex-direction:column;gap:12px;text-align:center;padding:6px 4px 4px}
+.welcome .wdeer{font-size:3rem;line-height:1}.welcome p{margin:0}
+#otherFind{margin-bottom:6px}
 .sep{border:0;border-top:1px solid var(--line);margin:2px 0;width:100%}
 .switch{position:relative;display:inline-block;width:52px;height:30px;flex:none}
 .switch input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:1}
@@ -419,6 +425,16 @@ textarea{min-height:120px;resize:vertical}
 .media-full{width:100%;max-height:60vh;object-fit:contain;border-radius:10px;background:#000;display:block}
 .toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:60;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:700;max-width:calc(100% - 32px);box-shadow:0 6px 24px rgb(0 0 0/.25)}
 @media (prefers-reduced-motion:reduce){.lights i,.status .glow,.logo-tile.on .t1,.logo-tile.on .t2{animation:none}}
+
+/* Easier reading: darker gray text and slightly larger small print. */
+:root{--muted:#5A473C}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--muted:#D6C6B2}}
+:root[data-theme="dark"]{--muted:#D6C6B2}
+.small{font-size:.95rem}.case-meta{font-size:.92rem}.fwho{font-size:.88rem}
+.frep small{font-size:.84rem}.fmorer{font-size:.95rem}.freacts button{font-size:.95rem;padding:5px 12px}
+.field small{font-size:.9rem}.label{font-size:.76rem}.tabs a{font-size:.78rem}
+.supt{font-size:.7rem}.supc small{font-size:.84rem}.totals i{font-size:.68rem}.sb .nm small{font-size:.8rem;color:rgba(247,240,225,.85)}
+.feedseg button{font-size:.92rem}.tag{font-size:.72rem}
 </style>
 </head>
 <body>
@@ -547,7 +563,9 @@ textarea{min-height:120px;resize:vertical}
     <div id="logGate"></div>
     <form class="stack" id="logForm" novalidate>
       <div class="field" id="actingWrap" hidden><span>Logging for</span><select id="acting"></select><small>Organizer only: log on behalf of any family.</small></div>
-      <label class="field" id="otherWrap"><span id="otherLbl">Who did you take him from?</span><select id="other"></select></label>
+      <div class="field" id="otherWrap"><label for="other" id="otherLbl">Who did you take him from?</label>
+        <input type="search" id="otherFind" placeholder="Search a house number or family name" autocomplete="off" enterkeyhint="search" aria-label="Search houses">
+        <select id="other"></select><small id="otherHint" hidden></small></div>
       <label class="check"><input type="checkbox" id="unsure"> <span>We’re not sure whose house it was</span></label>
       <p class="small muted" id="unsureNote" hidden style="margin-top:-6px">No problem. We’ll fill it in from the last house on record, and the organizer will double-check.</p>
       <label class="field"><span>When</span><input type="datetime-local" id="when"></label>
@@ -780,6 +798,9 @@ function compute(){
 
 /* ---------- toast & sheet ---------- */
 let toastT;function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,3200)}
+// A toast with an Undo button that stays up for 10 seconds.
+function toastUndo(m,undo){const t=$('#toast');t.innerHTML=`<span>${esc(m)}</span><button type="button" class="toastbtn">Undo</button>`;t.hidden=false;clearTimeout(toastT);
+  t.querySelector('button').addEventListener('click',async()=>{clearTimeout(toastT);t.hidden=true;await undo()},{once:true});toastT=setTimeout(()=>t.hidden=true,10000)}
 function openSheet(html){$('#sheet').innerHTML=html;$('#sheetWrap').hidden=false;document.body.style.overflow='hidden';return $('#sheet')}
 function closeSheet(){$('#sheetWrap').hidden=true;$('#sheet').innerHTML='';document.body.style.overflow='';sheetMap=null}
 $('#sheetWrap').addEventListener('click',e=>{if(e.target.closest('[data-close]'))closeSheet()});
@@ -1200,7 +1221,11 @@ function rLog(){
   if(!org||!$('#acting').value)$('#acting').value=mh?.id||hs[0]?.id||'';
   const acting=$('#acting').value||mh?.id;
   const others=hs.filter(h=>h.id!==acting).map(h=>[h.id,`${h.number} · ${h.family}`]);
-  {const keep=$('#other').value;fillSelect($('#other'),[['','Choose a house'],...others]);if(keep)$('#other').value=keep}
+  {const keep=$('#other').value,q=$('#otherFind').value.trim().toLowerCase().replace(/^no\.?\s*/,'');
+   const list=q?others.filter(([,label])=>label.toLowerCase().includes(q)):others;
+   fillSelect($('#other'),[['',q?(list.length?`${list.length} match${list.length===1?'':'es'}`:'No matches'):'Choose a house'],...list]);
+   if(list.length===1&&q)$('#other').value=list[0][0];else if(keep&&list.some(o=>o[0]===keep))$('#other').value=keep;
+   const hint=$('#otherHint');hint.hidden=!(q&&list.length===1);if(list.length===1)hint.textContent=`Picked ${list[0][1]}`}
   const un=$('#unsure').checked;$('#otherWrap').hidden=un;$('#unsureNote').hidden=!un;
   if(!$('#when').value)$('#when').value=localInput(new Date());
   $('#dropLbl').hidden=!S.assets;$('#noUpload').hidden=!!S.assets;
@@ -1460,7 +1485,7 @@ function openEvent(id){
     ${claimBtn(e)}
     ${ms.length?`<div class="gallery">${ms.map(m=>`<button data-media="${esc(m.id)}" aria-label="Open ${m.type}">${m.type==='image'?`<img src="${esc(murl(m))}" alt="">`:`<video src="${esc(murl(m))}#t=0.1" preload="metadata" muted playsinline></video><span class="play">VIDEO</span>`}</button>`).join('')}</div>`:'<p class="muted small">No photos or videos yet.</p>'}
     ${involved&&S.assets&&canWrite()&&(!isPast()||isOrg())?`<label class="drop"><input type="file" id="evFiles" accept="image/*,video/*" multiple><b>Add your photos or videos</b><br><small>Both the stealer and the family who lost him can add footage.</small></label><ul class="files" id="evFileList"></ul>`:''}
-    ${(isOrg()||e.by===myId())&&canWrite()?`<button class="btn" id="evEdit">Edit entry</button>`:''}
+    ${(isOrg()||e.by===myId())&&canWrite()?`<button class="btn" id="evEdit">Made a mistake? Fix it</button>`:''}
     ${e.note&&e.by&&e.by!==myId()&&!S.demo&&canWrite()?modLinks('steal',e.id,e.by,byHome?byHome.family:''):''}`);
   const f=sh.querySelector('#evFiles');if(f)f.addEventListener('change',async()=>{await uploadAll([...f.files],id,$('#evFileList'));f.value=''});
   const ed=sh.querySelector('#evEdit');if(ed)ed.addEventListener('click',()=>openEventForm(e));
@@ -1602,9 +1627,14 @@ async function pushAsk(){const P=FMsg();if(!P)return;
   syncPush()}
 // Ask once, the first time the app opens.
 async function pushAskOnLaunch(){const P=FMsg();if(!P)return;
-  try{const r=await P.checkPermissions();if(r.receive!=='prompt')return;
-    const q=await P.requestPermissions();S.push=q.receive;if(q.receive==='granted'&&S.me)await pushSave()}catch(e){console.warn('push launch',e)}
-  syncPush()}
+  try{const r=await P.checkPermissions();if(r.receive!=='prompt')return}catch(e){return}
+  // A friendly explanation first, then the iPhone's own Allow / Don't Allow prompt.
+  const sh=openSheet(`<div class="welcome"><div class="wdeer" aria-hidden="true">🦌</div><h2>Welcome to Reindeer Games!</h2>
+    <p>Want a heads-up the moment Rudolph is stolen? Turn on alerts and we’ll let you know. They’re quiet by default, with no sound.</p>
+    <p class="small muted">Next, your iPhone will ask. Tap <b>Allow</b>.</p>
+    <button class="btn red block" id="wYes">Turn on alerts</button><button class="btn ghost block" id="wNo">Not now</button></div>`);
+  sh.querySelector('#wYes').addEventListener('click',async()=>{closeSheet();try{const q=await P.requestPermissions();S.push=q.receive;if(q.receive==='granted'&&S.me)await pushSave()}catch(e){console.warn('push launch',e)}syncPush()});
+  sh.querySelector('#wNo').addEventListener('click',()=>{closeSheet();S.push='prompt';syncPush()})}
 if(inApp)setTimeout(pushAskOnLaunch,600);
 // Inline replies: keep drafts, Enter sends, and catch up on feed updates after typing.
 document.addEventListener('input',e=>{const f=e.target.closest&&e.target.closest('.irep');if(!f)return;S.repDraft[f.dataset.irep]=e.target.value;e.target.style.height='auto';e.target.style.height=Math.min(e.target.scrollHeight,140)+'px'});
@@ -1659,6 +1689,7 @@ $('#files').addEventListener('change',()=>{const fs=[...$('#files').files];$('#f
 
 /* ---------- log form ---------- */
 $('#unsure').addEventListener('change',()=>rLog());
+$('#otherFind').addEventListener('input',()=>rLog());
 $('#acting').addEventListener('change',rLog);
 $('#logForm').addEventListener('submit',async ev=>{ev.preventDefault();
   const acting=$('#acting').value||myHome()?.id;const unsure=$('#unsure').checked;const atv=$('#when').value;
@@ -1679,12 +1710,16 @@ $('#logForm').addEventListener('submit',async ev=>{ev.preventDefault();
   const ok=await W(async()=>{
     const evs=D().events.filter(e=>e.kind==='steal'&&evSeason(e)===viewSeason());
     const same=evs.find(e=>e.from===from&&(e.to===to||(!to&&e.to)||(!e.to&&to))&&near(e,H72));
+    let created=false;
     if(same){stealId=same.id;if(!same.to&&to)await col('steals').doc(same.id).update({to,at})}
-    else{const r=await col('steals').add({kind:'steal',season:viewSeason(),byHome:myHome()?.id||null,from,to,at,note:$('#note').value.trim(),by:S.me,createdAt:Date.now(),...(unsure?{unsure:true}:{})});stealId=r.id}
+    else{const r=await col('steals').add({kind:'steal',season:viewSeason(),byHome:myHome()?.id||null,from,to,at,note:$('#note').value.trim(),by:S.me,createdAt:Date.now(),...(unsure?{unsure:true}:{})});stealId=r.id;created=true}
+    S.lastCreated=created;
   });
   if(ok&&stealId){const fs=[...$('#files').files];if(fs.length&&S.assets)await uploadAll(fs,stealId,$('#fileList'));
-    toast('Logged. Keep him visible from the street.');
-    $('#logForm').reset();rLog();$('#when').value='';$('#fileList').innerHTML='';location.hash='#feed'}
+    const sid=stealId;
+    if(S.lastCreated)toastUndo('Logged! Keep him visible from the street.',async()=>{if(await W(async()=>{for(const m of D().media.filter(x=>x.stealId===sid))await delMedia(m);await col('steals').doc(sid).delete()},'Undone. That steal was removed.'))location.hash='#log'});
+    else toast('Logged. Keep him visible from the street.');
+    $('#logForm').reset();$('#otherFind').value='';rLog();$('#when').value='';$('#fileList').innerHTML='';location.hash='#feed'}
   btn.disabled=false;btn.textContent='Log it';
 });
 

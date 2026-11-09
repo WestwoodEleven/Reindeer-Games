@@ -210,6 +210,7 @@ main{padding-block:16px calc(96px + env(safe-area-inset-bottom,0px))}
 .btn.ghost{background:transparent}
 .btn.block{width:100%}
 .btn.sm{min-height:34px;padding:6px 11px;font-size:.88rem}
+.cpphoto{gap:6px;cursor:pointer}.cpphoto svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round;flex:none}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 .btn.danger{color:var(--nose);border-color:color-mix(in srgb,var(--nose) 40%,var(--line))}
 
@@ -533,7 +534,7 @@ textarea{min-height:120px;resize:vertical}
         <label class="sr" for="cpText">Message</label>
         <textarea id="cpText" maxlength="1000" placeholder="Say something to the neighborhood…" rows="2"></textarea>
         <ul class="files" id="cpFiles"></ul>
-        <div class="row" style="justify-content:space-between"><label class="btn sm" id="cpPhotoLbl"><input type="file" id="cpPhoto" accept="image/*,video/*" multiple hidden>Add photo or video</label><button class="btn red sm" type="submit" id="cpSend">Post</button></div>
+        <div class="row" style="justify-content:space-between"><label class="btn primary sm cpphoto" id="cpPhotoLbl"><input type="file" id="cpPhoto" accept="image/*,video/*" multiple hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Add photo or video</label><button class="btn red sm" type="submit" id="cpSend">Post</button></div>
       </form>
       <div id="feedList" class="feedlist"></div>
     </div>

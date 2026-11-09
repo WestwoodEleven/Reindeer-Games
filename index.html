@@ -878,7 +878,9 @@ function rStatus(C){
     else h+=`<div class="label">Status · ${isOrg()?'Organizer view':'Only you can see this'}</div><h2>Rudolph is at ${esc(fam(l.to))}</h2><p>${hno(homeById(l.to))} · since ${esc(ago(l.at))}. ${isOrg()?'Everyone else sees only that he’s on the loose.':'Neighbors won’t see where he is until he’s stolen again.'}</p>`;
     h+=win;
   }
-  st.innerHTML=h;
+  st.innerHTML=h;st.hidden=false;
+  // Before the game starts there's nothing to report, so the box stays hidden.
+  if(!isPast()&&!C.evs.length&&(S.ready||S.demo))st.hidden=true;
 }
 function caseLine(e){
   if(e.kind==='start')return `Rudolph starts the game at ${famB(e.to)}`;

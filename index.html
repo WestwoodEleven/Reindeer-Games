@@ -1396,7 +1396,8 @@ function rFeed(C){
   const tints=new Map();items.filter(it=>it.k==='post'||it.k==='photo').reverse().forEach((it,i)=>{const c=i%2?'tr':'tg';tints.set(it,c);if(it.p)S.postTint[it.p.id]=c});
   const thumbs=ms=>ms.length?`<div class="fthumbs">${ms.slice(0,4).map(m=>`<button data-media="${esc(m.id)}" aria-label="Open ${m.type}">${m.type==='image'?`<img src="${esc(murl(m))}" alt="" loading="lazy">`:`<video src="${esc(murl(m))}#t=0.1" preload="metadata" muted playsinline></video><span class="play">VIDEO</span>`}</button>`).join('')}</div>`:'';
   const fam=h=>h?esc(h.family):'The organizer';
-  $('#feedList').innerHTML=items.length?items.slice(0,150).map(it=>{
+  S.feedLimit=S.feedLimit||25;const more=items.length-S.feedLimit;
+  $('#feedList').innerHTML=items.length?items.slice(0,S.feedLimit).map(it=>{
     if(it.k==='sealed'&&it.e.kind==='start'){const e=it.e;return `<div class="falert knit"><span class="fic">★</span><div><b>Let the games begin! Rudolph is on the loose!</b><small>${esc(ago(e.at))} · Find him and steal him.</small></div></div>`}
     if(it.k==='sealed'){const e=it.e;return `<div class="falert knit"><span class="fic">!</span><div><b>${e.from?`Rudolph was taken from ${mid(fam(homeById(e.from)))}`:'Rudolph was stolen'}</b><small>${esc(ago(e.at))} · Who has him now? Go look.</small>${e.from&&e.from===myHome()?.id&&S.assets&&canWrite()?`<button class="linkbtn" data-ev="${esc(e.id)}" style="color:#fff;padding:0;margin-top:4px">Add your photos or videos</button>`:''}</div></div>`}
     if(it.k==='steal'){const e=it.e;return `<button class="falert done knit" data-ev="${esc(e.id)}"><span class="fic${e.kind==='start'?'':' num'}" ${e.kind==='start'?'':`title="Steal number ${sn.get(e.id)}"`}>${e.kind==='start'?'★':sn.get(e.id)||'🦌'}</span><div><b>${e.kind==='start'?'Let the games begin! Rudolph is on the loose!':caseLine(e)}</b><small>${e.kind==='start'&&e.to?`Started at ${mid(fam(homeById(e.to)))} · `:''}${esc(fmt(e.at))}${e.note&&!blocked(e.by)?` · “${esc(e.note)}”`:''}</small>${thumbs(mediaFor(e.id))}</div></button>`}
@@ -1410,6 +1411,7 @@ function rFeed(C){
           :canReply()?`<button class="freplybtn" data-repbox="${id}">${rs.length?'Reply…':'Be the first to reply…'}</button>`:'';
         return `<div class="freplies">${rs.length>2?`<button class="linkbtn fmorer" data-repmore="${id}">${open?'Show fewer':`View all ${rs.length} replies`}</button>`:''}${shown.map((r,k)=>replyLine(r,open||S.repBox===p.id,replyTint(p.id,off+k))).join('')}${box}</div>`})()}</div>`}).join('')
     :`<div class="empty"><h3>Nothing here yet</h3><p>Steals show up here automatically. Post a message or photo to get things going.</p></div>`;
+  if(more>0)$('#feedList').insertAdjacentHTML('beforeend',`<button class="btn block feedmore" data-feedmore>Show older posts <span class="muted">(${more} more)</span></button>`);
 }
 const DRAFT=`The basics (more to come):
 
@@ -1835,6 +1837,7 @@ document.addEventListener('click',async e=>{
   if(el=t.closest('[data-repbox]')){const id=el.dataset.repbox;S.repBox=id;renderNow();const ta=document.getElementById('irep-'+id);if(ta){ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length)}return}
   if(el=t.closest('[data-profile]')){e.stopPropagation();openProfile(el.dataset.profile);return}
   if(t.closest('[data-editprofile]')){if(S.demo){toast('The example game doesn’t save changes.');return}openProfileEditor();return}
+  if(t.closest('[data-feedmore]')){S.feedLimit+=25;renderNow();return}
   if(el=t.closest('[data-lbtab]')){S.lbTab=el.dataset.lbtab;renderNow();return}
   if(el=t.closest('[data-repmenu]')){openReplyMenu(el.dataset.repmenu);return}
   if(el=t.closest('[data-rdel]')){if(!el.dataset.armed){el.dataset.armed=1;el.textContent='Tap again to delete';return}

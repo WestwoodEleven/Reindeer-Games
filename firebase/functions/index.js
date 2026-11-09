@@ -114,7 +114,7 @@ exports.mediaAlert = onDocumentCreated('media/{id}', async (event) => {
     // Capture media: no family name, so it can't give away who has the reindeer.
     await sendAll({
       title: what === 'video' ? '🎥 New capture video' : '📸 New capture photo',
-      body: 'Open the feed to see it.',
+      body: 'Open Reindeer Rumblings to see it.',
       exceptUid: m.by,
       link: '#feed',
       kind: 'posts',

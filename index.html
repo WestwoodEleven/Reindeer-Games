@@ -189,6 +189,8 @@ main{padding-block:16px calc(96px + env(safe-area-inset-bottom,0px))}
 .frep small .linkbtn{font-size:.75rem;padding:0;margin-right:8px}
 .fmorer{align-self:flex-start;padding:0;font-size:.85rem}
 .freplybtn{align-self:stretch;text-align:left;border:1.5px solid var(--line);background:var(--bg);border-radius:999px;padding:7px 12px;font:500 .9rem var(--f-body);color:var(--muted);cursor:pointer}
+.irep{display:flex;gap:8px;align-items:flex-end}
+.irep textarea{flex:1;resize:none;min-height:40px;font:inherit;font-size:16px;border:2px solid var(--edge);border-radius:12px;padding:8px 12px;background:var(--surface);color:var(--ink)}
 .thpost{background:var(--bg);border-radius:12px;padding:10px 12px;margin:0}
 .thlist{display:flex;flex-direction:column;gap:12px;max-height:46vh;overflow:auto;padding:2px}
 .thform{display:flex;gap:8px;align-items:flex-end}
@@ -1141,7 +1143,7 @@ function openReactPicker(id){
   sh.querySelector('#ecForm').addEventListener('submit',async e=>{e.preventDefault();const em=firstEmoji($('#ecIn').value);if(!em){toast('That doesn’t look like an emoji. Use the emoji keyboard.');return}closeSheet();await toggleReact(id,em)});
 }
 // Replies to feed posts.
-S.postTint={};
+S.postTint={};S.repOpen=new Set();S.repBox=null;S.repDraft={};S.feedStale=false;
 const replyTint=(postId,i)=>{const pt=S.postTint[postId]||'tr';const first=pt==='tr'?'tg':'tr';return i%2?pt:first};
 const repliesFor=id=>(D().replies||[]).filter(r=>r.postId===id&&!blocked(r.by)).sort((a,b)=>String(a.at).localeCompare(String(b.at)));
 const canReply=()=>S.demo||(canWrite()&&(!isPast()||isOrg()));
@@ -1171,6 +1173,8 @@ function renderThread(){const l=$('#thList');if(!S.thread||!l||$('#sheetWrap').h
 async function delRepliesOf(postId){for(const r of (D().replies||[]).filter(x=>x.postId===postId))await col('replies').doc(r.id).delete().catch(()=>{})}
 const postGone=id=>!(D().posts||[]).some(p=>p.id===id);
 function rFeed(C){
+  const ae=document.activeElement;if(ae&&ae.closest&&ae.closest('.irep')&&$('#feedList').contains(ae)){S.feedStale=true;return}
+  S.feedStale=false;
   const photos=S.feedMode==='photos';
   $('#fmAll').setAttribute('aria-pressed',!photos);$('#fmPhotos').setAttribute('aria-pressed',photos);
   $('#feedAll').hidden=photos;$('#feedPhotos').hidden=!photos;
@@ -1197,7 +1201,10 @@ function rFeed(C){
     return `<div class="fpost knit ${tints.get(it)}"><div class="fwho"><b>${fam(h)}${mine?' <span class="you">You</span>':''}</b><span>${esc(ago(p.at))}<button class="fmore" data-postmenu="${esc(p.id)}" aria-label="More options">⋯</button></span></div>${p.text?`<p class="ftext">${esc(p.text)}</p>`:''}${thumbs(ms)}
       <div class="freacts">${(()=>{const tl=reactTally(p);const ems=[...new Set([...Object.keys(tl).sort((a,b)=>tl[b].n-tl[a].n),...DEFAULT_REACTS])].slice(0,10);
         return ems.map(em=>{const x=tl[em]||{n:0,mine:false};return `<button class="${x.mine?'on':''}" data-react="${esc(p.id)}|${esc(em)}" aria-label="React ${esc(em)}">${em}${x.n?` ${x.n}`:''}</button>`}).join('')+`<button class="fadd" data-reactpick="${esc(p.id)}" aria-label="Add a different reaction">＋</button>`})()}</div>${(()=>{const rs=repliesFor(p.id);if(!rs.length&&!canReply())return'';
-        return `<div class="freplies">${rs.length>2?`<button class="linkbtn fmorer" data-thread="${esc(p.id)}">View all ${rs.length} replies</button>`:''}${rs.slice(-2).map((r,k)=>replyLine(r,false,replyTint(p.id,rs.length-Math.min(2,rs.length)+k))).join('')}${canReply()?`<button class="freplybtn" data-thread="${esc(p.id)}">${rs.length?'Reply…':'Be the first to reply…'}</button>`:''}</div>`})()}</div>`}).join('')
+        const open=S.repOpen.has(p.id),shown=open?rs:rs.slice(-2),off=rs.length-shown.length,id=esc(p.id);
+        const box=S.repBox===p.id?`<form class="irep" data-irep="${id}"><label class="sr" for="irep-${id}">Write a reply</label><textarea id="irep-${id}" rows="1" maxlength="500" placeholder="Write a reply…" enterkeyhint="send">${esc(S.repDraft[p.id]||'')}</textarea><button class="btn red sm" type="submit">Send</button></form>`
+          :canReply()?`<button class="freplybtn" data-repbox="${id}">${rs.length?'Reply…':'Be the first to reply…'}</button>`:'';
+        return `<div class="freplies">${rs.length>2?`<button class="linkbtn fmorer" data-repmore="${id}">${open?'Show fewer':`View all ${rs.length} replies`}</button>`:''}${shown.map((r,k)=>replyLine(r,open||S.repBox===p.id,replyTint(p.id,off+k))).join('')}${box}</div>`})()}</div>`}).join('')
     :`<div class="empty"><h3>Nothing here yet</h3><p>Steals show up here automatically. Post a message or photo to get things going.</p></div>`;
 }
 const DRAFT=`The basics (more to come):
@@ -1502,6 +1509,17 @@ async function pushAskOnLaunch(){const P=FMsg();if(!P)return;
     const q=await P.requestPermissions();S.push=q.receive;if(q.receive==='granted'&&S.me)await pushSave()}catch(e){console.warn('push launch',e)}
   syncPush()}
 if(inApp)setTimeout(pushAskOnLaunch,600);
+// Inline replies: keep drafts, Enter sends, and catch up on feed updates after typing.
+document.addEventListener('input',e=>{const f=e.target.closest&&e.target.closest('.irep');if(!f)return;S.repDraft[f.dataset.irep]=e.target.value;e.target.style.height='auto';e.target.style.height=Math.min(e.target.scrollHeight,140)+'px'});
+document.addEventListener('keydown',e=>{const f=e.target.closest&&e.target.closest('.irep');if(f&&e.key==='Enter'&&!e.shiftKey){e.preventDefault();f.requestSubmit()}});
+document.addEventListener('focusout',e=>{if(!(e.target.closest&&e.target.closest('.irep')))return;setTimeout(()=>{const ae=document.activeElement;if(ae&&ae.closest&&ae.closest('.irep'))return;
+  if(!(S.repDraft[S.repBox]||'').trim())S.repBox=null;if(S.feedStale||!S.repBox)render()},250)});
+document.addEventListener('submit',async e=>{const f=e.target.closest&&e.target.closest('.irep');if(!f)return;e.preventDefault();
+  const id=f.dataset.irep,ta=f.querySelector('textarea'),text=ta.value.trim();if(!text)return;
+  if(S.demo){toast('The example game doesn’t save changes.');return}
+  const p=(D().posts||[]).find(x=>x.id===id);const btn=f.querySelector('button');btn.disabled=true;
+  const ok=await W(()=>col('replies').add({postId:id,season:(p&&p.season)||viewSeason(),by:S.me,byHome:myHome()?.id||null,text,at:new Date().toISOString(),createdAt:Date.now()}));
+  btn.disabled=false;if(ok){S.repDraft[id]='';S.repBox=null;ta.blur();renderNow()}});
 document.addEventListener('change',e=>{if(e.target&&e.target.id==='revealToggle'){try{e.target.checked?localStorage.setItem('rg-reveal','1'):localStorage.removeItem('rg-reveal')}catch{}
   toast(e.target.checked?'Spoilers on for this device':'Spoilers off. You see what everyone sees.');render()}});
 async function pushForget(){if(!S.pushTok||!S.db)return;const t=S.pushTok;S.pushTok=null;try{await S.db.doc('devices/'+t).delete()}catch{}}
@@ -1592,7 +1610,9 @@ document.addEventListener('click',async e=>{
   if(el=t.closest('[data-feedmode]')){S.feedMode=el.dataset.feedmode;renderNow();return}
   if(el=t.closest('[data-react]')){if(S.demo){toast('The example game doesn’t save changes.');return}if(!canWrite())return;
     const i=el.dataset.react.indexOf('|');await toggleReact(el.dataset.react.slice(0,i),el.dataset.react.slice(i+1));return}
-  if(el=t.closest('[data-thread]')){openThread(el.dataset.thread);return}
+  if(el=t.closest('[data-thread]')){const id=el.dataset.thread;S.repOpen.add(id);renderNow();return}
+  if(el=t.closest('[data-repmore]')){const id=el.dataset.repmore;S.repOpen.has(id)?S.repOpen.delete(id):S.repOpen.add(id);renderNow();return}
+  if(el=t.closest('[data-repbox]')){const id=el.dataset.repbox;S.repBox=id;renderNow();const ta=document.getElementById('irep-'+id);if(ta){ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length)}return}
   if(el=t.closest('[data-rdel]')){if(!el.dataset.armed){el.dataset.armed=1;el.textContent='Tap again to delete';return}
     await W(()=>col('replies').doc(el.dataset.rdel).delete(),'Reply deleted');return}
   if(el=t.closest('[data-reactpick]')){if(S.demo){toast('The example game doesn’t save changes.');return}if(!canWrite())return;openReactPicker(el.dataset.reactpick);return}

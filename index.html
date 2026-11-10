@@ -169,6 +169,7 @@ main{padding-block:16px calc(96px + env(safe-area-inset-bottom,0px))}
 .pbub small{display:block;color:var(--stripe-g);font-weight:700;font-size:.82rem}.pbub .chev{font-size:1.2rem;color:var(--muted)}
 .approw{display:flex;align-items:center;justify-content:space-between;gap:10px}.approw .seg{width:auto;flex:none;display:grid;grid-template-columns:repeat(3,auto)}.approw .seg button{padding:6px 12px}
 .fpost.stealc{background:#1D5C3A;color:#fff}.fpost.stealc::before{background-color:var(--stripe-r)}
+.fpost.stealc.sred{background:#9E1430}.fpost.stealc.sred::before{background-color:var(--stripe-g)}.fpost.stealc.sred .sbadge{background:var(--stripe-g)}
 .stealc .fwho b,.stealc .fwho>span{color:#fff}.stealc .fwho>span{opacity:.85}
 .stealc .sl{display:block;width:100%;text-align:left;border:0;background:none;padding:0;color:#fff;font:800 1.08rem/1.3 var(--f-body);margin:2px 0 0;cursor:pointer}
 .stealc .sl b{font-weight:800}.stealc .sn{color:#D9EADF;margin:0}
@@ -1454,17 +1455,19 @@ function rFeed(C){
   items.sort((a,b)=>String(b.t).localeCompare(String(a.t)));
   // Alternate red/green by age (oldest first), so a new post takes the next color and older ones never change.
   const sn=C.num;
-  const tints=new Map();items.filter(it=>it.k==='post'||it.k==='photo').reverse().forEach((it,i)=>{const c=i%2?'tr':'tg';tints.set(it,c);if(it.p)S.postTint[it.p.id]=c});
+  // Posts and steals share one red/green alternation; steals use the bold version of their color.
+  const tints=new Map();items.filter(it=>it.k==='post'||it.k==='photo'||((it.k==='steal'||it.k==='sealed')&&it.e.kind==='steal')).reverse().forEach((it,i)=>{const c=i%2?'tr':'tg';tints.set(it,c);if(it.p)S.postTint[it.p.id]=c});
+  const sc=it=>tints.get(it)==='tr'?'sred':'sgrn';
   const thumbs=ms=>ms.length?`<div class="fthumbs">${ms.slice(0,4).map(m=>`<button data-media="${esc(m.id)}" aria-label="Open ${m.type}">${m.type==='image'?`<img src="${esc(murl(m))}" alt="" loading="lazy">`:`<video src="${esc(murl(m))}#t=0.1" preload="metadata" muted playsinline></video><span class="play">VIDEO</span>`}</button>`).join('')}</div>`:'';
   const fam=h=>h?esc(h.family):'The organizer';
   S.feedLimit=S.feedLimit||25;const more=items.length-S.feedLimit;
   $('#feedList').innerHTML=items.length?items.slice(0,S.feedLimit).map(it=>{
     if(it.k==='sealed'&&it.e.kind==='start'){const e=it.e;return `<div class="falert knit"><span class="fic">★</span><div><b>Let the games begin! Rudolph is on the loose!</b><small>${esc(ago(e.at))} · Find him and steal him.</small></div></div>`}
-    if(it.k==='sealed'){const e=it.e;return `<div class="fpost knit stealc"><div class="fwho"><span class="fwho-n"><span class="sbadge">${sn.get(e.id)||'!'}</span><b>Steal ${sn.get(e.id)||''}</b></span><span>${esc(ago(e.at))}</span></div>
+    if(it.k==='sealed'){const e=it.e;return `<div class="fpost knit stealc ${sc(it)}"><div class="fwho"><span class="fwho-n"><span class="sbadge">${sn.get(e.id)||'!'}</span><b>Steal ${sn.get(e.id)||''}</b></span><span>${esc(ago(e.at))}</span></div>
       <p class="sl">${e.from?`Rudolph was taken from ${mid(fam(homeById(e.from)))}`:'Rudolph was stolen'}</p><p class="sn">Who has him now? Go look.</p>
       ${e.from&&e.from===myHome()?.id&&S.assets&&canWrite()?`<button class="linkbtn" data-ev="${esc(e.id)}" style="color:#fff;padding:0;align-self:flex-start">Add your photos or videos</button>`:''}
       ${reactsHtml(e)}<div class="lockr">🔒 Replies open once he’s stolen again.</div></div>`}
-    if(it.k==='steal'&&it.e.kind==='steal'){const e=it.e;return `<div class="fpost knit stealc"><div class="fwho"><button class="fwho-n" data-ev="${esc(e.id)}"><span class="sbadge">${sn.get(e.id)}</span><b>Steal ${sn.get(e.id)}</b></button><span>${esc(ago(e.at))}</span></div>
+    if(it.k==='steal'&&it.e.kind==='steal'){const e=it.e;return `<div class="fpost knit stealc ${sc(it)}"><div class="fwho"><button class="fwho-n" data-ev="${esc(e.id)}"><span class="sbadge">${sn.get(e.id)}</span><b>Steal ${sn.get(e.id)}</b></button><span>${esc(ago(e.at))}</span></div>
       <button class="sl" data-ev="${esc(e.id)}">${caseLine(e)}</button>${e.note&&!blocked(e.by)?`<p class="sn">“${esc(e.note)}”</p>`:''}${thumbs(mediaFor(e.id))}
       ${reactsHtml(e)}${repliesHtml(e.id)}</div>`}
     if(it.k==='steal'){const e=it.e;return `<button class="falert done knit" data-ev="${esc(e.id)}"><span class="fic${e.kind==='start'?'':' num'}" ${e.kind==='start'?'':`title="Steal number ${sn.get(e.id)}"`}>${e.kind==='start'?'★':sn.get(e.id)||'🦌'}</span><div><b>${e.kind==='start'?'Let the games begin! Rudolph is on the loose!':caseLine(e)}</b><small>${e.kind==='start'&&e.to?`Started at ${mid(fam(homeById(e.to)))} · `:''}${esc(fmt(e.at))}${e.note&&!blocked(e.by)?` · “${esc(e.note)}”`:''}</small>${thumbs(mediaFor(e.id))}</div></button>`}

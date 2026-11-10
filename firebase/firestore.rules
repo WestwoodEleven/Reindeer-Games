@@ -119,7 +119,9 @@ service cloud.firestore {
         // the thief fills in a steal the other family reported as "unknown"
         || (isMember() && resource.data.to == null
             && request.resource.data.to == myHome()
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['to', 'at']));
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['to', 'at']))
+        // anyone playing can react to a steal
+        || (isMember() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions']));
       allow delete: if isOrg() || (isMember() && resource.data.by == request.auth.uid);
     }
 
@@ -139,9 +141,11 @@ service cloud.firestore {
       allow create: if isMember() && request.resource.data.by == request.auth.uid
         && shortText(request.resource.data.text, 500)
         && request.resource.data.postId is string
-        && exists(/databases/$(database)/documents/posts/$(request.resource.data.postId));
+        && (exists(/databases/$(database)/documents/posts/$(request.resource.data.postId))
+            || exists(/databases/$(database)/documents/steals/$(request.resource.data.postId)));
       allow delete: if isOrg() || (isMember() && (resource.data.by == request.auth.uid
-        || get(/databases/$(database)/documents/posts/$(resource.data.postId)).data.by == request.auth.uid));
+        || (exists(/databases/$(database)/documents/posts/$(resource.data.postId))
+            && get(/databases/$(database)/documents/posts/$(resource.data.postId)).data.by == request.auth.uid)));
     }
 
     // Reports: any participant can file one; only organizers can read or act on them.

@@ -168,6 +168,17 @@ main{padding-block:16px calc(96px + env(safe-area-inset-bottom,0px))}
 .pbub.below{transform:translate(-50%,14px)}.pbub.below::after{bottom:auto;top:-9px;transform:translateX(-50%) rotate(225deg)}
 .pbub small{display:block;color:var(--stripe-g);font-weight:700;font-size:.82rem}.pbub .chev{font-size:1.2rem;color:var(--muted)}
 .approw{display:flex;align-items:center;justify-content:space-between;gap:10px}.approw .seg{width:auto;flex:none;display:grid;grid-template-columns:repeat(3,auto)}.approw .seg button{padding:6px 12px}
+.fpost.stealc{background:#1D5C3A;color:#fff}.fpost.stealc::before{background-color:var(--stripe-r)}
+.stealc .fwho b,.stealc .fwho>span{color:#fff}.stealc .fwho>span{opacity:.85}
+.stealc .sl{display:block;width:100%;text-align:left;border:0;background:none;padding:0;color:#fff;font:800 1.08rem/1.3 var(--f-body);margin:2px 0 0;cursor:pointer}
+.stealc .sl b{font-weight:800}.stealc .sn{color:#D9EADF;margin:0}
+.sbadge{width:28px;height:28px;border-radius:50%;background:var(--stripe-r);border:1.5px solid #fff;display:inline-grid;place-items:center;font-weight:800;font-size:.85rem;color:#fff;flex:none}
+.stealc .freacts button{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.35);color:#fff}
+.stealc .freacts button.on{background:rgba(255,255,255,.3);border-color:#fff}
+.stealc .freplies{border-top-color:rgba(255,255,255,.25)}
+.stealc .frep,.stealc .freplybtn,.stealc .irep textarea{background:#fff!important;color:var(--ink)}.stealc .frep small{color:#5A473C}
+.stealc .fmorer{color:#fff}
+.lockr{font-size:.9rem;color:#D9EADF;border-top:1px solid rgba(255,255,255,.25);padding-top:8px}
 .sep{border:0;border-top:1px solid var(--line);margin:2px 0;width:100%}
 .switch{position:relative;display:inline-block;width:52px;height:30px;flex:none}
 .switch input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:1}
@@ -1361,10 +1372,10 @@ const PICKER=['😂','🎄','😮','🦌','🎅','⛄','❄️','🎁','🔥','�
 function reactTally(p){const t={};for(const [k,who] of Object.entries(p.reactions||{})){const em=LEGACY_REACT[k]||k;if(!Array.isArray(who)||!who.length)continue;t[em]=t[em]||{n:0,mine:false};t[em].n+=who.length;if(who.includes(S.me))t[em].mine=true}return t}
 const firstEmoji=v=>{const str=String(v||'').trim();if(!str)return'';const seg=typeof Intl!=='undefined'&&Intl.Segmenter?[...new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(str)][0]?.segment:[...str][0];return /\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(seg||'')?seg:''};
 async function toggleReact(id,em){if(S.demo){toast('The example game doesn’t save changes.');return}if(!canWrite())return;
-  const p=(D().posts||[]).find(x=>x.id===id);if(!p)return;const FV=firebase.firestore.FieldValue,FP=firebase.firestore.FieldPath;
+  let p=(D().posts||[]).find(x=>x.id===id),coll='posts';if(!p){p=D().events.find(x=>x.id===id);coll='steals'}if(!p)return;const FV=firebase.firestore.FieldValue,FP=firebase.firestore.FieldPath;
   const legacy=Object.keys(LEGACY_REACT).find(k=>LEGACY_REACT[k]===em&&((p.reactions||{})[k]||[]).includes(S.me));
   const key=legacy||em;const on=((p.reactions||{})[key]||[]).includes(S.me);
-  await W(()=>S.db.doc('posts/'+id).update(new FP('reactions',key),on?FV.arrayRemove(S.me):FV.arrayUnion(S.me)))}
+  await W(()=>S.db.doc(coll+'/'+id).update(new FP('reactions',key),on?FV.arrayRemove(S.me):FV.arrayUnion(S.me)))}
 function openReactPicker(id){
   const sh=openSheet(`${shTop('Add a reaction','Pick one or use any emoji')}
     <div class="epick">${PICKER.map(e=>`<button type="button" data-pick="${esc(e)}" aria-label="React ${esc(e)}">${e}</button>`).join('')}</div>
@@ -1410,6 +1421,13 @@ function renderThread(){const l=$('#thList');if(!S.thread||!l||$('#sheetWrap').h
   l.innerHTML=rs.length?rs.map((r,i)=>replyLine(r,true,replyTint(S.thread,i))).join(''):'<p class="muted small" style="margin:0">No replies yet. Start the conversation.</p>';
   l.scrollTop=l.scrollHeight}
 async function delRepliesOf(postId){for(const r of (D().replies||[]).filter(x=>x.postId===postId))await col('replies').doc(r.id).delete().catch(()=>{})}
+function reactsHtml(o){const tl=reactTally(o);const ems=[...new Set([...Object.keys(tl).sort((a,b)=>tl[b].n-tl[a].n),...DEFAULT_REACTS])].slice(0,10);
+  return `<div class="freacts">${ems.map(em=>{const x=tl[em]||{n:0,mine:false};return `<button class="${x.mine?'on':''}" data-react="${esc(o.id)}|${esc(em)}" aria-label="React ${esc(em)}">${em}${x.n?` ${x.n}`:''}</button>`}).join('')}<button class="fadd" data-reactpick="${esc(o.id)}" aria-label="Add a different reaction">＋</button></div>`}
+function repliesHtml(pid){const rs=repliesFor(pid);if(!rs.length&&!canReply())return'';
+  const open=S.repOpen.has(pid),shown=open?rs:rs.slice(-2),off=rs.length-shown.length,id=esc(pid);
+  const box=S.repBox===pid?`<form class="irep" data-irep="${id}"><label class="sr" for="irep-${id}">Write a reply</label><textarea id="irep-${id}" rows="1" maxlength="500" placeholder="Write a reply…" enterkeyhint="send">${esc(S.repDraft[pid]||'')}</textarea><button class="btn red sm" type="submit">Send</button></form>`
+    :canReply()?`<button class="freplybtn" data-repbox="${id}">${rs.length?'Reply…':'Be the first to reply…'}</button>`:'';
+  return `<div class="freplies">${rs.length>2?`<button class="linkbtn fmorer" data-repmore="${id}">${open?'Show fewer':`View all ${rs.length} replies`}</button>`:''}${shown.map((r,k)=>replyLine(r,open||S.repBox===pid,replyTint(pid,off+k))).join('')}${box}</div>`}
 const postGone=id=>!(D().posts||[]).some(p=>p.id===id);
 function rFeed(C){
   const ae=document.activeElement;if(ae&&ae.closest&&ae.closest('.irep')&&$('#feedList').contains(ae)){S.feedStale=true;return}
@@ -1430,17 +1448,18 @@ function rFeed(C){
   S.feedLimit=S.feedLimit||25;const more=items.length-S.feedLimit;
   $('#feedList').innerHTML=items.length?items.slice(0,S.feedLimit).map(it=>{
     if(it.k==='sealed'&&it.e.kind==='start'){const e=it.e;return `<div class="falert knit"><span class="fic">★</span><div><b>Let the games begin! Rudolph is on the loose!</b><small>${esc(ago(e.at))} · Find him and steal him.</small></div></div>`}
-    if(it.k==='sealed'){const e=it.e;return `<div class="falert knit"><span class="fic">!</span><div><b>${e.from?`Rudolph was taken from ${mid(fam(homeById(e.from)))}`:'Rudolph was stolen'}</b><small>${esc(ago(e.at))} · Who has him now? Go look.</small>${e.from&&e.from===myHome()?.id&&S.assets&&canWrite()?`<button class="linkbtn" data-ev="${esc(e.id)}" style="color:#fff;padding:0;margin-top:4px">Add your photos or videos</button>`:''}</div></div>`}
+    if(it.k==='sealed'){const e=it.e;return `<div class="fpost knit stealc"><div class="fwho"><span class="fwho-n"><span class="sbadge">${sn.get(e.id)||'!'}</span><b>Steal ${sn.get(e.id)||''}</b></span><span>${esc(ago(e.at))}</span></div>
+      <p class="sl">${e.from?`Rudolph was taken from ${mid(fam(homeById(e.from)))}`:'Rudolph was stolen'}</p><p class="sn">Who has him now? Go look.</p>
+      ${e.from&&e.from===myHome()?.id&&S.assets&&canWrite()?`<button class="linkbtn" data-ev="${esc(e.id)}" style="color:#fff;padding:0;align-self:flex-start">Add your photos or videos</button>`:''}
+      ${reactsHtml(e)}<div class="lockr">🔒 Replies open once he’s stolen again.</div></div>`}
+    if(it.k==='steal'&&it.e.kind==='steal'){const e=it.e;return `<div class="fpost knit stealc"><div class="fwho"><button class="fwho-n" data-ev="${esc(e.id)}"><span class="sbadge">${sn.get(e.id)}</span><b>Steal ${sn.get(e.id)}</b></button><span>${esc(ago(e.at))}</span></div>
+      <button class="sl" data-ev="${esc(e.id)}">${caseLine(e)}</button>${e.note&&!blocked(e.by)?`<p class="sn">“${esc(e.note)}”</p>`:''}${thumbs(mediaFor(e.id))}
+      ${reactsHtml(e)}${repliesHtml(e.id)}</div>`}
     if(it.k==='steal'){const e=it.e;return `<button class="falert done knit" data-ev="${esc(e.id)}"><span class="fic${e.kind==='start'?'':' num'}" ${e.kind==='start'?'':`title="Steal number ${sn.get(e.id)}"`}>${e.kind==='start'?'★':sn.get(e.id)||'🦌'}</span><div><b>${e.kind==='start'?'Let the games begin! Rudolph is on the loose!':caseLine(e)}</b><small>${e.kind==='start'&&e.to?`Started at ${mid(fam(homeById(e.to)))} · `:''}${esc(fmt(e.at))}${e.note&&!blocked(e.by)?` · “${esc(e.note)}”`:''}</small>${thumbs(mediaFor(e.id))}</div></button>`}
     if(it.k==='photo'){const m=it.m,h=homeById(m.byHome);return `<div class="fpost knit ${tints.get(it)}"><div class="fwho">${h?`<button class="fwho-n" data-profile="${esc(h.id)}">${avatar(h)}<b>${fam(h)}</b></button>`:`<b>${fam(h)}</b>`}<span>${esc(ago(m.at))}</span></div>${m.caption?`<p>${esc(m.caption)}</p>`:''}${thumbs([m])}</div>`}
     const p=it.p,h=homeById(p.byHome),ms=D().media.filter(m=>m.postId===p.id&&!blocked(m.by));const mine=p.by===S.me;
     return `<div class="fpost knit ${tints.get(it)}"><div class="fwho">${h?`<button class="fwho-n" data-profile="${esc(h.id)}">${avatar(h)}<b>${fam(h)}${mine?' <span class="you">You</span>':''}</b></button>`:`<b>${fam(h)}</b>`}<span>${esc(ago(p.at))}<button class="fmore" data-postmenu="${esc(p.id)}" aria-label="More options">⋯</button></span></div>${p.text?`<p class="ftext">${esc(p.text)}</p>`:''}${thumbs(ms)}
-      <div class="freacts">${(()=>{const tl=reactTally(p);const ems=[...new Set([...Object.keys(tl).sort((a,b)=>tl[b].n-tl[a].n),...DEFAULT_REACTS])].slice(0,10);
-        return ems.map(em=>{const x=tl[em]||{n:0,mine:false};return `<button class="${x.mine?'on':''}" data-react="${esc(p.id)}|${esc(em)}" aria-label="React ${esc(em)}">${em}${x.n?` ${x.n}`:''}</button>`}).join('')+`<button class="fadd" data-reactpick="${esc(p.id)}" aria-label="Add a different reaction">＋</button>`})()}</div>${(()=>{const rs=repliesFor(p.id);if(!rs.length&&!canReply())return'';
-        const open=S.repOpen.has(p.id),shown=open?rs:rs.slice(-2),off=rs.length-shown.length,id=esc(p.id);
-        const box=S.repBox===p.id?`<form class="irep" data-irep="${id}"><label class="sr" for="irep-${id}">Write a reply</label><textarea id="irep-${id}" rows="1" maxlength="500" placeholder="Write a reply…" enterkeyhint="send">${esc(S.repDraft[p.id]||'')}</textarea><button class="btn red sm" type="submit">Send</button></form>`
-          :canReply()?`<button class="freplybtn" data-repbox="${id}">${rs.length?'Reply…':'Be the first to reply…'}</button>`:'';
-        return `<div class="freplies">${rs.length>2?`<button class="linkbtn fmorer" data-repmore="${id}">${open?'Show fewer':`View all ${rs.length} replies`}</button>`:''}${shown.map((r,k)=>replyLine(r,open||S.repBox===p.id,replyTint(p.id,off+k))).join('')}${box}</div>`})()}</div>`}).join('')
+      ${reactsHtml(p)}${repliesHtml(p.id)}</div>`}).join('')
     :`<div class="empty"><h3>Nothing here yet</h3><p>Steals show up here automatically. Post a message or photo to get things going.</p></div>`;
   if(more>0)$('#feedList').insertAdjacentHTML('beforeend',`<button class="btn block feedmore" data-feedmore>Show older posts <span class="muted">(${more} more)</span></button>`);
 }

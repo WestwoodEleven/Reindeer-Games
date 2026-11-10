@@ -135,7 +135,8 @@ exports.mediaAlert = onDocumentCreated('media/{id}', async (event) => {
 exports.replyAlert = onDocumentCreated('replies/{id}', async (event) => {
   const r = event.data && event.data.data();
   if (!r || !r.postId) return;
-  const post = await db.doc('posts/' + r.postId).get();
+  let post = await db.doc('posts/' + r.postId).get();
+  if (!post.exists) post = await db.doc('steals/' + r.postId).get(); // replies on a steal
   if (!post.exists) return;
   const who = new Set([post.data().by]);
   const others = await db.collection('replies').where('postId', '==', r.postId).get();

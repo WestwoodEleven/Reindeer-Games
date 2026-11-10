@@ -1824,7 +1824,10 @@ $('#logForm').addEventListener('submit',async ev=>{ev.preventDefault();
   let stealId=null;
   const ok=await W(async()=>{
     const evs=D().events.filter(e=>e.kind==='steal'&&evSeason(e)===viewSeason());
-    const same=evs.find(e=>e.from===from&&(e.to===to||(!to&&e.to)||(!e.to&&to))&&near(e,H72));
+    // Only treat it as a duplicate if it matches the newest steal on record (e.g. two people in the
+    // same family logging the same grab). A real re-steal of the same house days later is a new steal.
+    const latest=D().events.filter(e=>evSeason(e)===viewSeason()).sort((a,b)=>String(a.at).localeCompare(String(b.at))).pop();
+    const same=latest&&latest.kind==='steal'&&latest.from===from&&(latest.to===to||!latest.to)&&near(latest,6*3600e3)?latest:null;
     let created=false;
     if(same){stealId=same.id;if(!same.to&&to)await col('steals').doc(same.id).update({to,at})}
     else{const r=await col('steals').add({kind:'steal',season:viewSeason(),byHome:myHome()?.id||null,from,to,at,note:$('#note').value.trim(),by:S.me,createdAt:Date.now(),...(unsure?{unsure:true}:{})});stealId=r.id;created=true}

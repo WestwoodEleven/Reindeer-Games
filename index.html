@@ -274,6 +274,7 @@ main{padding-block:16px calc(96px + env(safe-area-inset-bottom,0px))}
 .map-bar button{min-width:44px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--bg);font-weight:700;font-size:1.05rem;cursor:pointer;padding:0 12px}
 .map-bar button.wide{font-size:.88rem;white-space:nowrap;padding:0 10px}
 .map-bar{flex-wrap:nowrap}.map-bar button{flex:none}
+@media (max-width:359px){.map-bar{gap:4px;padding:8px 6px}.map-bar button.wide{padding:0 7px;font-size:.8rem}}
 .map-bar button.play{background:var(--nose);color:#fff;border-color:var(--edge)}
 .replay{display:flex;flex-direction:column;gap:8px;padding:10px 12px 12px;border-top:1px solid var(--line);background:var(--surface)}
 .rcap{font-size:.92rem;line-height:1.35;min-height:2.7em}
@@ -569,9 +570,9 @@ textarea{min-height:120px;resize:vertical}
   <!-- HOMES: status, trail map with every home, home list, case file -->
   <section class="view" id="v-homes" data-view="homes" hidden>
     <div class="card map-card">
-      <div class="map-head"><h3>Rudolph’s trail &amp; houses</h3><span class="label" id="trailCount"></span></div>
+      <div class="map-head"><h3>Emerald Bay</h3><span class="label" id="trailCount"></span></div>
       <div class="map-box"><svg id="trailMap" role="img" aria-label="Map of participating houses and Rudolph’s moves around Emerald Bay"></svg></div>
-      <div class="map-bar"><button data-zoom="trail:out" aria-label="Zoom out">−</button><button data-zoom="trail:in" aria-label="Zoom in">+</button><button class="wide" data-zoom="trail:reset" aria-label="Show the whole map">Fit</button><button class="wide play" id="replayBtn" data-replay aria-label="Replay Rudolph’s trail">▶ Play</button><span class="sp"></span><button class="wide" data-expand="trail" aria-label="Full screen map">⛶ Expand</button></div>
+      <div class="map-bar"><button class="wide" data-zoom="trail:reset" aria-label="Show the whole map">Fit</button><button class="wide play" id="replayBtn" data-replay aria-label="Replay Rudolph’s trail">▶ Play</button><span class="sp"></span><button class="wide" data-expand="trail" aria-label="Full screen map">⛶ Expand</button></div>
       <div class="replay" id="replay" hidden>
         <div class="rcap" id="replayCap" aria-live="polite"></div>
         <div class="rbar"><span id="replayProg"></span></div>
@@ -882,6 +883,9 @@ class MapView{
   constructor(svg,mode){this.svg=svg;this.mode=mode;this.vb=null;this.ptrs=new Map();this.onTap=null;this.sel=null;this.bind()}
   size(){const {W,H}=mapSize();if(this.W!==W||this.H!==H){this.W=W;this.H=H;this.reset(false)}}
   reset(apply=true){this.vb={x:0,y:0,w:this.W,h:this.H};if(apply)this.apply()}
+  fitBox(x0,y0,x1,y1){this.size();const W=this.W,H=this.H;let w=(x1-x0)*W,h=(y1-y0)*H;const ar=W/H;
+    if(w/h>ar)h=w/ar;else w=h*ar;w=Math.min(W,Math.max(w,W/4));h=w/ar;
+    const cx=(x0+x1)/2*W,cy=(y0+y1)/2*H;this.vb={x:cx-w/2,y:cy-h/2,w,h};this.clamp();this.apply()}
   focus(fx,fy,w){this.size();const v=this.vb;v.w=w||this.W/3;v.h=v.w*this.H/this.W;v.x=fx*this.W-v.w/2;v.y=fy*this.H-v.h/2;this.clamp();this.apply()}
   apply(){const v=this.vb;this.svg.setAttribute('viewBox',`${v.x} ${v.y} ${v.w} ${v.h}`);if(this.onView)this.onView()}
   clamp(){const v=this.vb;v.w=Math.min(this.W,Math.max(this.W/6,v.w));v.h=v.w*this.H/this.W;v.x=Math.min(this.W-v.w,Math.max(0,v.x));v.y=Math.min(this.H-v.h,Math.max(0,v.y))}
@@ -928,7 +932,7 @@ function partial(r,t){if(t>=1)return r.d;const p1=lerp(r.s,r.c,t),p2=lerp(lerp(r
   return {d:`<path class="${r.cls}" d="M${r.s.x} ${r.s.y}Q${p1.x} ${p1.y} ${p2.x} ${p2.y}"${r.mk?` marker-end="url(#${r.mk})"`:''}/>`,at:p2}}
 function drawTrail(){
   const m=trailMap;m.size();const R=S.replay,C=compute();let out='',badges='',marker='',land='';
-  const items=R?R.steps:C.items,num=R?R.num:C.num,upto=R?R.i:items.length-1;
+  const items=R?R.steps:C.items,num=R?R.num:C.num,upto=R?R.i:(S.trailOn?items.length-1:-1);
   items.forEach((it,i)=>{
     if(i>upto)return;const t=R&&i===upto?R.t:1;
     const from=it.gap?it.from:it.ev.from,to=it.gap?it.to:it.ev.to,a=homeById(from),b=homeById(to);
@@ -946,14 +950,18 @@ function drawTrail(){
     if(sh&&hpos(sh)){const {x,y}=P(sh,m.W,m.H);seen=`<circle class="m-seen" cx="${x}" cy="${y}" r="40"/><circle class="m-seen-c" cx="${x}" cy="${y}" r="9"/><text class="m-seen-t" x="${x+30}" y="${y-30}">${C.seen.left?'TAKEN FROM HERE':(C.hidden?'LAST CONFIRMED':'RUDOLPH')}</text>`}}
   const mk=marker?`<circle class="m-rd-glow" cx="${marker.x}" cy="${marker.y}" r="18" filter="url(#rg-${m.mode})"/><circle class="m-rd" cx="${marker.x}" cy="${marker.y}" r="10"/>`:'';
   m.draw(pins(m,{sel:selHome})+out+seen+badges+land+mk);
-  if(!R)$('#replayBtn').hidden=!C.items.length;
+  if(!R){const rb=$('#replayBtn');rb.hidden=!C.items.length;rb.textContent=S.trailOn?'Hide trail':'🦌 Track Rudolph';rb.classList.toggle('play',!S.trailOn)}
+  // First look at the Map: zoom to fit the playing houses.
+  if(!S.mapFitted&&!R&&!$('#v-homes').hidden){const ps=D().homes.map(h=>hpos(h)).filter(Boolean);
+    if(ps.length>1){S.mapFitted=true;const xs=ps.map(p=>p.x),ys=ps.map(p=>p.y),pad=.06;
+      m.fitBox(Math.max(0,Math.min(...xs)-pad),Math.max(0,Math.min(...ys)-pad),Math.min(1,Math.max(...xs)+pad),Math.min(1,Math.max(...ys)+pad))}}
 }
 /* ---------- trail replay: one steal at a time ---------- */
 const reduceMotion=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
 function startReplay(){const C=compute();if(!C.items.length)return;
   trailMap.reset();S.replay={steps:C.items,num:C.num,i:0,t:reduceMotion()?1:0,hold:0,playing:true,speed:1,last:performance.now(),raf:0};
   $('#replay').hidden=false;$('#replayBtn').hidden=true;$('#rpSpeed').textContent='1×';runReplay()}
-function stopReplay(){const r=S.replay;if(!r)return;cancelAnimationFrame(r.raf);S.replay=null;$('#replay').hidden=true;drawTrail()}
+function stopReplay(keep=true){const r=S.replay;if(!r)return;cancelAnimationFrame(r.raf);S.replay=null;if(keep)S.trailOn=true;$('#replay').hidden=true;drawTrail()}
 function runReplay(){const r=S.replay;if(!r)return;cancelAnimationFrame(r.raf);r.last=performance.now();r.raf=requestAnimationFrame(tickReplay);replayUI()}
 function tickReplay(now){const r=S.replay;if(!r)return;const dt=Math.min(100,now-r.last);r.last=now;
   if(r.playing){
@@ -971,7 +979,7 @@ function replayUI(){const r=S.replay;if(!r)return;const it=r.steps[r.i],n=r.step
   $('#replayCap').innerHTML=cap;$('#replayProg').style.width=`${Math.round((r.i+(r.t>=1?1:r.t))/n*100)}%`;
   const tg=$('#rpToggle');const done=!r.playing&&r.i===n-1&&r.t>=1;tg.textContent=done?'↺':r.playing?'⏸':'▶';tg.setAttribute('aria-label',done?'Replay from the start':r.playing?'Pause':'Play')}
 document.addEventListener('click',e=>{
-  if(e.target.closest('[data-replay]')){startReplay();return}
+  if(e.target.closest('[data-replay]')){if(S.trailOn){S.trailOn=false;drawTrail()}else startReplay();return}
   const b=e.target.closest('[data-rp]');if(!b||!S.replay)return;const r=S.replay,n=r.steps.length;
   switch(b.dataset.rp){
     case'toggle':if(!r.playing&&r.i===n-1&&r.t>=1){r.i=0;r.t=reduceMotion()?1:0}r.playing=!r.playing;break;
@@ -1039,7 +1047,7 @@ function rTimeline(C){
     h+=`<li class="case" data-ev="${esc(e.id)}"><div class="case-n">${C.num.get(e.id)}</div><div><p>${caseLine(e)}</p><p class="case-meta">${esc(fmt(e.at))}${n?` · ${n} ${n>1?'files':'file'}`:''}</p>${e.note&&!blocked(e.by)?`<p class="small">“${esc(e.note)}”</p>`:''}${thumbs(e.id)}${claimBtn(e)}</div></li>`;
   });
   t.innerHTML=h||`<li class="empty"><h3>No steals yet</h3><p>Every capture shows up here as a numbered case.</p></li>`;
-  $('#trailCount').textContent=C.evs.length?`${C.evs.length} ${C.evs.length>1?'entries':'entry'}`:'';
+  {const nh=D().homes.length,ns=C.vis.filter(e=>e.kind==='steal').length;$('#trailCount').textContent=nh?`${nh} ${nh===1?'house':'houses'}${ns?` · ${ns} ${ns===1?'steal':'steals'}`:''}`:''}
 }
 S.lbTab=S.lbTab||'standings';
 function rLeaders(C){const sup=S.lbTab==='sup';$('#boardLabel').textContent=`${viewSeason()} · ${sup?'Superlatives':'Standings'}`;$('#lbStand').setAttribute('aria-pressed',!sup);$('#lbSup').setAttribute('aria-pressed',sup);
@@ -1499,7 +1507,7 @@ function renderNow(){
   if(v==='gate')rGate();
   if(sheetMap&&sheetMap.redraw)sheetMap.redraw();
 }
-addEventListener('hashchange',()=>{stopReplay();document.querySelectorAll('.map-card.full').forEach(c=>{c.classList.remove('full');const b=c.querySelector('[data-expand]');if(b)b.textContent='⛶ Expand'});document.body.style.overflow='';renderNow();scrollTo(0,0)});
+addEventListener('hashchange',()=>{stopReplay(false);S.trailOn=false;S.mapFitted=false;document.querySelectorAll('.map-card.full').forEach(c=>{c.classList.remove('full');const b=c.querySelector('[data-expand]');if(b)b.textContent='⛶ Expand'});document.body.style.overflow='';renderNow();scrollTo(0,0)});
 
 /* ---------- writes ---------- */
 async function W(fn,okMsg){

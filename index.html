@@ -192,6 +192,8 @@ main{padding-block:16px calc(96px + env(safe-area-inset-bottom,0px))}
 .spc h2{margin:0;font-size:1.7rem}.spc p{margin:0;font-size:1.08rem;line-height:1.45;color:var(--ink)}
 .dots{display:flex;gap:8px;justify-content:center}.dots i{width:9px;height:9px;border-radius:50%;background:var(--line)}.dots i.on{background:var(--stripe-r);width:24px;border-radius:9px}
 .splink{color:var(--stripe-g);font-weight:700;text-decoration:underline;font-size:.98rem}
+.check.agree{font-size:.95rem;align-items:flex-start}.check.agree .linkbtn{padding:0;font:inherit;font-weight:700;text-decoration:underline}
+.privacy ul{margin:4px 0;padding-left:20px}.privacy li{margin:4px 0}
 .sep{border:0;border-top:1px solid var(--line);margin:2px 0;width:100%}
 .switch{position:relative;display:inline-block;width:52px;height:30px;flex:none}
 .switch input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:1}
@@ -732,6 +734,12 @@ textarea{min-height:120px;resize:vertical}
     </div>
   </section>
 
+  <!-- COMMUNITY RULES (terms) -->
+  <section class="view" id="v-terms" data-view="terms" hidden>
+    <a class="linkbtn" href="#feed" id="termsBack" style="align-self:flex-start;padding:0">← Back</a>
+    <div class="card stack privacy" id="termsBody"></div>
+  </section>
+
   <!-- ADMIN -->
   <section class="view" id="v-admin" data-view="admin" hidden>
     <h2>Organizer</h2>
@@ -1250,7 +1258,7 @@ function rGate(){
     <form id="emailForm" class="stack" novalidate><label class="field"><span>Or get a sign-in link by email</span><input type="email" id="emailId" name="email" autocomplete="email" placeholder="you@example.com"></label><button class="btn outline-c" type="submit" id="emailBtn">Email me a link</button></form>`
     :inApp?'':`<button class="linkbtn" data-other-signin style="display:block;margin:14px auto 0">Other ways to sign in</button>`}
     <button class="linkbtn" data-demo style="display:block;margin:8px auto 0">See an example game</button>
-    <a class="linkbtn" href="#privacy" style="display:block;margin:4px auto 0;text-align:center;font-weight:500">Privacy policy</a>`}
+    <div style="text-align:center;margin-top:4px"><a class="linkbtn" href="#terms" style="font-weight:500">Community rules</a> · <a class="linkbtn" href="#privacy" style="font-weight:500">Privacy policy</a></div>`}
   else if(!S.ready||j===undefined){key='load2';h=`<div class="label">Loading</div><h2>Checking your invite…</h2>`}
   else if(j&&j.status==='pending'&&!S.editJoin){key='pending:'+j.family+'|'+j.number;step=3;h=`<div class="label">Request sent</div><h2>Waiting for the organizer</h2>
     <div class="famrow"><span class="hno">${esc(j.number)}</span><div><b>${esc(j.family)}</b><div class="case-meta">Requested ${esc(ago(j.at))}</div></div></div>
@@ -1305,16 +1313,17 @@ function mountJoinStep(root){
     $('#jhForm').hidden=true;const s2=$('#jhStep2');s2.hidden=false;
     if(found){$('#jhTitle').textContent=`${found.family} play from ${number}`;
       s2.innerHTML=`<p>Join them and you’ll play as one family.</p><div class="famrow"><span class="hno">${esc(number)}</span><b>${esc(found.family)}</b></div>
-        <div class="pwbox"${S.pwJoin?'':' hidden'}><label class="field"><span>Game password</span><input type="text" id="jhPw" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="From the organizer"></label><button class="btn red" id="jhPwBtn">Join now</button><div class="or">OR</div></div>
+        ${agreeBox()}<div class="pwbox"${S.pwJoin?'':' hidden'}><label class="field"><span>Game password</span><input type="text" id="jhPw" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="From the organizer"></label><button class="btn red" id="jhPwBtn">Join now</button><div class="or">OR</div></div>
         <button class="btn ${S.pwJoin?'outline-c':'red'}" id="jhSend">${S.pwJoin?'No password? Ask the organizer to approve you':`Request to join ${esc(mid(found.family))}`}</button><button class="linkbtn" id="jhBack">Not your family? Change house number</button>`}
     else{$('#jhTitle').textContent=`You’re the first from ${number}`;
       s2.innerHTML=`<p>Name your family. Everyone in your household will join under this name.</p>
         <label class="field"><span>Family name</span><input type="text" id="jhFam" maxlength="40" placeholder="The Garcias" value="${esc(req&&!found?req.family:'')}"></label>
-        <div class="pwbox"${S.pwJoin?'':' hidden'}><label class="field"><span>Game password</span><input type="text" id="jhPw" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="From the organizer"></label><button class="btn red" id="jhPwBtn">Join now</button><div class="or">OR</div></div>
+        ${agreeBox()}<div class="pwbox"${S.pwJoin?'':' hidden'}><label class="field"><span>Game password</span><input type="text" id="jhPw" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="From the organizer"></label><button class="btn red" id="jhPwBtn">Join now</button><div class="or">OR</div></div>
         <button class="btn ${S.pwJoin?'outline-c':'red'}" id="jhSend">${S.pwJoin?'No password? Ask the organizer to approve you':'Send request'}</button><button class="linkbtn" id="jhBack">Change house number</button>`;
       setTimeout(()=>$('#jhFam')?.focus(),30)}
     $('#jhBack').addEventListener('click',showForm);
     $('#jhPwBtn')?.addEventListener('click',async()=>{
+      if(needAgree())return;
       const code=($('#jhPw').value||'').trim().toLowerCase();
       if(!code){toast('Enter the game password.');return}
       const family=found?found.family:($('#jhFam')?.value||'').trim();
@@ -1330,7 +1339,7 @@ function mountJoinStep(root){
       catch(err){console.error(err);b.disabled=false;b.textContent='Join now';
         toast(err&&err.code==='permission-denied'?'That password didn’t work. Check with the organizer, or ask to be approved.':errMsg(err))}
     });
-    $('#jhSend').addEventListener('click',async()=>{
+    $('#jhSend').addEventListener('click',async()=>{if(needAgree())return;
       const family=found?found.family:($('#jhFam')?.value||'').trim();
       if(!family){toast('Give your family a name.');return}
       const sb=$('#jhSend');sb.disabled=true;
@@ -1493,7 +1502,7 @@ function rRules(){const c=seasonCfg();const t=(c.rules||'').trim();
   $('#draftTag').hidden=!!t;
   const dates=c.start?`<p class="label">Game window · ${esc(c.start)}${c.end?' → '+esc(c.end):''}</p>`:'';
   const acct=S.me&&!S.demo?`<p class="small muted">Signed in as ${esc(S.email||S.phone||'')} · <button class="btn sm ghost" data-signout>Sign out</button></p>`:'';
-  $('#rulesBody').innerHTML=`${acct}${dates}<div class="rules">${esc(t||DRAFT)}</div>${S.live.config.contact&&!S.demo?`<p class="small muted">Questions, concerns or something inappropriate? Contact the organizer: <b>${esc(S.live.config.contact)}</b>. You can also tap <b>Report</b> on any photo, video or note.</p>`:''}${isOrg()&&!S.demo?`<a class="btn sm" href="#admin" style="align-self:start">Edit rules</a>`:''}<a class="linkbtn" href="#privacy" style="align-self:start;padding:0">Privacy policy</a>`;
+  $('#rulesBody').innerHTML=`${acct}${dates}<div class="rules">${esc(t||DRAFT)}</div>${S.live.config.contact&&!S.demo?`<p class="small muted">Questions, concerns or something inappropriate? Contact the organizer: <b>${esc(S.live.config.contact)}</b>. You can also tap <b>Report</b> on any photo, video or note.</p>`:''}${isOrg()&&!S.demo?`<a class="btn sm" href="#admin" style="align-self:start">Edit rules</a>`:''}<div class="row" style="gap:16px"><a class="linkbtn" href="#terms" style="padding:0">Community rules</a><a class="linkbtn" href="#privacy" style="padding:0">Privacy policy</a></div>`;
 }
 function rAdmin(C){
   {const t=$('#revealToggle');if(t)t.checked=orgReveal()}
@@ -1528,13 +1537,14 @@ function rAdmin(C){
 }
 
 /* ---------- routing / render ---------- */
-const VIEWS=['homes','leaders','log','feed','gallery','rules','admin','privacy'];
+const VIEWS=['homes','leaders','log','feed','gallery','rules','admin','privacy','terms'];
 function route(){let v=location.hash.slice(1);if(v==='join'){v='homes';setTimeout(()=>openHomeForm('join'),0)}if(!VIEWS.includes(v))v='feed';return v}
 let raf=0;function render(){if(raf)return;raf=requestAnimationFrame(()=>{raf=0;renderNow()})}
 function renderNow(){
   let v=route();const C=compute();
-  if(v!=='rules'&&v!=='privacy')S.backTo=v;
-  const gated=!isMember();if(gated&&v!=='privacy')v='gate';$('#tabs').hidden=gated;
+  if(v!=='rules'&&v!=='privacy'&&v!=='terms')S.backTo=v;
+  const gated=!isMember();if(gated&&v!=='privacy'&&v!=='terms')v='gate';
+  if(v==='terms'){$('#termsBody').innerHTML=TERMS;$('#termsBack').setAttribute('href',gated?'#':'#rules')}$('#tabs').hidden=gated;
   if(v==='privacy'){$('#privContact').innerHTML=S.live.config.contact&&!S.demo?`contact the organizer at <b>${esc(S.live.config.contact)}</b>.`:'contact the organizer (their contact info is on the Rules page once you’ve joined).';$('#privBack').setAttribute('href',gated?'#':'#rules')}
   document.querySelectorAll('[data-view]').forEach(s=>s.hidden=s.dataset.view!==v);
   document.querySelectorAll('[data-tab]').forEach(a=>{if(a.dataset.tab===v)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
@@ -1792,6 +1802,27 @@ const WELCOME=[
   {em:'🦌',t:'Steal Rudolph',d:'Find him in a neighbor’s yard and take him home. Wherever he is, he must stay visible from the street.'},
   {em:'📸',t:'Log it',d:'Tap the big red <b>+</b> and snap a photo. Logging your steal is how you get the point.'},
   {em:'🤫',t:'Keep it secret',d:'Nobody sees where Rudolph went until he’s stolen again. No spoilers in the feed!',rules:true}];
+// Community rules everyone agrees to before joining (Apple requires this for apps where people post).
+const TERMS=`<h2>Community rules</h2><p class="small muted">Effective November 10, 2026</p>
+  <p>Reindeer Games is a friendly neighborhood game. By joining, you agree to these rules for everyone in your household who uses it.</p>
+  <h3>Keep it friendly</h3><ul>
+  <li>No bullying, harassment, threats, hate speech or insults about anyone.</li>
+  <li>No nudity, sexual content, violence, or anything you wouldn’t want a child in the neighborhood to see.</li>
+  <li>Don’t post anyone’s private information, and don’t post photos of people who haven’t agreed to it, especially other families’ children.</li></ul>
+  <h3>Play fair and safe</h3><ul>
+  <li>Never go inside anyone’s home, garage or car, and don’t damage property, decorations or landscaping.</li>
+  <li>Be respectful of neighbors who aren’t playing.</li>
+  <li>No spoilers: don’t reveal where Rudolph is.</li></ul>
+  <h3>If something’s wrong</h3><p>Tap <b>Report</b> on any post, reply, photo or video, or <b>Block</b> a family to stop seeing their posts. The organizer reviews reports and removes content that breaks these rules, and can remove a family from the game. There is no tolerance for objectionable content or abusive users.</p>
+  <p>Everything you post is visible to all participating families. You can delete your own posts and your account at any time.</p>`;
+const agreedKey=()=>'rg-terms-'+(S.me||'');
+function hasAgreed(){try{return !!localStorage.getItem(agreedKey())}catch{return true}}
+function markAgreed(){try{localStorage.setItem(agreedKey(),'1')}catch{}}
+function agreeBox(){return `<label class="check agree"><input type="checkbox" id="jhAgree"> <span>I agree to the <button type="button" class="linkbtn" data-showterms>Community rules</button></span></label>`}
+function needAgree(){const c=$('#jhAgree');if(c&&!c.checked){toast('Please agree to the Community rules first.');c.focus();return true}if(c)markAgreed();return false}
+// Members who joined before the rules existed agree once.
+function openTermsAgree(then){const sh=openSheet(`${shTop('Before you play','Community rules')}<div class="privacy stack">${TERMS}</div><button class="btn red block" id="trAgree">I agree</button>`);
+  sh.querySelector('#trAgree').addEventListener('click',()=>{markAgreed();closeSheet();if(then)then()})}
 const welcomeKey=()=>'rg-welcome-'+curSeason();
 function welcomeSeen(){try{return !!localStorage.getItem(welcomeKey())}catch{return true}}
 async function openWelcome(){if($('#welcome'))return;
@@ -1819,7 +1850,9 @@ async function openWelcome(){if($('#welcome'))return;
     if(dx<-50&&i<cards.length-1){i++;show()}else if(dx>50&&i>0){i--;show()}});
   o.addEventListener('keydown',e=>{if(e.key==='Escape')close();if(e.key==='ArrowRight'&&i<cards.length-1){i++;show()}if(e.key==='ArrowLeft'&&i>0){i--;show()}});
   show()}
-function maybeWelcome(){if(S.demo||!S.ready||!isMember()||isPast()||welcomeSeen()||!$('#sheetWrap').hidden)return;openWelcome()}
+function maybeWelcome(){if(S.demo||!S.ready||!isMember()||!$('#sheetWrap').hidden||$('#welcome'))return;
+  if(!hasAgreed()&&!isOrg()){openTermsAgree(()=>{if(!isPast()&&!welcomeSeen())openWelcome()});return}
+  if(isPast()||welcomeSeen())return;openWelcome()}
 // Keep one-line titles on one line: shrink a little if the space is tight.
 function fitOne(el,box,max,min,extra=0){if(!el||!box||!box.offsetParent)return;let px=max;el.style.fontSize=px+'px';
   while(el.scrollWidth+extra>box.clientWidth+1&&px>min){px-=.5;el.style.fontSize=px+'px'}}
@@ -1941,6 +1974,7 @@ document.addEventListener('click',async e=>{
   if(t.closest('[data-editprofile]')){if(S.demo){toast('The example game doesn’t save changes.');return}openProfileEditor();return}
   if(t.closest('[data-feedmore]')){S.feedLimit+=25;renderNow();return}
   if(t.closest('[data-closerules]')){location.hash='#'+(S.backTo||'feed');return}
+  if(t.closest('[data-showterms]')){e.preventDefault();openSheet(`${shTop('Community rules','Reindeer Games')}<div class="privacy stack">${TERMS}</div>`);return}
   if(t.closest('[data-howto]')){closeSheet();openWelcome();return}
   if(t.closest('[data-quickphoto]')){openQuickPost(true);return}
   if(t.closest('[data-quickpost]')){openQuickPost();return}
@@ -1976,7 +2010,7 @@ document.addEventListener('click',async e=>{
       <div class="approw"><span class="small muted">Appearance</span><div class="seg" role="group" aria-label="Appearance">${['auto','light','dark'].map(k=>`<button type="button" data-theme-set="${k}" aria-pressed="${themePref()===k}">${k==='auto'?'Auto':k==='light'?'Light':'Dark'}</button>`).join('')}</div></div>
       ${isOrg()&&!S.demo?`<a class="btn red block" href="#admin" data-close>Organizer tools${orgPending()?` · ${orgPending()} to review`:''}</a>`:''}
       <div class="row">${mh?`<button class="btn" data-editprofile>Edit family profile</button>`:''}<button class="btn" data-howto>📜 How to play</button>${FMsg()&&!S.demo?'<button class="btn" data-alerts>Alert settings</button>':''}${mh?`<a class="btn" href="#homes" data-close>See who’s playing</a>`:''}${isInstalled()?'':'<button class="btn" data-a2hs data-close>Add to phone</button>'}<button class="btn danger" data-signout data-close>Sign out</button></div>
-      <div class="row" style="justify-content:space-between;margin-top:4px"><a class="linkbtn" href="#privacy" data-close>Privacy policy</a>${S.demo?'':'<button class="linkbtn" data-delacct style="color:var(--nose)">Delete my account</button>'}</div>`);return}
+      <div class="row" style="justify-content:space-between;margin-top:4px"><span><a class="linkbtn" href="#terms" data-close>Community rules</a> · <a class="linkbtn" href="#privacy" data-close>Privacy</a></span>${S.demo?'':'<button class="linkbtn" data-delacct style="color:var(--nose)">Delete my account</button>'}</div>`);return}
   if(t.closest('[data-delacct]')){openDeleteAccount();return}
   if(t.closest('[data-alerts]')){openAlertSettings();return}
   if(t.closest('[data-missing]')){if(S.demo){toast('The example game doesn’t save changes.');return}

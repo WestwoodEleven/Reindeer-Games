@@ -179,6 +179,18 @@ main{padding-block:16px calc(96px + env(safe-area-inset-bottom,0px))}
 .stealc .frep,.stealc .freplybtn,.stealc .irep textarea{background:#fff!important;color:var(--ink)}.stealc .frep small{color:#5A473C}
 .stealc .fmorer{color:#fff}
 .lockr{font-size:.9rem;color:#D9EADF;border-top:1px solid rgba(255,255,255,.25);padding-top:8px}
+.spl{position:fixed;inset:0;z-index:200;background:rgba(43,26,18,.55);display:flex;align-items:flex-end;justify-content:center}
+.spc{background:var(--surface);width:100%;max-width:560px;border-radius:22px 22px 0 0;border:2px solid var(--edge);border-bottom:0;padding:16px 22px calc(26px + env(safe-area-inset-bottom,0px));position:relative;overflow:hidden;display:flex;flex-direction:column;gap:14px;text-align:center;animation:spIn .25s ease-out}
+@keyframes spIn{from{transform:translateY(30px);opacity:0}}
+@media (prefers-reduced-motion:reduce){.spc{animation:none}}
+.spc::before{content:"";position:absolute;left:0;right:0;top:0;height:10px;background-color:var(--stripe-r);background-image:linear-gradient(135deg,var(--surface) 25%,transparent 25%),linear-gradient(225deg,var(--surface) 25%,transparent 25%);background-size:10px 10px}
+.sptop{display:flex;justify-content:space-between;align-items:center;margin-top:8px;min-height:24px;font:600 .72rem var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.sptop .linkbtn{font:600 .95rem var(--f-body);letter-spacing:0;text-transform:none;color:var(--muted);text-decoration:underline;padding:0}
+.spc:focus{outline:none}
+.spem{font-size:4.2rem;line-height:1;margin-top:6px}
+.spc h2{margin:0;font-size:1.7rem}.spc p{margin:0;font-size:1.08rem;line-height:1.45;color:var(--ink)}
+.dots{display:flex;gap:8px;justify-content:center}.dots i{width:9px;height:9px;border-radius:50%;background:var(--line)}.dots i.on{background:var(--stripe-r);width:24px;border-radius:9px}
+.splink{color:var(--stripe-g);font-weight:700;text-decoration:underline;font-size:.98rem}
 .sep{border:0;border-top:1px solid var(--line);margin:2px 0;width:100%}
 .switch{position:relative;display:inline-block;width:52px;height:30px;flex:none}
 .switch input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:1}
@@ -1524,6 +1536,7 @@ function renderNow(){
   document.querySelectorAll('[data-view]').forEach(s=>s.hidden=s.dataset.view!==v);
   document.querySelectorAll('[data-tab]').forEach(a=>{if(a.dataset.tab===v)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
   rWho();rBanner();syncPush();if(S.thread)renderThread();requestAnimationFrame(fitTitles);requestAnimationFrame(syncCbar);requestAnimationFrame(placePinBubble);
+  if(v!=='gate')setTimeout(maybeWelcome,400);
   if(v==='homes'){rTimeline(C);rHomes();drawTrail()}
   if(v==='leaders')rLeaders(C);
   if(v==='log')rLog();
@@ -1771,7 +1784,39 @@ async function pushAskOnLaunch(){const P=FMsg();if(!P)return;
     <button class="btn red block" id="wYes">Turn on alerts</button><button class="btn ghost block" id="wNo">Not now</button></div>`);
   sh.querySelector('#wYes').addEventListener('click',async()=>{closeSheet();try{const q=await P.requestPermissions();S.push=q.receive;if(q.receive==='granted'&&S.me)await pushSave()}catch(e){console.warn('push launch',e)}syncPush()});
   sh.querySelector('#wNo').addEventListener('click',()=>{closeSheet();S.push='prompt';syncPush()})}
-if(inApp)setTimeout(pushAskOnLaunch,600);
+// Welcome splash: three quick rule cards (plus an alerts card in the app), once per season after joining.
+const WELCOME=[
+  {em:'🦌',t:'Steal Rudolph',d:'Find him in a neighbor’s yard and take him home. Wherever he is, he must stay visible from the street.'},
+  {em:'📸',t:'Log it',d:'Tap the big red <b>+</b> and snap a photo. Logging your steal is how you get the point.'},
+  {em:'🤫',t:'Keep it secret',d:'Nobody sees where Rudolph went until he’s stolen again. No spoilers in the feed!',rules:true}];
+const welcomeKey=()=>'rg-welcome-'+curSeason();
+function welcomeSeen(){try{return !!localStorage.getItem(welcomeKey())}catch{return true}}
+async function openWelcome(){if($('#welcome'))return;
+  const cards=[...WELCOME];const P=FMsg();
+  if(P){try{const r=await P.checkPermissions();if(r.receive==='prompt')cards.push({em:'🔔',t:'Get steal alerts',d:'We’ll tell you the moment Rudolph is stolen. Quiet by default, no sound.',alerts:true})}catch{}}
+  try{localStorage.setItem(welcomeKey(),'1')}catch{}
+  const o=document.createElement('div');o.id='welcome';o.className='spl';o.setAttribute('role','dialog');o.setAttribute('aria-modal','true');o.setAttribute('aria-label','Welcome to Reindeer Games');
+  document.body.appendChild(o);document.body.style.overflow='hidden';$('#cbar').hidden=true;let i=0;
+  const close=()=>{o.remove();document.body.style.overflow='';syncCbar()};
+  const show=()=>{const c=cards[i],n=cards.length,last=i===n-1;
+    o.innerHTML=`<div class="spc"><div class="sptop"><span>Welcome · ${i+1} of ${n}</span>${last?'':'<button type="button" class="linkbtn" data-wskip>Skip</button>'}</div>
+      <div class="spem" aria-hidden="true">${c.em}</div><h2>${c.t}</h2><p>${c.d}</p>
+      <div class="dots" aria-hidden="true">${cards.map((_,k)=>`<i class="${k===i?'on':''}"></i>`).join('')}</div>
+      ${c.alerts?'<button class="btn red block" data-walerts>Turn on alerts</button><button class="btn ghost block" data-wdone>Not now, let’s play</button>'
+        :last?'<button class="btn red block" data-wdone>Let’s play!</button>':'<button class="btn red block" data-wnext>Next</button>'}
+      ${c.rules?'<a class="splink" href="#rules" data-wrules>Read all the rules</a>':''}</div>`;
+    o.querySelector('.spc').setAttribute('tabindex','-1');o.querySelector('.spc').focus({preventScroll:true})};
+  o.addEventListener('click',async e=>{const t=e.target;
+    if(t===o||t.closest('[data-wskip],[data-wdone]')){close();return}
+    if(t.closest('[data-wrules]')){close();return}
+    if(t.closest('[data-wnext]')){i=Math.min(cards.length-1,i+1);show();return}
+    if(t.closest('[data-walerts]')){close();try{const q=await P.requestPermissions();S.push=q.receive;if(q.receive==='granted'&&S.me)await pushSave()}catch(err){console.warn(err)}syncPush()}});
+  let x0=null;o.addEventListener('touchstart',e=>{x0=e.touches[0].clientX},{passive:true});
+  o.addEventListener('touchend',e=>{if(x0==null)return;const dx=e.changedTouches[0].clientX-x0;x0=null;
+    if(dx<-50&&i<cards.length-1){i++;show()}else if(dx>50&&i>0){i--;show()}});
+  o.addEventListener('keydown',e=>{if(e.key==='Escape')close();if(e.key==='ArrowRight'&&i<cards.length-1){i++;show()}if(e.key==='ArrowLeft'&&i>0){i--;show()}});
+  show()}
+function maybeWelcome(){if(S.demo||!S.ready||!isMember()||isPast()||welcomeSeen()||!$('#sheetWrap').hidden)return;openWelcome()}
 // Keep one-line titles on one line: shrink a little if the space is tight.
 function fitOne(el,box,max,min,extra=0){if(!el||!box||!box.offsetParent)return;let px=max;el.style.fontSize=px+'px';
   while(el.scrollWidth+extra>box.clientWidth+1&&px>min){px-=.5;el.style.fontSize=px+'px'}}
@@ -1893,6 +1938,7 @@ document.addEventListener('click',async e=>{
   if(t.closest('[data-editprofile]')){if(S.demo){toast('The example game doesn’t save changes.');return}openProfileEditor();return}
   if(t.closest('[data-feedmore]')){S.feedLimit+=25;renderNow();return}
   if(t.closest('[data-closerules]')){location.hash='#'+(S.backTo||'feed');return}
+  if(t.closest('[data-howto]')){closeSheet();openWelcome();return}
   if(t.closest('[data-quickphoto]')){openQuickPost(true);return}
   if(t.closest('[data-quickpost]')){openQuickPost();return}
   if(t.closest('[data-totop]')){scrollTo({top:0,behavior:'smooth'});return}
@@ -1926,7 +1972,7 @@ document.addEventListener('click',async e=>{
       ${S.blocks.length?`<div class="field"><span>Blocked people</span><ul class="homes">${S.blocks.map((u,i)=>`<li><div style="grid-column:1/3"><b>Blocked person ${i+1}</b><div class="case-meta">Their photos, videos and notes are hidden for you</div></div><button class="btn sm" data-unblock="${esc(u)}">Unblock</button></li>`).join('')}</ul></div>`:''}
       <div class="approw"><span class="small muted">Appearance</span><div class="seg" role="group" aria-label="Appearance">${['auto','light','dark'].map(k=>`<button type="button" data-theme-set="${k}" aria-pressed="${themePref()===k}">${k==='auto'?'Auto':k==='light'?'Light':'Dark'}</button>`).join('')}</div></div>
       ${isOrg()&&!S.demo?`<a class="btn red block" href="#admin" data-close>Organizer tools${orgPending()?` · ${orgPending()} to review`:''}</a>`:''}
-      <div class="row">${mh?`<button class="btn" data-editprofile>Edit family profile</button>`:''}<a class="btn" href="#rules" data-close>📜 How to play</a>${FMsg()&&!S.demo?'<button class="btn" data-alerts>Alert settings</button>':''}${mh?`<a class="btn" href="#homes" data-close>See who’s playing</a>`:''}${isInstalled()?'':'<button class="btn" data-a2hs data-close>Add to phone</button>'}<button class="btn danger" data-signout data-close>Sign out</button></div>
+      <div class="row">${mh?`<button class="btn" data-editprofile>Edit family profile</button>`:''}<button class="btn" data-howto>📜 How to play</button>${FMsg()&&!S.demo?'<button class="btn" data-alerts>Alert settings</button>':''}${mh?`<a class="btn" href="#homes" data-close>See who’s playing</a>`:''}${isInstalled()?'':'<button class="btn" data-a2hs data-close>Add to phone</button>'}<button class="btn danger" data-signout data-close>Sign out</button></div>
       <div class="row" style="justify-content:space-between;margin-top:4px"><a class="linkbtn" href="#privacy" data-close>Privacy policy</a>${S.demo?'':'<button class="linkbtn" data-delacct style="color:var(--nose)">Delete my account</button>'}</div>`);return}
   if(t.closest('[data-delacct]')){openDeleteAccount();return}
   if(t.closest('[data-alerts]')){openAlertSettings();return}

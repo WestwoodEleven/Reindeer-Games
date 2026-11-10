@@ -1021,9 +1021,7 @@ function rStatus(C){
   }else if(C.evs.length&&!C.hidden&&C.last){
     const l=C.last,mh=myHome()?.id;
     if(!l.to&&l.kind==='steal')h=`<div class="label">Thief unknown</div><b>Taken from ${esc(mid(fam(l.from)))} ${esc(ago(l.at))}</b><p>Nobody has logged the steal yet. If it was your family, <a href="#log">claim it</a> so it counts.</p>`;
-    else if(l.to&&mh&&l.to===mh)h=`<div class="label">Only your family can see this</div><b>Rudolph is at your house</b><p>Keep him visible from the street. Neighbors find out where he was after he’s stolen again.</p>`;
     else if(l.to&&isOrg()&&orgReveal())h=`<div class="label">Organizer view · spoilers on</div><b>Rudolph is at ${esc(mid(fam(l.to)))}</b><p>${hno(homeById(l.to))} · since ${esc(ago(l.at))}. <a href="#admin">Turn off</a></p>`;
-    else if(l.to)h=`<div class="label">Only your family can see this</div><b>Rudolph is at ${esc(mid(fam(l.to)))}</b><p>You were part of this steal, so you know where he went. Everyone else sees that he’s on the loose.</p>`;
   }
   st.innerHTML=h;st.hidden=!h;
 }

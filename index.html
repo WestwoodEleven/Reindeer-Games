@@ -734,6 +734,25 @@ textarea{min-height:120px;resize:vertical}
     </div>
   </section>
 
+  <!-- HELP & CONTACT (public: used as the App Store support link) -->
+  <section class="view" id="v-help" data-view="help" hidden>
+    <a class="linkbtn" href="#feed" id="helpBack" style="align-self:flex-start;padding:0">← Back</a>
+    <div class="card stack privacy">
+      <h2>Help &amp; contact</h2>
+      <p>Reindeer Games is a private, volunteer-run holiday game for participating families in the Emerald Bay neighborhood of Laguna Beach.</p>
+      <h3>Contact the organizer</h3>
+      <p>Questions, problems, or something inappropriate? Email <a id="helpMail" href="#"></a>. We usually reply within a day.</p>
+      <h3>Common questions</h3>
+      <p><b>How do I join?</b> Sign in with your mobile number, enter your house number, and use the game password from the organizer, or ask the organizer to approve you.</p>
+      <p><b>I didn’t get the text code.</b> Check the number, wait a minute, and tap <i>Use a different number</i> to try again. Still stuck? Email us.</p>
+      <p><b>How do I log a steal?</b> Tap the red <b>+</b> at the bottom, pick the house you took him from, add a photo, and tap <i>Log it</i>.</p>
+      <p><b>How do I report or block something?</b> Tap <b>⋯</b> on any post, reply or photo and choose <i>Report</i> or <i>Block</i>.</p>
+      <p><b>How do I turn alerts on or off?</b> In the app, tap your family name, then <i>Alert settings</i>.</p>
+      <p><b>How do I delete my account?</b> Tap your family name, then <i>Delete my account</i>. Or email us and we’ll do it for you.</p>
+      <p class="small"><a class="linkbtn" href="#terms" style="padding:0">Community rules</a> · <a class="linkbtn" href="#privacy" style="padding:0">Privacy policy</a></p>
+    </div>
+  </section>
+
   <!-- COMMUNITY RULES (terms) -->
   <section class="view" id="v-terms" data-view="terms" hidden>
     <a class="linkbtn" href="#feed" id="termsBack" style="align-self:flex-start;padding:0">← Back</a>
@@ -1258,7 +1277,7 @@ function rGate(){
     <form id="emailForm" class="stack" novalidate><label class="field"><span>Or get a sign-in link by email</span><input type="email" id="emailId" name="email" autocomplete="email" placeholder="you@example.com"></label><button class="btn outline-c" type="submit" id="emailBtn">Email me a link</button></form>`
     :inApp?'':`<button class="linkbtn" data-other-signin style="display:block;margin:14px auto 0">Other ways to sign in</button>`}
     <button class="linkbtn" data-demo style="display:block;margin:8px auto 0">See an example game</button>
-    <div style="text-align:center;margin-top:4px"><a class="linkbtn" href="#terms" style="font-weight:500">Community rules</a> · <a class="linkbtn" href="#privacy" style="font-weight:500">Privacy policy</a></div>`}
+    <div style="text-align:center;margin-top:4px"><a class="linkbtn" href="#help" style="font-weight:500">Help</a> · <a class="linkbtn" href="#terms" style="font-weight:500">Community rules</a> · <a class="linkbtn" href="#privacy" style="font-weight:500">Privacy policy</a></div>`}
   else if(!S.ready||j===undefined){key='load2';h=`<div class="label">Loading</div><h2>Checking your invite…</h2>`}
   else if(j&&j.status==='pending'&&!S.editJoin){key='pending:'+j.family+'|'+j.number;step=3;h=`<div class="label">Request sent</div><h2>Waiting for the organizer</h2>
     <div class="famrow"><span class="hno">${esc(j.number)}</span><div><b>${esc(j.family)}</b><div class="case-meta">Requested ${esc(ago(j.at))}</div></div></div>
@@ -1537,13 +1556,14 @@ function rAdmin(C){
 }
 
 /* ---------- routing / render ---------- */
-const VIEWS=['homes','leaders','log','feed','gallery','rules','admin','privacy','terms'];
+const VIEWS=['homes','leaders','log','feed','gallery','rules','admin','privacy','terms','help'];
 function route(){let v=location.hash.slice(1);if(v==='join'){v='homes';setTimeout(()=>openHomeForm('join'),0)}if(!VIEWS.includes(v))v='feed';return v}
 let raf=0;function render(){if(raf)return;raf=requestAnimationFrame(()=>{raf=0;renderNow()})}
 function renderNow(){
   let v=route();const C=compute();
-  if(v!=='rules'&&v!=='privacy'&&v!=='terms')S.backTo=v;
-  const gated=!isMember();if(gated&&v!=='privacy'&&v!=='terms')v='gate';
+  if(!['rules','privacy','terms','help'].includes(v))S.backTo=v;
+  const gated=!isMember();if(gated&&!['privacy','terms','help'].includes(v))v='gate';
+  if(v==='help'){const m=$('#helpMail');m.textContent=SUPPORT_EMAIL;m.href='mailto:'+SUPPORT_EMAIL+'?subject=Reindeer%20Games';$('#helpBack').setAttribute('href',gated?'#':'#'+(S.backTo||'feed'))}
   if(v==='terms'){$('#termsBody').innerHTML=TERMS;$('#termsBack').setAttribute('href',gated?'#':'#rules')}$('#tabs').hidden=gated;
   if(v==='privacy'){$('#privContact').innerHTML=S.live.config.contact&&!S.demo?`contact the organizer at <b>${esc(S.live.config.contact)}</b>.`:'contact the organizer (their contact info is on the Rules page once you’ve joined).';$('#privBack').setAttribute('href',gated?'#':'#rules')}
   document.querySelectorAll('[data-view]').forEach(s=>s.hidden=s.dataset.view!==v);
@@ -1802,6 +1822,8 @@ const WELCOME=[
   {em:'🦌',t:'Steal Rudolph',d:'Find him in a neighbor’s yard and take him home. Wherever he is, he must stay visible from the street.'},
   {em:'📸',t:'Log it',d:'Tap the big red <b>+</b> and snap a photo. Logging your steal is how you get the point.'},
   {em:'🤫',t:'Keep it secret',d:'Nobody sees where Rudolph went until he’s stolen again. No spoilers in the feed!',rules:true}];
+// Public support contact (shown on the Help page, which is the App Store support link).
+const SUPPORT_EMAIL='mitchellaustin@gmail.com';
 // Community rules everyone agrees to before joining (Apple requires this for apps where people post).
 const TERMS=`<h2>Community rules</h2><p class="small muted">Effective November 10, 2026</p>
   <p>Reindeer Games is a friendly neighborhood game. By joining, you agree to these rules for everyone in your household who uses it.</p>
@@ -2010,7 +2032,7 @@ document.addEventListener('click',async e=>{
       <div class="approw"><span class="small muted">Appearance</span><div class="seg" role="group" aria-label="Appearance">${['auto','light','dark'].map(k=>`<button type="button" data-theme-set="${k}" aria-pressed="${themePref()===k}">${k==='auto'?'Auto':k==='light'?'Light':'Dark'}</button>`).join('')}</div></div>
       ${isOrg()&&!S.demo?`<a class="btn red block" href="#admin" data-close>Organizer tools${orgPending()?` · ${orgPending()} to review`:''}</a>`:''}
       <div class="row">${mh?`<button class="btn" data-editprofile>Edit family profile</button>`:''}<button class="btn" data-howto>📜 How to play</button>${FMsg()&&!S.demo?'<button class="btn" data-alerts>Alert settings</button>':''}${mh?`<a class="btn" href="#homes" data-close>See who’s playing</a>`:''}${isInstalled()?'':'<button class="btn" data-a2hs data-close>Add to phone</button>'}<button class="btn danger" data-signout data-close>Sign out</button></div>
-      <div class="row" style="justify-content:space-between;margin-top:4px"><span><a class="linkbtn" href="#terms" data-close>Community rules</a> · <a class="linkbtn" href="#privacy" data-close>Privacy</a></span>${S.demo?'':'<button class="linkbtn" data-delacct style="color:var(--nose)">Delete my account</button>'}</div>`);return}
+      <div class="row" style="justify-content:space-between;margin-top:4px"><span><a class="linkbtn" href="#help" data-close>Help</a> · <a class="linkbtn" href="#terms" data-close>Rules</a> · <a class="linkbtn" href="#privacy" data-close>Privacy</a></span>${S.demo?'':'<button class="linkbtn" data-delacct style="color:var(--nose)">Delete my account</button>'}</div>`);return}
   if(t.closest('[data-delacct]')){openDeleteAccount();return}
   if(t.closest('[data-alerts]')){openAlertSettings();return}
   if(t.closest('[data-missing]')){if(S.demo){toast('The example game doesn’t save changes.');return}
